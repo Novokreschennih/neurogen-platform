@@ -216,6 +216,12 @@ VK_CENTRAL_GROUP=
 # Секретный ключ для VK Callback API (вебхуки)
 VK_SECRET_KEY=
 
+# Токен группы для VK API (users.get, photos и т.д.)
+VK_GROUP_TOKEN=
+
+# URL сообщества VK (для кнопок и редиректов)
+VK_COMMUNITY_URL=https://vk.com/sethubble
+
 # ============================================================
 # ПРИМЕР ЗАПОЛНЕНИЯ (ВСЕГО 50 ПЕРЕМЕННЫХ):
 # ============================================================
@@ -268,3 +274,5 @@ VK_SECRET_KEY=
 # VK_SERVICE_TOKEN=vk1...
 # VK_CENTRAL_GROUP=123456789
 # VK_SECRET_KEY=my_vk_callback_secret
+# VK_GROUP_TOKEN=vk1_service_token_for_api
+# VK_COMMUNITY_URL=https://vk.com/sethubble

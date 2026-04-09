@@ -21,7 +21,9 @@ export async function handleWebChat(event, context) {
 
     // Обработка лидов (сбор email)
     if (payload.isEmail) {
-      log.info(`[WEB LEAD] ${payload.email}`, { ref: payload.referrer });
+      // v5.0: partner_id приоритетнее referrer (оба поддерживаются)
+      const partnerId = payload.partner_id || payload.referrer || "p_qdr";
+      log.info(`[WEB LEAD] ${payload.email}`, { partnerId });
 
       // Сохраняем email-пользователя в YDB
       if (context.ydb) {
@@ -30,7 +32,7 @@ export async function handleWebChat(event, context) {
         if (!emailUser) {
           emailUser = {
             user_id: emailUserId,
-            partner_id: payload.referrer || "p_qdr",
+            partner_id: partnerId,
             state: "START",
             bought_tripwire: false,
             session: {
@@ -56,7 +58,10 @@ export async function handleWebChat(event, context) {
             last_reminder_time: 0,
           };
           await context.ydb.saveUser(emailUser);
-          log.info(`[WEB LEAD] Saved email user to YDB`, { userId: emailUserId });
+          log.info(`[WEB LEAD] Saved email user to YDB`, {
+            userId: emailUserId,
+            partnerId,
+          });
         }
       }
 
@@ -81,8 +86,8 @@ export async function handleWebChat(event, context) {
       webUserId = `web:${crypto.randomUUID()}`;
     }
 
-    // Определяем реферера
-    const referrer = payload.referrer || "p_qdr";
+    // v5.0: partner_id приоритетнее referrer
+    const partnerId = payload.partner_id || payload.referrer || "p_qdr";
 
     let webUser = await context.ydb?.getUser(webUserId);
     const isNewUser = !webUser;
@@ -91,13 +96,15 @@ export async function handleWebChat(event, context) {
     if (!webUser && context.ydb) {
       webUser = {
         user_id: webUserId,
-        partner_id: referrer,
+        partner_id: partnerId,
         state: "START",
         bought_tripwire: false,
         session: {
           source: "web",
           session_id: webUserId,
-          channels: { web: { enabled: true, configured: true, session_id: webUserId } },
+          channels: {
+            web: { enabled: true, configured: true, session_id: webUserId },
+          },
           channel_states: { web: "START" },
           last_activity: Date.now(),
           tags: [],
@@ -115,17 +122,27 @@ export async function handleWebChat(event, context) {
         last_reminder_time: 0,
       };
       await context.ydb.saveUser(webUser);
-      log.info(`[WEB CHAT] New web user created`, { userId: webUserId, referrer });
+      log.info(`[WEB CHAT] New web user created`, {
+        userId: webUserId,
+        partnerId,
+      });
     }
 
     // Фолбэк если ydb недоступен — AI чат работает без сохранения
     if (!webUser) {
       webUser = {
         user_id: webUserId,
-        partner_id: referrer,
+        partner_id: partnerId,
         state: "START",
         bought_tripwire: false,
-        session: { source: "web", session_id: webUserId, last_activity: Date.now(), tags: [], dialog_history: [], xp: 0 },
+        session: {
+          source: "web",
+          session_id: webUserId,
+          last_activity: Date.now(),
+          tags: [],
+          dialog_history: [],
+          xp: 0,
+        },
         last_seen: Date.now(),
         bot_token: "",
         tariff: "",
@@ -159,7 +176,7 @@ export async function handleWebChat(event, context) {
         if (!existingEmail) {
           const emailUser = {
             user_id: emailUserId,
-            partner_id: referrer,
+            partner_id: partnerId,
             state: "START",
             bought_tripwire: false,
             session: {
@@ -329,7 +346,8 @@ SetHubble — гибридная IT-платформа и крипто-плат�
       );
       // Ограничиваем историю 20 сообщениями
       if (webUser.session.dialog_history.length > 20) {
-        webUser.session.dialog_history = webUser.session.dialog_history.slice(-20);
+        webUser.session.dialog_history =
+          webUser.session.dialog_history.slice(-20);
       }
       await context.ydb.saveUser(webUser);
     }

@@ -721,18 +721,22 @@ body {
     document.addEventListener("DOMContentLoaded", () => {
   // === НАСТРОЙКИ ===
   const DEFAULT_BOT = "sethubble_biz_bot";
+  const DEFAULT_PARTNER_ID = "p_qdr";
 
   // ⚠️ ЗАМЕНИ на реальный URL твоего API Gateway из Яндекса! ⚠️
   const API_URL =
     "https://d5dsbah1d4ju0glmp9d0.3zvepvee.apigw.yandexcloud.net/?action=web-chat";
   const WEB_CHAT_URL = "/ai/";
+  const VK_COMMUNITY_URL = "https://vk.com/sethubble";
 
   // === ПЕРЕМЕННЫЕ ===
+  let partnerId = null;
   let refBot = null;
 
-  // === ИНИЦИАЛИЗАЦИЯ РЕФЕРАЛА (ДУПЛИКАЦИЯ) ===
+  // === ИНИЦИАЛИЗАЦИЯ РЕФЕРАЛА (МУЛЬТИКАНАЛ v5.0) ===
+  // ?page= теперь кодирует partner_id (не bot_username)
   const urlParams = new URLSearchParams(window.location.search);
-  let encryptedId = urlParams.get("page");
+  let encodedId = urlParams.get("page");
 
   const fromHex = (hex) => {
     try {
@@ -746,23 +750,38 @@ body {
     }
   };
 
-  if (encryptedId) {
-    const decoded = fromHex(encryptedId);
+  if (encodedId) {
+    const decoded = fromHex(encodedId);
     if (decoded) {
-      refBot = decoded.replace("@", "").trim();
-      localStorage.setItem("neurogen_partner_bot", refBot);
+      partnerId = decoded.trim();
+      localStorage.setItem("neurogen_partner_id", partnerId);
     }
   }
 
-  if (!refBot) {
-    refBot = localStorage.getItem("neurogen_partner_bot") || DEFAULT_BOT;
+  // Фолбэк: читаем из localStorage
+  if (!partnerId) {
+    partnerId = localStorage.getItem("neurogen_partner_id")
+      || DEFAULT_PARTNER_ID;
   }
+
+  // Для обратной совместимости: если ?page= ещё содержит bot_username
+  // Определяем по формату: partner_id начинается с "p_", bot_username — нет
+  if (partnerId && !partnerId.startsWith("p_")) {
+    // Старый формат — bot_username, конвертируем в дефолтный partner_id
+    console.log(
+      "[JOIN] Legacy bot_username detected, using default partner_id",
+    );
+    partnerId = DEFAULT_PARTNER_ID;
+  }
+
+  // Сохраняем bot_username для Telegram (из настроек или дефолт)
+  refBot = localStorage.getItem("neurogen_partner_bot") || DEFAULT_BOT;
 
   // Обновляем плашку партнера
   const badge = document.getElementById("partner-badge");
   const nameEl = document.getElementById("partner-name");
-  if (badge && nameEl && refBot !== DEFAULT_BOT) {
-    nameEl.textContent = `@${refBot}`;
+  if (badge && nameEl && partnerId !== DEFAULT_PARTNER_ID) {
+    nameEl.textContent = partnerId;
     badge.classList.remove("hidden");
   }
 
@@ -831,6 +850,7 @@ body {
     submitEmailBtn.disabled = true;
 
     // Фоновая отправка Email на Yandex Cloud API
+    // Сохраняем partner_id вместе с email
     try {
       await fetch(API_URL, {
         method: "POST",
@@ -838,7 +858,8 @@ body {
         body: JSON.stringify({
           isEmail: true,
           email: email,
-          referrer: refBot,
+          partner_id: partnerId,
+          referrer: partnerId, // Backward compat
         }),
       });
     } catch (err) {
@@ -850,21 +871,21 @@ body {
     stepChoice.classList.remove("hidden");
   });
 
-  // === МАРШРУТИЗАЦИЯ ===
+  // === МАРШРУТИЗАЦИЯ ПО КАНАЛАМ (v5.0) ===
 
-  // 1. Web-чат
-  btnWeb.addEventListener("click", () => {
-    window.location.href = `${WEB_CHAT_URL}?ref=${refBot}`;
-  });
-
-  // 2. Telegram-бот
+  // 1. Telegram — deep link с partner_id в start payload
   btnTelegram.addEventListener("click", () => {
-    window.location.href = `https://t.me/${refBot}`;
+    window.location.href = `https://t.me/${refBot}?start=${partnerId}`;
   });
 
-  // 3. VK — сообщество SetHubble
+  // 2. VK — сообщество SetHubble с partner_id
   btnVK.addEventListener("click", () => {
-    window.location.href = "https://vk.com/sethubble";
+    window.location.href = `${VK_COMMUNITY_URL}?ref=${partnerId}`;
+  });
+
+  // 3. Web-чат — partner_id как параметр
+  btnWeb.addEventListener("click", () => {
+    window.location.href = `${WEB_CHAT_URL}?ref=${partnerId}`;
   });
 
   // 4. Email — сохраняем email и показываем инструкцию

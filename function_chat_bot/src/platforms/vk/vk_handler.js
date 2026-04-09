@@ -14,16 +14,26 @@
  */
 
 export async function handleVkWebhook(event, context) {
-  const { ydb, scenarioVK, log, processedUpdates, renderStep, corsHeaders, channelManager, sendEmail } = context;
+  const {
+    ydb,
+    scenarioVK,
+    log,
+    processedUpdates,
+    renderStep,
+    corsHeaders,
+    channelManager,
+    sendEmail,
+  } = context;
 
-  const action = event.httpMethod === "GET"
-    ? new URL(event.path, "http://example.com").searchParams.get("action")
-    : null;
+  const action =
+    event.httpMethod === "GET"
+      ? new URL(event.path, "http://example.com").searchParams.get("action")
+      : null;
 
-  const isVkRequest = event.body && (
-    event.body.includes('"type":"confirmation"') ||
-    event.body.includes('"type":"message_new"')
-  );
+  const isVkRequest =
+    event.body &&
+    (event.body.includes('"type":"confirmation"') ||
+      event.body.includes('"type":"message_new"'));
 
   if (action === "vk-webhook" || isVkRequest) {
     log.info(`[VK WEBHOOK] Request received`);
@@ -59,19 +69,26 @@ export async function handleVkWebhook(event, context) {
     try {
       const payloadStr = event.isBase64Encoded
         ? Buffer.from(event.body, "base64").toString("utf8")
-        : (event.body || "{}");
+        : event.body || "{}";
       const payload = JSON.parse(payloadStr);
 
       if (payload.type === "confirmation") {
-        return { 
-          statusCode: 200, 
-          headers: { "Content-Type": "text/plain" }, 
-          body: process.env.VK_CONFIRM_CODE || "ТВОЙ_КОД_ИЗ_НАСТРОЕК_ВК" 
+        return {
+          statusCode: 200,
+          headers: { "Content-Type": "text/plain" },
+          body: process.env.VK_CONFIRM_CODE || "ТВОЙ_КОД_ИЗ_НАСТРОЕК_ВК",
         };
       }
 
-      if (process.env.VK_SECRET_KEY && payload.secret !== process.env.VK_SECRET_KEY) {
-        return { statusCode: 403, headers: { "Content-Type": "text/plain" }, body: "Forbidden" };
+      if (
+        process.env.VK_SECRET_KEY &&
+        payload.secret !== process.env.VK_SECRET_KEY
+      ) {
+        return {
+          statusCode: 403,
+          headers: { "Content-Type": "text/plain" },
+          body: "Forbidden",
+        };
       }
 
       // === MESSAGE_EVENT (callback кнопка нажата) ===
@@ -92,125 +109,228 @@ export async function handleVkWebhook(event, context) {
           // Отвечаем VK что событие обработано (убирает кнопку)
           await fetch(
             `https://api.vk.com/method/messages.sendMessageEventAnswer?access_token=${process.env.VK_GROUP_TOKEN}&v=5.199&event_id=${eventId}&user_id=${userId}&event_data=${encodeURIComponent(JSON.stringify({ event_type: "show_snackbar", text: "✅" }))}`,
-            { method: 'POST' }
+            { method: "POST" },
           );
 
           if (callbackData) {
             const vkUser = await ydb.getUser(`vk:${userId}`);
-            if (!vkUser || !vkUser.user_id) return { statusCode: 200, body: "ok" };
+            if (!vkUser || !vkUser.user_id)
+              return { statusCode: 200, body: "ok" };
 
             const vkCtx = {
-              isVk: true, from: { id: userId }, message: { text: "" }, dbUser: vkUser,
-              callbackQuery: { data: callbackData, message: { text: "", caption: "", reply_markup: null } },
+              isVk: true,
+              from: { id: userId },
+              message: { text: "" },
+              dbUser: vkUser,
+              callbackQuery: {
+                data: callbackData,
+                message: { text: "", caption: "", reply_markup: null },
+              },
               telegram: { sendChatAction: async () => {} },
               reply: async (replyText, opts = {}) => {
-                const msg = (replyText || "").replace(/<[^>]*>?/gm, '');
+                const msg = (replyText || "").replace(/<[^>]*>?/gm, "");
                 const params = new URLSearchParams();
-                params.append('access_token', process.env.VK_GROUP_TOKEN);
-                params.append('v', '5.199');
-                params.append('user_id', String(userId));
-                params.append('random_id', String(Math.floor(Math.random() * 2147483647)));
-                params.append('message', msg);
+                params.append("access_token", process.env.VK_GROUP_TOKEN);
+                params.append("v", "5.199");
+                params.append("user_id", String(userId));
+                params.append(
+                  "random_id",
+                  String(Math.floor(Math.random() * 2147483647)),
+                );
+                params.append("message", msg);
                 const translateKb = (tgOpts) => {
                   if (!tgOpts?.reply_markup?.inline_keyboard) return null;
-                  const vkBtns = tgOpts.reply_markup.inline_keyboard.map(row =>
-                    row.map(btn => {
-                      if (btn.url) return { action: { type: "open_link", link: btn.url, label: btn.text.substring(0, 40) } };
-                      else if (btn.callback_data) return { action: { type: "callback", payload: JSON.stringify({ callback_data: btn.callback_data }), label: btn.text.substring(0, 40) }, color: "positive" };
-                      return null;
-                    }).filter(Boolean)
+                  const vkBtns = tgOpts.reply_markup.inline_keyboard.map(
+                    (row) =>
+                      row
+                        .map((btn) => {
+                          if (btn.url)
+                            return {
+                              action: {
+                                type: "open_link",
+                                link: btn.url,
+                                label: btn.text.substring(0, 40),
+                              },
+                            };
+                          else if (btn.callback_data)
+                            return {
+                              action: {
+                                type: "callback",
+                                payload: JSON.stringify({
+                                  callback_data: btn.callback_data,
+                                }),
+                                label: btn.text.substring(0, 40),
+                              },
+                              color: "positive",
+                            };
+                          return null;
+                        })
+                        .filter(Boolean),
                   );
                   return JSON.stringify({ inline: true, buttons: vkBtns });
                 };
                 const kb = translateKb(opts);
-                if (kb) params.append('keyboard', kb);
-                await fetch('https://api.vk.com/method/messages.send', { method: 'POST', body: params });
+                if (kb) params.append("keyboard", kb);
+                await fetch("https://api.vk.com/method/messages.send", {
+                  method: "POST",
+                  body: params,
+                });
               },
               replyWithPhoto: async (photoUrl, opts = {}) => {
-                const cap = (opts.caption || "").replace(/<[^>]*>?/gm, '');
+                const cap = (opts.caption || "").replace(/<[^>]*>?/gm, "");
                 await vkCtx.reply(`${cap}\n\n${photoUrl}`, opts);
               },
               editMessageText: async () => {},
               editMessageCaption: async () => {},
-              answerCbQuery: async () => {}
+              answerCbQuery: async () => {},
             };
 
             const vkToken = "VK_CENTRAL_GROUP";
 
             // Выполняем callback
             if (callbackData === "CLICK_REG_ID") {
-              if (vkUser.sh_user_id && vkUser.sh_ref_tail) return await renderStep(vkCtx, "REGISTRATION_EXIST", vkToken);
+              if (vkUser.sh_user_id && vkUser.sh_ref_tail)
+                return await renderStep(vkCtx, "REGISTRATION_EXIST", vkToken);
               vkUser.state = "WAIT_REG_ID";
               await ydb.saveUser(vkUser);
-              return await vkCtx.reply("✍️ Введи ТВОЙ цифровой ID\n\nПришли мне номер, который ты получил в личном кабинете SetHubble после регистрации (например: 1234).", {});
+              return await vkCtx.reply(
+                "✍️ Введи ТВОЙ цифровой ID\n\nПришли мне номер, который ты получил в личном кабинете SetHubble после регистрации (например: 1234).",
+                {},
+              );
             }
             if (callbackData === "FORCE_REG_UPDATE") {
-              vkUser.state = "WAIT_REG_ID"; await ydb.saveUser(vkUser);
-              return await vkCtx.reply("✍️ Обновление данных\n\nХорошо, введи новый цифровой ID:", {});
+              vkUser.state = "WAIT_REG_ID";
+              await ydb.saveUser(vkUser);
+              return await vkCtx.reply(
+                "✍️ Обновление данных\n\nХорошо, введи новый цифровой ID:",
+                {},
+              );
             }
             if (callbackData === "SETUP_BOT_START") {
               vkUser.state = "WAIT_BOT_TOKEN";
               if (vkUser.bot_token) vkUser.session.is_changing_token = true;
               await ydb.saveUser(vkUser);
-              return await vkCtx.reply("🚀 НАСТРОЙКА БОТА-КЛОНА\n\nПришли мне API TOKEN твоего бота из @BotFather.", {});
+              return await vkCtx.reply(
+                "🚀 НАСТРОЙКА БОТА-КЛОНА\n\nПришли мне API TOKEN твоего бота из @BotFather.",
+                {},
+              );
             }
             if (callbackData === "CONFIRM_UPGRADE") {
-              if (!vkUser.session.tags.includes("seen_plans")) vkUser.session.tags.push("seen_plans");
+              if (!vkUser.session.tags.includes("seen_plans"))
+                vkUser.session.tags.push("seen_plans");
               await ydb.saveUser(vkUser);
               return await renderStep(vkCtx, "UPGRADE_CONFIRMED", vkToken);
             }
             if (callbackData === "RESTART_FUNNEL") {
-              vkUser.saved_state = ""; vkUser.state = "START";
-              vkUser.reminders_count = 0; vkUser.last_reminder_time = 0;
-              vkUser.session = { tags: vkUser.session?.tags || [], last_activity: Date.now() };
+              vkUser.saved_state = "";
+              vkUser.state = "START";
+              vkUser.reminders_count = 0;
+              vkUser.last_reminder_time = 0;
+              vkUser.session = {
+                tags: vkUser.session?.tags || [],
+                last_activity: Date.now(),
+              };
               await ydb.saveUser(vkUser);
               return await renderStep(vkCtx, "START", vkToken);
             }
             if (callbackData === "MAIN_MENU") {
-              vkUser.reminders_count = 0; vkUser.last_reminder_time = 0;
+              vkUser.reminders_count = 0;
+              vkUser.last_reminder_time = 0;
               return await renderStep(vkCtx, "MAIN_MENU", vkToken);
             }
             if (callbackData === "RESUME_LAST") {
-              return await renderStep(vkCtx, vkUser.saved_state || "START", vkToken);
+              return await renderStep(
+                vkCtx,
+                vkUser.saved_state || "START",
+                vkToken,
+              );
             }
-            if (callbackData === "LOCKED_NEED_ID") return await renderStep(vkCtx, "LOCKED_TRAINING_INFO", vkToken);
-            if (callbackData === "LOCKED_NEED_PRO") return await renderStep(vkCtx, "LOCKED_CRM_INFO", vkToken);
-            if (callbackData === "LOCKED_NEED_TRAINING") return await renderStep(vkCtx, "LOCKED_PRO_TRAINING_INFO", vkToken);
-            if (callbackData === "LOCKED_NEED_PLANS") return await renderStep(vkCtx, "LOCKED_PLANS_INFO", vkToken);
+            if (callbackData === "LOCKED_NEED_ID")
+              return await renderStep(vkCtx, "LOCKED_TRAINING_INFO", vkToken);
+            if (callbackData === "LOCKED_NEED_PRO")
+              return await renderStep(vkCtx, "LOCKED_CRM_INFO", vkToken);
+            if (callbackData === "LOCKED_NEED_TRAINING")
+              return await renderStep(
+                vkCtx,
+                "LOCKED_PRO_TRAINING_INFO",
+                vkToken,
+              );
+            if (callbackData === "LOCKED_NEED_PLANS")
+              return await renderStep(vkCtx, "LOCKED_PLANS_INFO", vkToken);
             if (callbackData === "CHANGE_BOT_TOKEN") {
-              vkUser.state = "WAIT_BOT_TOKEN"; vkUser.session.old_bot_token = vkUser.bot_token;
-              vkUser.saved_state = ""; vkUser.session.is_changing_token = true; await ydb.saveUser(vkUser);
-              return await vkCtx.reply("🔄 ИЗМЕНЕНИЕ ТОКЕНА БОТА\n\nПришли мне НОВЫЙ API TOKEN из @BotFather.", {});
+              vkUser.state = "WAIT_BOT_TOKEN";
+              vkUser.session.old_bot_token = vkUser.bot_token;
+              vkUser.saved_state = "";
+              vkUser.session.is_changing_token = true;
+              await ydb.saveUser(vkUser);
+              return await vkCtx.reply(
+                "🔄 ИЗМЕНЕНИЕ ТОКЕНА БОТА\n\nПришли мне НОВЫЙ API TOKEN из @BotFather.",
+                {},
+              );
             }
             if (callbackData === "CONTINUE_WITH_CURRENT_BOT") {
-              vkUser.state = "Module_3_Offline"; await ydb.saveUser(vkUser);
+              vkUser.state = "Module_3_Offline";
+              await ydb.saveUser(vkUser);
               return await renderStep(vkCtx, "Module_3_Offline", vkToken);
             }
             if (callbackData === "CREATE_NEW_BOT") {
-              vkUser.state = "WAIT_BOT_TOKEN"; vkUser.saved_state = ""; await ydb.saveUser(vkUser);
-              return await vkCtx.reply("🔄 СОЗДАНИЕ НОВОГО БОТА\n\nПришли мне API TOKEN нового бота из @BotFather.", {});
+              vkUser.state = "WAIT_BOT_TOKEN";
+              vkUser.saved_state = "";
+              await ydb.saveUser(vkUser);
+              return await vkCtx.reply(
+                "🔄 СОЗДАНИЕ НОВОГО БОТА\n\nПришли мне API TOKEN нового бота из @BotFather.",
+                {},
+              );
             }
             if (callbackData === "THEORY_COURSE_COMPLETE") {
-              if (!vkUser.session.theory_complete) { vkUser.session.theory_complete = true; vkUser.session.xp = (vkUser.session.xp || 0) + 10; await ydb.saveUser(vkUser); }
+              if (!vkUser.session.theory_complete) {
+                vkUser.session.theory_complete = true;
+                vkUser.session.xp = (vkUser.session.xp || 0) + 10;
+                await ydb.saveUser(vkUser);
+              }
               return await renderStep(vkCtx, "Theory_Reward_Spoilers", vkToken);
             }
             if (callbackData === "USE_EXISTING_DATA") {
-              vkUser.session.tmp_shui = vkUser.sh_user_id; vkUser.session.tmp_shrt = vkUser.sh_ref_tail;
-              vkUser.state = "WAIT_PARTNER_REG"; await ydb.saveUser(vkUser);
-              return await vkCtx.reply(`✅ ДАННЫЕ ПОДТВЕРЖДЕНЫ\n\n🎯 Перейди по ссылке для регистрации и напиши "готов"`, {});
+              vkUser.session.tmp_shui = vkUser.sh_user_id;
+              vkUser.session.tmp_shrt = vkUser.sh_ref_tail;
+              vkUser.state = "WAIT_PARTNER_REG";
+              await ydb.saveUser(vkUser);
+              return await vkCtx.reply(
+                `✅ ДАННЫЕ ПОДТВЕРЖДЕНЫ\n\n🎯 Перейди по ссылке для регистрации и напиши "готов"`,
+                {},
+              );
             }
             if (callbackData === "ENTER_NEW_DATA") {
-              vkUser.state = "WAIT_SH_ID_P"; await ydb.saveUser(vkUser);
-              return await vkCtx.reply("✏️ Пришли НОВЫЙ цифровой ID для этого бота:", {});
+              vkUser.state = "WAIT_SH_ID_P";
+              await ydb.saveUser(vkUser);
+              return await vkCtx.reply(
+                "✏️ Пришли НОВЫЙ цифровой ID для этого бота:",
+                {},
+              );
             }
-            if (callbackData === "EDIT_PROFILE") return await renderStep(vkCtx, "EDIT_PROFILE", vkToken);
-            if (callbackData === "GO_TO_MODULE_2") return await renderStep(vkCtx, "Module_2_Online", vkToken);
-            if (callbackData === "GO_TO_MODULE_3") return await renderStep(vkCtx, "Module_3_Offline", vkToken);
-            if (callbackData === "GO_TO_FINAL") return await renderStep(vkCtx, "Lesson_Final_Comparison", vkToken);
+            if (callbackData === "EDIT_PROFILE")
+              return await renderStep(vkCtx, "EDIT_PROFILE", vkToken);
+            if (callbackData === "GO_TO_MODULE_2")
+              return await renderStep(vkCtx, "Module_2_Online", vkToken);
+            if (callbackData === "GO_TO_MODULE_3")
+              return await renderStep(vkCtx, "Module_3_Offline", vkToken);
+            if (callbackData === "GO_TO_FINAL")
+              return await renderStep(
+                vkCtx,
+                "Lesson_Final_Comparison",
+                vkToken,
+              );
 
             if (scenarioVK.steps[callbackData]) {
-              const navSteps = ["START", "RESUME_GATE", "MAIN_MENU", "Pre_Training_Logic", "EDIT_PROFILE"];
-              if (!navSteps.includes(vkUser.state)) vkUser.saved_state = vkUser.state;
+              const navSteps = [
+                "START",
+                "RESUME_GATE",
+                "MAIN_MENU",
+                "Pre_Training_Logic",
+                "EDIT_PROFILE",
+              ];
+              if (!navSteps.includes(vkUser.state))
+                vkUser.saved_state = vkUser.state;
               vkUser.session.last_vk_step = callbackData;
               await ydb.saveUser(vkUser);
               return await renderStep(vkCtx, callbackData, vkToken);
@@ -220,7 +340,11 @@ export async function handleVkWebhook(event, context) {
           log.error(`[VK EVENT ERROR]`, e);
         }
 
-        return { statusCode: 200, headers: { "Content-Type": "text/plain" }, body: "ok" };
+        return {
+          statusCode: 200,
+          headers: { "Content-Type": "text/plain" },
+          body: "ok",
+        };
       }
 
       if (payload.type === "message_new") {
@@ -229,7 +353,11 @@ export async function handleVkWebhook(event, context) {
 
         const vkUpdateId = `${message.from_id}_${message.conversation_message_id || message.id || message.date}`;
         if (processedUpdates.has(vkUpdateId)) {
-           return { statusCode: 200, headers: { "Content-Type": "text/plain" }, body: "ok" };
+          return {
+            statusCode: 200,
+            headers: { "Content-Type": "text/plain" },
+            body: "ok",
+          };
         }
         processedUpdates.set(vkUpdateId, Date.now());
 
@@ -238,36 +366,69 @@ export async function handleVkWebhook(event, context) {
 
         if (!vkUser || typeof vkUser !== "object" || !vkUser.user_id) {
           let partnerId = process.env.MY_PARTNER_ID || "p_qdr";
+
+          // v5.0: Поддержка partner_id из разных источников
+          // 1. Из message.payload (JSON с command)
           if (message.payload) {
-             try {
-               const parsedPayload = JSON.parse(message.payload);
-               if (parsedPayload.command && parsedPayload.command.startsWith("p_")) partnerId = parsedPayload.command;
-             } catch(e) {}
-          } else {
-             const refMatch = text.match(/p_([a-zA-Z0-9]+)/);
-             if (refMatch) partnerId = `p_${refMatch[1]}`;
+            try {
+              const parsedPayload = JSON.parse(message.payload);
+              // Формат: {"command": "p_xxx"} или {"ref": "p_xxx"}
+              if (
+                parsedPayload.command &&
+                parsedPayload.command.startsWith("p_")
+              ) {
+                partnerId = parsedPayload.command;
+              } else if (
+                parsedPayload.ref &&
+                parsedPayload.ref.startsWith("p_")
+              ) {
+                partnerId = parsedPayload.ref;
+              }
+            } catch (e) {}
+          }
+
+          // 2. Из текста сообщения (если пользователь вручную ввёл p_xxx)
+          if (!partnerId.startsWith("p_")) {
+            const refMatch = text.match(/p_([a-zA-Z0-9]+)/);
+            if (refMatch) partnerId = `p_${refMatch[1]}`;
           }
 
           let firstName = "VK Lead";
           if (process.env.VK_GROUP_TOKEN) {
-             try {
-                 const url = `https://api.vk.com/method/users.get?user_ids=${message.from_id}&access_token=${process.env.VK_GROUP_TOKEN}&v=5.199`;
-                 const resp = await fetch(url);
-                 const data = await resp.json();
-                 if (data.response && data.response[0]) firstName = data.response[0].first_name;
-             } catch(e) {}
+            try {
+              const url = `https://api.vk.com/method/users.get?user_ids=${message.from_id}&access_token=${process.env.VK_GROUP_TOKEN}&v=5.199`;
+              const resp = await fetch(url);
+              const data = await resp.json();
+              if (data.response && data.response[0])
+                firstName = data.response[0].first_name;
+            } catch (e) {}
           }
 
           vkUser = {
-            user_id: vkUserId, partner_id: partnerId, state: "START", bought_tripwire: false,
-            session: { source: "vkontakte", last_activity: Date.now(), tags: [] },
-            last_seen: Date.now(), bot_token: "VK_CENTRAL_GROUP", tariff: "", sh_user_id: "", sh_ref_tail: "",
-            purchases: [], first_name: firstName, reminders_count: 0, last_reminder_time: 0
+            user_id: vkUserId,
+            partner_id: partnerId,
+            state: "START",
+            bought_tripwire: false,
+            session: {
+              source: "vkontakte",
+              last_activity: Date.now(),
+              tags: [],
+            },
+            last_seen: Date.now(),
+            bot_token: "VK_CENTRAL_GROUP",
+            tariff: "",
+            sh_user_id: "",
+            sh_ref_tail: "",
+            purchases: [],
+            first_name: firstName,
+            reminders_count: 0,
+            last_reminder_time: 0,
           };
           await ydb.saveUser(vkUser);
         }
 
-        if (!vkUser.session || typeof vkUser.session !== "object") vkUser.session = { tags: [], source: "vkontakte" };
+        if (!vkUser.session || typeof vkUser.session !== "object")
+          vkUser.session = { tags: [], source: "vkontakte" };
         vkUser.session.last_activity = Date.now();
         vkUser.last_seen = Date.now();
 
@@ -287,22 +448,52 @@ export async function handleVkWebhook(event, context) {
             log.info(`[VK] Parsed payload`, { parsed });
             if (parsed.callback_data) callbackData = parsed.callback_data;
           } catch (e) {
-            log.warn(`[VK] Failed to parse payload`, { rawPayload: message.payload, error: e.message });
+            log.warn(`[VK] Failed to parse payload`, {
+              rawPayload: message.payload,
+              error: e.message,
+            });
             // VK может отправлять callback_data напрямую как строку
             callbackData = message.payload;
           }
         } else {
-          log.warn(`[VK] No payload in message`, { text, hasPayload: !!message.payload });
+          log.warn(`[VK] No payload in message`, {
+            text,
+            hasPayload: !!message.payload,
+          });
         }
 
         const translateKeyboard = (tgOpts) => {
-          if (!tgOpts || !tgOpts.reply_markup || !tgOpts.reply_markup.inline_keyboard) return null;
-          const vkButtons = tgOpts.reply_markup.inline_keyboard.map(row => {
-            return row.map(btn => {
-              if (btn.url) return { action: { type: "open_link", link: btn.url, label: btn.text.substring(0, 40) } };
-              else if (btn.callback_data) return { action: { type: "callback", payload: JSON.stringify({ callback_data: btn.callback_data }), label: btn.text.substring(0, 40) }, color: "positive" };
-              return null;
-            }).filter(Boolean);
+          if (
+            !tgOpts ||
+            !tgOpts.reply_markup ||
+            !tgOpts.reply_markup.inline_keyboard
+          )
+            return null;
+          const vkButtons = tgOpts.reply_markup.inline_keyboard.map((row) => {
+            return row
+              .map((btn) => {
+                if (btn.url)
+                  return {
+                    action: {
+                      type: "open_link",
+                      link: btn.url,
+                      label: btn.text.substring(0, 40),
+                    },
+                  };
+                else if (btn.callback_data)
+                  return {
+                    action: {
+                      type: "callback",
+                      payload: JSON.stringify({
+                        callback_data: btn.callback_data,
+                      }),
+                      label: btn.text.substring(0, 40),
+                    },
+                    color: "positive",
+                  };
+                return null;
+              })
+              .filter(Boolean);
           });
           return JSON.stringify({ inline: true, buttons: vkButtons });
         };
@@ -312,30 +503,43 @@ export async function handleVkWebhook(event, context) {
           from: { id: message.from_id },
           message: { text: text },
           dbUser: vkUser,
-          callbackQuery: callbackData ? { data: callbackData, message: { text: text, caption: text, reply_markup: null } } : null,
+          callbackQuery: callbackData
+            ? {
+                data: callbackData,
+                message: { text: text, caption: text, reply_markup: null },
+              }
+            : null,
           telegram: { sendChatAction: async () => {} },
           reply: async (replyText, opts = {}) => {
             const params = new URLSearchParams();
-            params.append('access_token', process.env.VK_GROUP_TOKEN);
-            params.append('v', '5.199');
-            params.append('user_id', String(message.from_id));
-            params.append('random_id', String(Math.floor(Math.random() * 2147483647)));
+            params.append("access_token", process.env.VK_GROUP_TOKEN);
+            params.append("v", "5.199");
+            params.append("user_id", String(message.from_id));
+            params.append(
+              "random_id",
+              String(Math.floor(Math.random() * 2147483647)),
+            );
 
             let finalMessage = replyText || "";
             if (opts.caption) finalMessage = opts.caption;
 
             // --- УБИРАЕМ HTML ТЕГИ ДЛЯ ВК ---
-            finalMessage = finalMessage.replace(/<[^>]*>?/gm, '');
-            params.append('message', finalMessage);
+            finalMessage = finalMessage.replace(/<[^>]*>?/gm, "");
+            params.append("message", finalMessage);
 
             const vkKb = translateKeyboard(opts);
-            if (vkKb) params.append('keyboard', vkKb);
+            if (vkKb) params.append("keyboard", vkKb);
 
-            try { await fetch('https://api.vk.com/method/messages.send', { method: 'POST', body: params }); } catch (sendErr) {}
+            try {
+              await fetch("https://api.vk.com/method/messages.send", {
+                method: "POST",
+                body: params,
+              });
+            } catch (sendErr) {}
           },
           replyWithPhoto: async (photoUrl, opts = {}) => {
             let captionText = opts.caption || "";
-            captionText = captionText.replace(/<[^>]*>?/gm, '');
+            captionText = captionText.replace(/<[^>]*>?/gm, "");
 
             try {
               // Скачиваем фото
@@ -345,32 +549,41 @@ export async function handleVkWebhook(event, context) {
 
               // Получаем URL для загрузки
               const uploadResp = await fetch(
-                `https://api.vk.com/method/photos.getMessagesUploadServer?access_token=${process.env.VK_GROUP_TOKEN}&v=5.199`
+                `https://api.vk.com/method/photos.getMessagesUploadServer?access_token=${process.env.VK_GROUP_TOKEN}&v=5.199`,
               );
               const uploadData = await uploadResp.json();
               const uploadUrl = uploadData.response?.upload_url;
-              if (!uploadUrl) throw new Error('No upload URL');
+              if (!uploadUrl) throw new Error("No upload URL");
 
               // Загружаем фото
-              const boundary = '----WebKitFormBoundary' + Math.random().toString(36).slice(2);
+              const boundary =
+                "----WebKitFormBoundary" + Math.random().toString(36).slice(2);
               const uploadForm = new Uint8Array([
-                ...new TextEncoder().encode(`--${boundary}\r\nContent-Disposition: form-data; name="photo"; filename="photo.jpg"\r\nContent-Type: image/jpeg\r\n\r\n`),
+                ...new TextEncoder().encode(
+                  `--${boundary}\r\nContent-Disposition: form-data; name="photo"; filename="photo.jpg"\r\nContent-Type: image/jpeg\r\n\r\n`,
+                ),
                 ...new Uint8Array(photoBuffer),
                 ...new TextEncoder().encode(`\r\n--${boundary}--\r\n`),
               ]);
 
               const upResp = await fetch(uploadUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}` },
+                method: "POST",
+                headers: {
+                  "Content-Type": `multipart/form-data; boundary=${boundary}`,
+                },
                 body: uploadForm,
               });
               const uploadResult = await upResp.json();
 
-              if (uploadResult.photo && uploadResult.server && uploadResult.hash) {
+              if (
+                uploadResult.photo &&
+                uploadResult.server &&
+                uploadResult.hash
+              ) {
                 // Сохраняем фото
                 const saveResp = await fetch(
                   `https://api.vk.com/method/photos.saveMessagesPhoto?access_token=${process.env.VK_GROUP_TOKEN}&v=5.199&server=${uploadResult.server}&photo=${uploadResult.photo}&hash=${uploadResult.hash}`,
-                  { method: 'POST' }
+                  { method: "POST" },
                 );
                 const saveData = await saveResp.json();
                 const savedPhoto = saveData.response?.[0];
@@ -378,40 +591,57 @@ export async function handleVkWebhook(event, context) {
                 if (savedPhoto?.id) {
                   // Фото с подписью (БЕЗ кнопок)
                   const sendParams = new URLSearchParams();
-                  sendParams.append('access_token', process.env.VK_GROUP_TOKEN);
-                  sendParams.append('v', '5.199');
-                  sendParams.append('user_id', String(message.from_id));
-                  sendParams.append('random_id', String(Math.floor(Math.random() * 2147483647)));
-                  sendParams.append('attachment', `photo${savedPhoto.owner_id}_${savedPhoto.id}`);
-                  if (captionText) sendParams.append('message', captionText);
-                  await fetch('https://api.vk.com/method/messages.send', { method: 'POST', body: sendParams });
+                  sendParams.append("access_token", process.env.VK_GROUP_TOKEN);
+                  sendParams.append("v", "5.199");
+                  sendParams.append("user_id", String(message.from_id));
+                  sendParams.append(
+                    "random_id",
+                    String(Math.floor(Math.random() * 2147483647)),
+                  );
+                  sendParams.append(
+                    "attachment",
+                    `photo${savedPhoto.owner_id}_${savedPhoto.id}`,
+                  );
+                  if (captionText) sendParams.append("message", captionText);
+                  await fetch("https://api.vk.com/method/messages.send", {
+                    method: "POST",
+                    body: sendParams,
+                  });
                   log.info(`[VK] Photo sent`, { photoId: savedPhoto.id });
 
                   // Кнопки ОТДЕЛЬНЫМ минимальным сообщением (без дублирования текста!)
                   if (opts?.reply_markup?.inline_keyboard) {
                     const kbParams = new URLSearchParams();
-                    kbParams.append('access_token', process.env.VK_GROUP_TOKEN);
-                    kbParams.append('v', '5.199');
-                    kbParams.append('user_id', String(message.from_id));
-                    kbParams.append('random_id', String(Math.floor(Math.random() * 2147483647)));
-                    kbParams.append('message', '👇');
+                    kbParams.append("access_token", process.env.VK_GROUP_TOKEN);
+                    kbParams.append("v", "5.199");
+                    kbParams.append("user_id", String(message.from_id));
+                    kbParams.append(
+                      "random_id",
+                      String(Math.floor(Math.random() * 2147483647)),
+                    );
+                    kbParams.append("message", "👇");
                     const vkKb = translateKeyboard(opts);
-                    if (vkKb) kbParams.append('keyboard', vkKb);
-                    await fetch('https://api.vk.com/method/messages.send', { method: 'POST', body: kbParams });
+                    if (vkKb) kbParams.append("keyboard", vkKb);
+                    await fetch("https://api.vk.com/method/messages.send", {
+                      method: "POST",
+                      body: kbParams,
+                    });
                   }
                   return;
                 }
               }
             } catch (e) {
-              log.warn('[VK] Photo upload failed:', e.message);
+              log.warn("[VK] Photo upload failed:", e.message);
             }
 
             // Фолбэк: просто текст (без фото)
             await vkCtx.reply(captionText, opts);
           },
-          editMessageText: async (replyText, opts = {}) => await vkCtx.reply(replyText, opts),
-          editMessageCaption: async (replyText, opts = {}) => await vkCtx.reply(replyText, opts),
-          answerCbQuery: async () => {}
+          editMessageText: async (replyText, opts = {}) =>
+            await vkCtx.reply(replyText, opts),
+          editMessageCaption: async (replyText, opts = {}) =>
+            await vkCtx.reply(replyText, opts),
+          answerCbQuery: async () => {},
         };
 
         // Оборачиваем логику в функцию для гарантированного возврата 200 OK
@@ -425,53 +655,117 @@ export async function handleVkWebhook(event, context) {
                 const level = callbackData.split("_")[2];
                 vkUser.state = `WAIT_SECRET_${level}`;
                 await ydb.saveUser(vkUser);
-                return await vkCtx.reply(`✍️ ВВОД КОДА: МОДУЛЬ ${level}\n\nОтправь мне секретное слово:`);
+                return await vkCtx.reply(
+                  `✍️ ВВОД КОДА: МОДУЛЬ ${level}\n\nОтправь мне секретное слово:`,
+                );
               }
               switch (callbackData) {
-                case "apps_menu": return await vkCtx.reply("🎒 ИИ-ПРИЛОЖЕНИЯ\n\nДоступны в PRO-режиме. Подробности на сайте.");
-                case "GO_TO_MODULE_2": return await renderStep(vkCtx, "Module_2_Online", vkToken);
-                case "GO_TO_MODULE_3": case "Module_3_Offline": return await renderStep(vkCtx, "Module_3_Offline", vkToken);
-                case "GO_TO_FINAL": return await renderStep(vkCtx, "Lesson_Final_Comparison", vkToken);
+                case "apps_menu":
+                  return await vkCtx.reply(
+                    "🎒 ИИ-ПРИЛОЖЕНИЯ\n\nДоступны в PRO-режиме. Подробности на сайте.",
+                  );
+                case "GO_TO_MODULE_2":
+                  return await renderStep(vkCtx, "Module_2_Online", vkToken);
+                case "GO_TO_MODULE_3":
+                case "Module_3_Offline":
+                  return await renderStep(vkCtx, "Module_3_Offline", vkToken);
+                case "GO_TO_FINAL":
+                  return await renderStep(
+                    vkCtx,
+                    "Lesson_Final_Comparison",
+                    vkToken,
+                  );
                 case "CHANGE_BOT_TOKEN":
-                  vkUser.state = "WAIT_BOT_TOKEN"; vkUser.session.old_bot_token = vkUser.bot_token;
-                  vkUser.saved_state = ""; vkUser.session.is_changing_token = true; await ydb.saveUser(vkUser);
-                  return await vkCtx.reply("🔄 ИЗМЕНЕНИЕ ТОКЕНА БОТА\n\nПришли мне НОВЫЙ API TOKEN из @BotFather.");
+                  vkUser.state = "WAIT_BOT_TOKEN";
+                  vkUser.session.old_bot_token = vkUser.bot_token;
+                  vkUser.saved_state = "";
+                  vkUser.session.is_changing_token = true;
+                  await ydb.saveUser(vkUser);
+                  return await vkCtx.reply(
+                    "🔄 ИЗМЕНЕНИЕ ТОКЕНА БОТА\n\nПришли мне НОВЫЙ API TOKEN из @BotFather.",
+                  );
                 case "CONTINUE_WITH_CURRENT_BOT":
-                  vkUser.state = "Module_3_Offline"; await ydb.saveUser(vkUser); return await renderStep(vkCtx, "Module_3_Offline", vkToken);
+                  vkUser.state = "Module_3_Offline";
+                  await ydb.saveUser(vkUser);
+                  return await renderStep(vkCtx, "Module_3_Offline", vkToken);
                 case "CREATE_NEW_BOT":
-                  vkUser.state = "WAIT_BOT_TOKEN"; vkUser.saved_state = ""; await ydb.saveUser(vkUser);
-                  return await vkCtx.reply("🔄 СОЗДАНИЕ НОВОГО БОТА\n\nПришли мне API TOKEN нового бота из @BotFather.");
+                  vkUser.state = "WAIT_BOT_TOKEN";
+                  vkUser.saved_state = "";
+                  await ydb.saveUser(vkUser);
+                  return await vkCtx.reply(
+                    "🔄 СОЗДАНИЕ НОВОГО БОТА\n\nПришли мне API TOKEN нового бота из @BotFather.",
+                  );
                 case "THEORY_COURSE_COMPLETE":
-                  if (!vkUser.session.theory_complete) { vkUser.session.theory_complete = true; vkUser.session.xp = (vkUser.session.xp || 0) + 10; await ydb.saveUser(vkUser); }
-                  return await renderStep(vkCtx, "Theory_Reward_Spoilers", vkToken);
+                  if (!vkUser.session.theory_complete) {
+                    vkUser.session.theory_complete = true;
+                    vkUser.session.xp = (vkUser.session.xp || 0) + 10;
+                    await ydb.saveUser(vkUser);
+                  }
+                  return await renderStep(
+                    vkCtx,
+                    "Theory_Reward_Spoilers",
+                    vkToken,
+                  );
                 case "USE_EXISTING_DATA":
-                  vkUser.session.tmp_shui = vkUser.sh_user_id; vkUser.session.tmp_shrt = vkUser.sh_ref_tail;
-                  vkUser.state = "WAIT_PARTNER_REG"; await ydb.saveUser(vkUser);
-                  return await vkCtx.reply(`✅ ДАННЫЕ ПОДТВЕРЖДЕНЫ\n\n🎯 Перейди по ссылке для регистрации и напиши "готов"`);
+                  vkUser.session.tmp_shui = vkUser.sh_user_id;
+                  vkUser.session.tmp_shrt = vkUser.sh_ref_tail;
+                  vkUser.state = "WAIT_PARTNER_REG";
+                  await ydb.saveUser(vkUser);
+                  return await vkCtx.reply(
+                    `✅ ДАННЫЕ ПОДТВЕРЖДЕНЫ\n\n🎯 Перейди по ссылке для регистрации и напиши "готов"`,
+                  );
                 case "ENTER_NEW_DATA":
-                  vkUser.state = "WAIT_SH_ID_P"; await ydb.saveUser(vkUser); return await vkCtx.reply("✏️ Пришли НОВЫЙ цифровой ID для этого бота:");
-                case "EDIT_PROFILE": return await renderStep(vkCtx, "EDIT_PROFILE", vkToken);
+                  vkUser.state = "WAIT_SH_ID_P";
+                  await ydb.saveUser(vkUser);
+                  return await vkCtx.reply(
+                    "✏️ Пришли НОВЫЙ цифровой ID для этого бота:",
+                  );
+                case "EDIT_PROFILE":
+                  return await renderStep(vkCtx, "EDIT_PROFILE", vkToken);
 
                 // === РЕГИСТРАЦИЯ И НАВИГАЦИЯ ===
                 case "CLICK_REG_ID":
-                  log.info(`[VK] CLICK_REG_ID clicked`, { currentShUserId: vkUser.sh_user_id, currentShRefTail: vkUser.sh_ref_tail });
-                  if (vkUser.sh_user_id && vkUser.sh_ref_tail) return await renderStep(vkCtx, "REGISTRATION_EXIST", vkToken);
+                  log.info(`[VK] CLICK_REG_ID clicked`, {
+                    currentShUserId: vkUser.sh_user_id,
+                    currentShRefTail: vkUser.sh_ref_tail,
+                  });
+                  if (vkUser.sh_user_id && vkUser.sh_ref_tail)
+                    return await renderStep(
+                      vkCtx,
+                      "REGISTRATION_EXIST",
+                      vkToken,
+                    );
                   vkUser.state = "WAIT_REG_ID";
-                  log.info(`[VK] Setting state to WAIT_REG_ID`, { userId: vkUser.user_id });
+                  log.info(`[VK] Setting state to WAIT_REG_ID`, {
+                    userId: vkUser.user_id,
+                  });
                   await ydb.saveUser(vkUser);
-                  log.info(`[VK] saveUser completed`, { userId: vkUser.user_id, savedState: "WAIT_REG_ID" });
-                  return await vkCtx.reply("✍️ <b>Введи ТВОЙ цифровой ID</b>\n\nПришли мне номер, который ты получил в личном кабинете SetHubble после регистрации (например: 1234).", {});
+                  log.info(`[VK] saveUser completed`, {
+                    userId: vkUser.user_id,
+                    savedState: "WAIT_REG_ID",
+                  });
+                  return await vkCtx.reply(
+                    "✍️ <b>Введи ТВОЙ цифровой ID</b>\n\nПришли мне номер, который ты получил в личном кабинете SetHubble после регистрации (например: 1234).",
+                    {},
+                  );
                 case "FORCE_REG_UPDATE":
                   vkUser.state = "WAIT_REG_ID";
                   await ydb.saveUser(vkUser);
-                  return await vkCtx.reply("✍️ <b>Обновление данных</b>\n\nХорошо, введи новый цифровой ID:", {});
+                  return await vkCtx.reply(
+                    "✍️ <b>Обновление данных</b>\n\nХорошо, введи новый цифровой ID:",
+                    {},
+                  );
                 case "SETUP_BOT_START":
                   vkUser.state = "WAIT_BOT_TOKEN";
                   if (vkUser.bot_token) vkUser.session.is_changing_token = true;
                   await ydb.saveUser(vkUser);
-                  return await vkCtx.reply("🚀 <b>НАСТРОЙКА БОТА-КЛОНА</b>\n\nПришли мне <b>API TOKEN</b> твоего бота из @BotFather.", {});
+                  return await vkCtx.reply(
+                    "🚀 <b>НАСТРОЙКА БОТА-КЛОНА</b>\n\nПришли мне <b>API TOKEN</b> твоего бота из @BotFather.",
+                    {},
+                  );
                 case "CONFIRM_UPGRADE":
-                  if (!vkUser.session.tags.includes("seen_plans")) vkUser.session.tags.push("seen_plans");
+                  if (!vkUser.session.tags.includes("seen_plans"))
+                    vkUser.session.tags.push("seen_plans");
                   await ydb.saveUser(vkUser);
                   return await renderStep(vkCtx, "UPGRADE_CONFIRMED", vkToken);
                 case "RESTART_FUNNEL":
@@ -479,7 +773,14 @@ export async function handleVkWebhook(event, context) {
                   vkUser.state = "START";
                   vkUser.reminders_count = 0;
                   vkUser.last_reminder_time = 0;
-                  vkUser.session = { tags: vkUser.session?.tags || [], last_activity: Date.now(), bot_username: vkUser.session?.bot_username, old_bot_token: vkUser.session?.old_bot_token, ai_count: vkUser.session?.ai_count, ai_date: vkUser.session?.ai_date };
+                  vkUser.session = {
+                    tags: vkUser.session?.tags || [],
+                    last_activity: Date.now(),
+                    bot_username: vkUser.session?.bot_username,
+                    old_bot_token: vkUser.session?.old_bot_token,
+                    ai_count: vkUser.session?.ai_count,
+                    ai_date: vkUser.session?.ai_date,
+                  };
                   await ydb.saveUser(vkUser);
                   return await renderStep(vkCtx, "START", vkToken);
                 case "MAIN_MENU":
@@ -487,28 +788,62 @@ export async function handleVkWebhook(event, context) {
                   vkUser.last_reminder_time = 0;
                   return await renderStep(vkCtx, "MAIN_MENU", vkToken);
                 case "RESUME_LAST":
-                  return await renderStep(vkCtx, vkUser.saved_state || "START", vkToken);
+                  return await renderStep(
+                    vkCtx,
+                    vkUser.saved_state || "START",
+                    vkToken,
+                  );
                 case "LOCKED_NEED_ID":
-                  return await renderStep(vkCtx, "LOCKED_TRAINING_INFO", vkToken);
+                  return await renderStep(
+                    vkCtx,
+                    "LOCKED_TRAINING_INFO",
+                    vkToken,
+                  );
                 case "LOCKED_NEED_PRO":
                   return await renderStep(vkCtx, "LOCKED_CRM_INFO", vkToken);
                 case "LOCKED_NEED_TRAINING":
-                  return await renderStep(vkCtx, "LOCKED_PRO_TRAINING_INFO", vkToken);
+                  return await renderStep(
+                    vkCtx,
+                    "LOCKED_PRO_TRAINING_INFO",
+                    vkToken,
+                  );
                 case "LOCKED_NEED_PLANS":
                   return await renderStep(vkCtx, "LOCKED_PLANS_INFO", vkToken);
                 case "PROMO_KIT": {
-                  const botName = vkUser.session?.bot_username || "sethubble_biz_bot";
-                  const apiGw = process.env.API_GW_HOST || "d5dsbah1d4ju0glmp9d0.3zvepvee.apigw.yandexcloud.net";
-                  const promoKitUrl = process.env.PROMO_KIT_URL || "https://novokreschennih.github.io/neurogen-promo-kit/";
-                  const mod3Param = (vkUser.session?.mod3_done || vkUser.bought_tripwire) ? "&mod3=1" : "";
-                  return await vkCtx.reply(`🚀 <b>Promo-Kit</b>\n\nТвой генератор маркетинговых материалов:\n${promoKitUrl}?bot=${botName}&api=https://${apiGw}${mod3Param}`, {});
+                  const botName =
+                    vkUser.session?.bot_username || "sethubble_biz_bot";
+                  const apiGw =
+                    process.env.API_GW_HOST ||
+                    "d5dsbah1d4ju0glmp9d0.3zvepvee.apigw.yandexcloud.net";
+                  const promoKitUrl =
+                    process.env.PROMO_KIT_URL ||
+                    "https://novokreschennih.github.io/neurogen-promo-kit/";
+                  const mod3Param =
+                    vkUser.session?.mod3_done || vkUser.bought_tripwire
+                      ? "&mod3=1"
+                      : "";
+                  return await vkCtx.reply(
+                    `🚀 <b>Promo-Kit</b>\n\nТвой генератор маркетинговых материалов:\n${promoKitUrl}?bot=${botName}&api=https://${apiGw}${mod3Param}`,
+                    {},
+                  );
                 }
-                case "REMINDER_1H_RESUME": case "REMINDER_3H_RESUME": case "REMINDER_24H_RESUME": case "REMINDER_48H_RESUME":
-                  return await renderStep(vkCtx, vkUser.saved_state || "START", vkToken);
+                case "REMINDER_1H_RESUME":
+                case "REMINDER_3H_RESUME":
+                case "REMINDER_24H_RESUME":
+                case "REMINDER_48H_RESUME":
+                  return await renderStep(
+                    vkCtx,
+                    vkUser.saved_state || "START",
+                    vkToken,
+                  );
 
                 // === MULTI_CHANNEL: Выбор дополнительных каналов ===
                 case "MULTI_CHANNEL_SELECT":
-                  return await renderStep(vkCtx, "MULTI_CHANNEL_SELECT", vkToken);
+                  return await renderStep(
+                    vkCtx,
+                    "MULTI_CHANNEL_SELECT",
+                    vkToken,
+                  );
                 case "CHANNEL_SETUP_VK":
                   vkUser.state = "WAIT_VK_GROUP_ID";
                   await ydb.saveUser(vkUser);
@@ -520,40 +855,57 @@ export async function handleVkWebhook(event, context) {
                   if (!email) {
                     vkUser.state = "WAIT_EMAIL_INPUT";
                     await ydb.saveUser(vkUser);
-                    return await vkCtx.reply("📧 Введи свой email для подключения рассылки:", {});
+                    return await vkCtx.reply(
+                      "📧 Введи свой email для подключения рассылки:",
+                      {},
+                    );
                   }
-                  return await renderStep(vkCtx, "CHANNEL_SETUP_EMAIL", vkToken);
+                  return await renderStep(
+                    vkCtx,
+                    "CHANNEL_SETUP_EMAIL",
+                    vkToken,
+                  );
                 case "CHANNEL_SKIPPED":
                   return await renderStep(vkCtx, "CHANNEL_SKIPPED", vkToken);
                 case "CHANNEL_SETUP_COMPLETE":
-                  channelManager.configureChannel(vkUser, "vk", { enabled: true, configured: true, configured_at: Date.now() });
+                  channelManager.configureChannel(vkUser, "vk", {
+                    enabled: true,
+                    configured: true,
+                    configured_at: Date.now(),
+                  });
                   await ydb.saveUser(vkUser);
-                  return await renderStep(vkCtx, "CHANNEL_SETUP_COMPLETE", vkToken);
+                  return await renderStep(
+                    vkCtx,
+                    "CHANNEL_SETUP_COMPLETE",
+                    vkToken,
+                  );
                 case "VK_HELP":
                   return await vkCtx.reply(
                     `❓ <b>Как найти ID сообщества VK:</b>\n\n` +
-                    `1️⃣ Открой своё сообщество VK\n` +
-                    `2️⃣ Нажми «Управление»\n` +
-                    `3️⃣ В адресной строке увидишь: vk.com/club<b>123456789</b>\n` +
-                    `4️⃣ Число после "club" — это и есть ID\n\n` +
-                    `Или: «Управление» → «Работа с API» → ID указан там.\n\n` +
-                    `Напиши ID (только цифры):`,
-                    {}
+                      `1️⃣ Открой своё сообщество VK\n` +
+                      `2️⃣ Нажми «Управление»\n` +
+                      `3️⃣ В адресной строке увидишь: vk.com/club<b>123456789</b>\n` +
+                      `4️⃣ Число после "club" — это и есть ID\n\n` +
+                      `Или: «Управление» → «Работа с API» → ID указан там.\n\n` +
+                      `Напиши ID (только цифры):`,
+                    {},
                   );
 
                 // === KEYWORD COMMANDS (аналоги команд Telegram) ===
-                case "VK_STATS": case "VK_STATISTIKA":
+                case "VK_STATS":
+                case "VK_STATISTIKA":
                   // Аналог /stats
                   const stats = await ydb.getPartnerStats(message.from_id);
                   return await vkCtx.reply(
                     `📊 <b>ТВОЯ СТАТИСТИКА</b>\n\n` +
-                    `👥 Всего в сети: ${stats.total || 0}\n` +
-                    `💰 Оплатили: ${stats.sales || 0}\n` +
-                    `🪙 NeuroCoins: ${vkUser.session?.xp || 0}\n\n` +
-                    `${vkUser.bought_tripwire ? '✅ PRO-статус активен' : '🔒 Для CRM нужен PRO-статус'}`,
-                    {}
+                      `👥 Всего в сети: ${stats.total || 0}\n` +
+                      `💰 Оплатили: ${stats.sales || 0}\n` +
+                      `🪙 NeuroCoins: ${vkUser.session?.xp || 0}\n\n` +
+                      `${vkUser.bought_tripwire ? "✅ PRO-статус активен" : "🔒 Для CRM нужен PRO-статус"}`,
+                    {},
                   );
-                case "VK_TOOLS": case "VK_INSTRUMENTY":
+                case "VK_TOOLS":
+                case "VK_INSTRUMENTY":
                   // Аналог /tools
                   return await renderStep(vkCtx, "TOOLS_MENU", vkToken);
                 case "VK_MENU":
@@ -563,32 +915,53 @@ export async function handleVkWebhook(event, context) {
                   return await renderStep(vkCtx, "MAIN_MENU", vkToken);
               }
               if (scenarioVK.steps[callbackData]) {
-                const navSteps = ["START", "RESUME_GATE", "MAIN_MENU", "Pre_Training_Logic", "EDIT_PROFILE"];
-                if (!navSteps.includes(vkUser.state)) vkUser.saved_state = vkUser.state;
+                const navSteps = [
+                  "START",
+                  "RESUME_GATE",
+                  "MAIN_MENU",
+                  "Pre_Training_Logic",
+                  "EDIT_PROFILE",
+                ];
+                if (!navSteps.includes(vkUser.state))
+                  vkUser.saved_state = vkUser.state;
                 vkUser.session.last_vk_step = callbackData;
                 await ydb.saveUser(vkUser);
                 return await renderStep(vkCtx, callbackData, vkToken);
               }
-              return await vkCtx.reply("⚡ Система обрабатывает твой запрос...");
+              return await vkCtx.reply(
+                "⚡ Система обрабатывает твой запрос...",
+              );
             }
 
-            if (txt.toLowerCase() === "старт" || txt.toLowerCase() === "/start" || txt.toLowerCase() === "начать") {
-              vkUser.state = "START"; await ydb.saveUser(vkUser); return await renderStep(vkCtx, "START", vkToken);
+            if (
+              txt.toLowerCase() === "старт" ||
+              txt.toLowerCase() === "/start" ||
+              txt.toLowerCase() === "начать"
+            ) {
+              vkUser.state = "START";
+              await ydb.saveUser(vkUser);
+              return await renderStep(vkCtx, "START", vkToken);
             }
 
             // === KEYWORD COMMANDS (текстовые команды) ===
-            if (txt.toLowerCase() === "статистика" || txt.toLowerCase() === "стата") {
+            if (
+              txt.toLowerCase() === "статистика" ||
+              txt.toLowerCase() === "стата"
+            ) {
               const stats = await ydb.getPartnerStats(message.from_id);
               return await vkCtx.reply(
                 `📊 <b>ТВОЯ СТАТИСТИКА</b>\n\n` +
-                `👥 Всего в сети: ${stats.total || 0}\n` +
-                `💰 Оплатили: ${stats.sales || 0}\n` +
-                `🪙 NeuroCoins: ${vkUser.session?.xp || 0}\n\n` +
-                `${vkUser.bought_tripwire ? '✅ PRO-статус активен' : '🔒 Для CRM нужен PRO-статус'}`,
-                {}
+                  `👥 Всего в сети: ${stats.total || 0}\n` +
+                  `💰 Оплатили: ${stats.sales || 0}\n` +
+                  `🪙 NeuroCoins: ${vkUser.session?.xp || 0}\n\n` +
+                  `${vkUser.bought_tripwire ? "✅ PRO-статус активен" : "🔒 Для CRM нужен PRO-статус"}`,
+                {},
               );
             }
-            if (txt.toLowerCase() === "инструменты" || txt.toLowerCase() === "tools") {
+            if (
+              txt.toLowerCase() === "инструменты" ||
+              txt.toLowerCase() === "tools"
+            ) {
               return await renderStep(vkCtx, "TOOLS_MENU", vkToken);
             }
             if (txt.toLowerCase() === "меню" || txt.toLowerCase() === "menu") {
@@ -599,12 +972,19 @@ export async function handleVkWebhook(event, context) {
 
             // === ОБРАБОТКА ВВОДА В СОСТОЯНИЯХ ОЖИДАНИЯ ===
             if (vkUser.state === "WAIT_REG_ID") {
-              log.info(`[VK] WAIT_REG_ID input`, { txt, userId: vkUser.user_id });
-              if (isNaN(txt)) return await vkCtx.reply("❌ Пришли только цифры.", {});
+              log.info(`[VK] WAIT_REG_ID input`, {
+                txt,
+                userId: vkUser.user_id,
+              });
+              if (isNaN(txt))
+                return await vkCtx.reply("❌ Пришли только цифры.", {});
               vkUser.sh_user_id = txt;
               vkUser.state = "WAIT_REG_TAIL";
               await ydb.saveUser(vkUser);
-              return await vkCtx.reply("✅ Принято! Теперь скопируй и пришли свою <b>Ссылку для приглашений</b> полностью (например: https://sethubble.com/ru/p_xyt):", {});
+              return await vkCtx.reply(
+                "✅ Принято! Теперь скопируй и пришли свою <b>Ссылку для приглашений</b> полностью (например: https://sethubble.com/ru/p_xyt):",
+                {},
+              );
             }
 
             if (vkUser.state === "WAIT_REG_TAIL") {
@@ -615,7 +995,10 @@ export async function handleVkWebhook(event, context) {
               vkUser.sh_ref_tail = tail;
               vkUser.state = "Training_Main";
               await ydb.saveUser(vkUser);
-              await vkCtx.reply("✨ <b>Аккаунт привязан!</b>\n\nЯ открыл для тебя доступ к материалам. В Главном Меню теперь разблокирован раздел «Обучение».\n\nА сейчас переходим сразу к делу 👇", {});
+              await vkCtx.reply(
+                "✨ <b>Аккаунт привязан!</b>\n\nЯ открыл для тебя доступ к материалам. В Главном Меню теперь разблокирован раздел «Обучение».\n\nА сейчас переходим сразу к делу 👇",
+                {},
+              );
               return await renderStep(vkCtx, "Training_Main", vkToken);
             }
 
@@ -623,7 +1006,10 @@ export async function handleVkWebhook(event, context) {
               vkUser.session.tmp_shui = txt;
               vkUser.state = "WAIT_SH_TAIL_P";
               await ydb.saveUser(vkUser);
-              return await vkCtx.reply("Пришли свою ссылку для приглашений полностью (например: https://sethubble.com/ru/p_xyt):", {});
+              return await vkCtx.reply(
+                "Пришли свою ссылку для приглашений полностью (например: https://sethubble.com/ru/p_xyt):",
+                {},
+              );
             }
 
             if (vkUser.state === "WAIT_SH_TAIL_P") {
@@ -646,14 +1032,14 @@ export async function handleVkWebhook(event, context) {
 
               return await vkCtx.reply(
                 `🎯 <b>ШАГ 3: СТАНЬ ПАРТНЁРОМ PROДУКТА</b>\n\n` +
-                `Чтобы ты мог получать деньги с продаж, тебе нужно добавить этот продукт в свой личный кабинет SetHubble.\n\n` +
-                `<b>ЧТО ДЕЛАТЬ:</b>\n` +
-                `1. Перейди по ссылке своего пригласителя:\n` +
-                `<a href="${regLink}">${regLink}</a>\n\n` +
-                `2. Зарегистрируйся/войди в свой аккаунт\n` +
-                `3. Продукт автоматически добавится в твой кабинет\n\n` +
-                `<i>💡 Это займёт 1-2 минуты. После регистрации вернись в бота и напиши любое слово (например, "готов"):</i>`,
-                {}
+                  `Чтобы ты мог получать деньги с продаж, тебе нужно добавить этот продукт в свой личный кабинет SetHubble.\n\n` +
+                  `<b>ЧТО ДЕЛАТЬ:</b>\n` +
+                  `1. Перейди по ссылке своего пригласителя:\n` +
+                  `<a href="${regLink}">${regLink}</a>\n\n` +
+                  `2. Зарегистрируйся/войди в свой аккаунт\n` +
+                  `3. Продукт автоматически добавится в твой кабинет\n\n` +
+                  `<i>💡 Это займёт 1-2 минуты. После регистрации вернись в бота и напиши любое слово (например, "готов"):</i>`,
+                {},
               );
             }
 
@@ -668,13 +1054,20 @@ export async function handleVkWebhook(event, context) {
               vkUser.state = "Module_3_Offline";
               await ydb.saveUser(vkUser);
 
-              await vkCtx.reply(`🎉 Данные сохранены! Переходим к следующему шагу 👇`, {});
+              await vkCtx.reply(
+                `🎉 Данные сохранены! Переходим к следующему шагу 👇`,
+                {},
+              );
               return await renderStep(vkCtx, "Module_3_Offline", vkToken);
             }
 
             // === MULTI_CHANNEL: Настройка VK сообщества ===
             if (vkUser.state === "WAIT_VK_GROUP_ID") {
-              if (isNaN(txt)) return await vkCtx.reply("❌ ID сообщества — только цифры. Попробуй ещё раз:", {});
+              if (isNaN(txt))
+                return await vkCtx.reply(
+                  "❌ ID сообщества — только цифры. Попробуй ещё раз:",
+                  {},
+                );
               channelManager.enableChannel(vkUser, "vk");
               channelManager.setChannelConfig(vkUser, "vk", {
                 group_id: txt,
@@ -682,16 +1075,27 @@ export async function handleVkWebhook(event, context) {
                 configured: true,
                 configured_at: Date.now(),
               });
-              channelManager.setChannelState(vkUser, "vk", "CHANNEL_SETUP_VK_SUCCESS");
+              channelManager.setChannelState(
+                vkUser,
+                "vk",
+                "CHANNEL_SETUP_VK_SUCCESS",
+              );
               await ydb.saveUser(vkUser);
-              return await renderStep(vkCtx, "CHANNEL_SETUP_VK_SUCCESS", vkToken);
+              return await renderStep(
+                vkCtx,
+                "CHANNEL_SETUP_VK_SUCCESS",
+                vkToken,
+              );
             }
 
             // === MULTI_CHANNEL: Ввод email ===
             if (vkUser.state === "WAIT_EMAIL_INPUT") {
               const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
               if (!emailRegex.test(txt)) {
-                return await vkCtx.reply("❌ Это не похоже на email. Попробуй ещё раз:", {});
+                return await vkCtx.reply(
+                  "❌ Это не похоже на email. Попробуй ещё раз:",
+                  {},
+                );
               }
               vkUser.session.email = txt;
               vkUser.session.email_verified = true; // TODO: send verification code
@@ -699,31 +1103,64 @@ export async function handleVkWebhook(event, context) {
               channelManager.configureChannel(vkUser, "email", {
                 subscribed: true,
               });
-              channelManager.setChannelState(vkUser, "email", "CHANNEL_SETUP_EMAIL_SUCCESS");
+              channelManager.setChannelState(
+                vkUser,
+                "email",
+                "CHANNEL_SETUP_EMAIL_SUCCESS",
+              );
               await ydb.saveUser(vkUser);
 
               // Отправляем приветственное письмо
               if (sendEmail) {
-                const { templates } = await import("../../core/email/email_service.js");
+                const { templates } =
+                  await import("../../core/email/email_service.js");
                 const tpl = templates.welcome(vkUser);
-                await sendEmail({ to: txt, subject: tpl.subject, text: tpl.text, html: tpl.html });
+                await sendEmail({
+                  to: txt,
+                  subject: tpl.subject,
+                  text: tpl.text,
+                  html: tpl.html,
+                });
               }
 
-              return await renderStep(vkCtx, "CHANNEL_SETUP_EMAIL_SUCCESS", vkToken);
+              return await renderStep(
+                vkCtx,
+                "CHANNEL_SETUP_EMAIL_SUCCESS",
+                vkToken,
+              );
             }
 
             // === СЕКРЕТНЫЕ СЛОВА ===
             const secretsConfig = {
-              WAIT_SECRET_1: { word: "гибрид", xp: 20, next: "Module_2_Online", flag: "mod1_done", awardKey: "mod1_awarded" },
-              WAIT_SECRET_2: { word: "облако", xp: 30, next: "WAIT_BOT_TOKEN", flag: "mod2_done", awardKey: "mod2" },
-              WAIT_SECRET_3: { word: "сарафан", xp: 40, next: "Lesson_Final_Comparison", flag: "mod3_done", awardKey: "mod3_awarded" },
+              WAIT_SECRET_1: {
+                word: "гибрид",
+                xp: 20,
+                next: "Module_2_Online",
+                flag: "mod1_done",
+                awardKey: "mod1_awarded",
+              },
+              WAIT_SECRET_2: {
+                word: "облако",
+                xp: 30,
+                next: "WAIT_BOT_TOKEN",
+                flag: "mod2_done",
+                awardKey: "mod2",
+              },
+              WAIT_SECRET_3: {
+                word: "сарафан",
+                xp: 40,
+                next: "Lesson_Final_Comparison",
+                flag: "mod3_done",
+                awardKey: "mod3_awarded",
+              },
             };
 
             if (secretsConfig[vkUser.state]) {
               const config = secretsConfig[vkUser.state];
               if (txt.toLowerCase().trim() === config.word.toLowerCase()) {
                 if (!vkUser.session.xp_awarded) vkUser.session.xp_awarded = {};
-                const alreadyAwarded = vkUser.session.xp_awarded[config.awardKey];
+                const alreadyAwarded =
+                  vkUser.session.xp_awarded[config.awardKey];
 
                 if (!alreadyAwarded) {
                   vkUser.session.xp = (vkUser.session.xp || 0) + config.xp;
@@ -732,7 +1169,10 @@ export async function handleVkWebhook(event, context) {
                 }
 
                 if (!alreadyAwarded) {
-                  await vkCtx.reply(`✅ <b>КОД ПРИНЯТ!</b>\n\n🪙 Тебе начислено +${config.xp} NeuroCoins! Твой баланс: ${vkUser.session.xp}\n\nПродолжаем путь 👇`, {});
+                  await vkCtx.reply(
+                    `✅ <b>КОД ПРИНЯТ!</b>\n\n🪙 Тебе начислено +${config.xp} NeuroCoins! Твой баланс: ${vkUser.session.xp}\n\nПродолжаем путь 👇`,
+                    {},
+                  );
                 }
 
                 if (config.next === "WAIT_BOT_TOKEN") {
@@ -740,11 +1180,11 @@ export async function handleVkWebhook(event, context) {
                   await ydb.saveUser(vkUser);
                   return await vkCtx.reply(
                     `🚀 <b>ПЕРЕХОДИМ К ПРАКТИКЕ: ЗАПУСК ИИ-КЛОНА</b>\n\n` +
-                    `Отлично, секретный код принят! 🪙\n\n` +
-                    `Ты уже оформил профиль своего бота по инструкции из Модуля 2. Теперь нам осталось подключить его к нашему нейроядру. Твой бот оживет и в нём сразу будут зашиты твои реферальные ссылки.\n\n` +
-                    `Скопируй и пришли мне <b>API TOKEN</b> твоего нового бота из @BotFather (это длинный набор букв и цифр).\n\n` +
-                    `🔒 <i>Помни: он не дает нам доступ к твоему аккаунту. Это совершенно безопасно.</i>`,
-                    {}
+                      `Отлично, секретный код принят! 🪙\n\n` +
+                      `Ты уже оформил профиль своего бота по инструкции из Модуля 2. Теперь нам осталось подключить его к нашему нейроядру. Твой бот оживет и в нём сразу будут зашиты твои реферальные ссылки.\n\n` +
+                      `Скопируй и пришли мне <b>API TOKEN</b> твоего нового бота из @BotFather (это длинный набор букв и цифр).\n\n` +
+                      `🔒 <i>Помни: он не дает нам доступ к твоему аккаунту. Это совершенно безопасно.</i>`,
+                    {},
                   );
                 }
 
@@ -752,13 +1192,22 @@ export async function handleVkWebhook(event, context) {
                 await ydb.saveUser(vkUser);
                 return await renderStep(vkCtx, config.next, vkToken);
               } else {
-                return await vkCtx.reply("❌ <b>Неверное слово.</b>\n\nЗагляни в конец статьи еще раз, найди правильное слово и пришли его мне.", {});
+                return await vkCtx.reply(
+                  "❌ <b>Неверное слово.</b>\n\nЗагляни в конец статьи еще раз, найди правильное слово и пришли его мне.",
+                  {},
+                );
               }
             }
 
             if (vkUser.state === "WAIT_BOT_TOKEN") {
-              const res = await fetch(`https://api.telegram.org/bot${txt}/getMe`).then((r) => r.json());
-              if (!res.ok) return await vkCtx.reply("❌ Неверный токен. Проверь и пришли ещё раз:", {});
+              const res = await fetch(
+                `https://api.telegram.org/bot${txt}/getMe`,
+              ).then((r) => r.json());
+              if (!res.ok)
+                return await vkCtx.reply(
+                  "❌ Неверный токен. Проверь и пришли ещё раз:",
+                  {},
+                );
 
               vkUser.saved_state = txt;
               vkUser.session.bot_username = res.result.username;
@@ -768,30 +1217,49 @@ export async function handleVkWebhook(event, context) {
                 await ydb.saveUser(vkUser);
                 return await vkCtx.reply(
                   `В моей базе уже есть твои данные SetHubble:\n🆔 ID: <b>${vkUser.sh_user_id}</b>\n🔗 Хвост: <b>${vkUser.sh_ref_tail}</b>\n\nИспользуем их для настройки твоего нового клона?\n\n✅ ДА, ВСЁ ВЕРНО\n✏️ НЕТ, ВВЕСТИ ДРУГИЕ`,
-                  {}
+                  {},
                 );
               } else {
                 vkUser.state = "WAIT_SH_ID_P";
                 await ydb.saveUser(vkUser);
-                return await vkCtx.reply("Пришли цифровой ID для привязки к этому боту (только цифры):", {});
+                return await vkCtx.reply(
+                  "Пришли цифровой ID для привязки к этому боту (только цифры):",
+                  {},
+                );
               }
             }
 
             // === ДЕФОЛТ: Если состояние не распознано — показать START ===
             if (!vkUser.state || vkUser.state === "VK_LEAD") {
-              vkUser.state = "START"; await ydb.saveUser(vkUser); return await renderStep(vkCtx, "START", vkToken);
+              vkUser.state = "START";
+              await ydb.saveUser(vkUser);
+              return await renderStep(vkCtx, "START", vkToken);
             }
             await renderStep(vkCtx, vkUser.state, vkToken);
-          } catch (e) { log.error("[VK ROUTER ERROR]", e); }
+          } catch (e) {
+            log.error("[VK ROUTER ERROR]", e);
+          }
         };
 
         await runVkRouter();
-        return { statusCode: 200, headers: { "Content-Type": "text/plain" }, body: "ok" };
+        return {
+          statusCode: 200,
+          headers: { "Content-Type": "text/plain" },
+          body: "ok",
+        };
       }
-      return { statusCode: 200, headers: { "Content-Type": "text/plain" }, body: "ok" };
+      return {
+        statusCode: 200,
+        headers: { "Content-Type": "text/plain" },
+        body: "ok",
+      };
     } catch (err) {
       log.error("[VK WEBHOOK ERROR]", err);
-      return { statusCode: 200, headers: { "Content-Type": "text/plain" }, body: "ok" };
+      return {
+        statusCode: 200,
+        headers: { "Content-Type": "text/plain" },
+        body: "ok",
+      };
     }
   }
 
