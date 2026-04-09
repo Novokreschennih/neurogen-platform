@@ -1,8 +1,15 @@
 /**
- * Cron Jobs Handler
- * Обрабатывает плановые напоминания и дожимы
+ * Cron Jobs Handler — v5.0 Multi-Channel
+ * Обрабатывает плановые напоминания и дожимы через все каналы:
+ * - Telegram (Telegraf)
+ * - VK (VK API messages.send)
+ * - Email (Yandex Cloud Postbox)
+ *
  * action: params.action === "cron"
  */
+
+import { templates as emailTemplates } from "../email/email_service.js";
+import channelManager from "../channels/channel_manager.js";
 
 export async function handleCronJobs(event, context) {
   const {
@@ -24,7 +31,7 @@ export async function handleCronJobs(event, context) {
 
   if (params.action !== "cron") return null;
 
-  log.info(`[CRON] ========== ЗАПУСК CRON ==========`);
+  log.info(`[CRON] ========== ЗАПУСК CRON (v5.0 Multi-Channel) ==========`);
   log.info(
     `[CRON] Критерии: неактивны > ${CRON_STALE_HOURS}ч, макс. пользователей: ${CRON_MAX_USERS_PER_RUN}`,
   );
@@ -35,24 +42,16 @@ export async function handleCronJobs(event, context) {
   log.info(`[CRON] Найдено неактивных пользователей: ${stale.length}`);
   log.info(`[CRON] Будет обработано в этом запуске: ${usersToProcess.length}`);
 
-  if (stale.length > CRON_MAX_USERS_PER_RUN) {
-    log.info(
-      `[CRON] ⚠️ Очередь большая! Оставшиеся ${stale.length - CRON_MAX_USERS_PER_RUN} пользователей будут обработаны в следующем запуске`,
-    );
-  }
-
   if (usersToProcess.length === 0) {
     log.info(`[CRON] ⚠️ В базе нет пользователей для дожимов/напоминаний`);
   } else {
-    log.info(`[CRON] Пользователи в обработке (первые 10):`);
-    usersToProcess.slice(0, 10).forEach((u, idx) => {
-      log.info(
-        `  [${idx + 1}] User ${u.user_id}: state=${u.state}, last_seen=${Math.round((Date.now() - (u.last_seen || 0)) / 3600000)}ч назад, bot=${u.bot_token?.substring(0, 20) || "N/A"}...`,
-      );
+    // Группировка по каналам для логирования
+    const byChannel = { telegram: 0, vk: 0, email: 0, web: 0, unknown: 0 };
+    usersToProcess.forEach((u) => {
+      const ch = channelManager.getPrimaryChannel(u) || "unknown";
+      byChannel[ch] = (byChannel[ch] || 0) + 1;
     });
-    if (usersToProcess.length > 10) {
-      log.info(`  ... и ещё ${usersToProcess.length - 10} пользователей`);
-    }
+    log.info(`[CRON] Распределение по каналам:`, byChannel);
   }
 
   const shouldSendReminder = (user) => {
@@ -93,6 +92,81 @@ export async function handleCronJobs(event, context) {
     return false;
   };
 
+  /**
+   * Отправка напоминания через Email (фолбэк если основной канал недоступен)
+   */
+  async function sendEmailReminder(user, step) {
+    const email = user.session?.email;
+    if (!email) return { sent: false, error: "No email", channel: "email" };
+
+    const tpl = emailTemplates.reminder(user, step);
+    const { sendEmail } = await import("../email/email_service.js");
+    const result = await sendEmail({ to: email, ...tpl });
+
+    return {
+      sent: result.success,
+      error: result.error,
+      errorCode: result.success ? null : 500,
+      channel: "email",
+    };
+  }
+
+  /**
+   * Отправка дожима через Email
+   */
+  async function sendEmailDozhim(user, nextStep, offerType) {
+    const email = user.session?.email;
+    if (!email) return { sent: false, error: "No email", channel: "email" };
+
+    const tpl = emailTemplates.followup(user, offerType || "tripwire");
+    const { sendEmail } = await import("../email/email_service.js");
+    const result = await sendEmail({ to: email, ...tpl });
+
+    return {
+      sent: result.success,
+      error: result.error,
+      errorCode: result.success ? null : 500,
+      channel: "email",
+    };
+  }
+
+  /**
+   * Мультиканальная отправка: пробуем основной канал, при неудаче — фолбэк на email
+   */
+  async function sendWithFallback(user, stepKey, maxRetries) {
+    // Основная отправка через sendStepToUser (автоматически определяет канал)
+    let result = await sendStepToUser(
+      user.bot_token,
+      user.user_id,
+      stepKey,
+      user,
+      maxRetries,
+    );
+
+    // Если основной канал не сработал и есть email — пробуем email
+    if (!result.sent && user.session?.email && user.session?.channels?.email?.configured) {
+      log.info(`[CRON FALLBACK] Primary channel failed, trying email`, {
+        userId: user.user_id,
+        primaryChannel: result.channel,
+      });
+
+      const isReminder = stepKey.startsWith("REMINDER_");
+      if (isReminder) {
+        result = await sendEmailReminder(user, stepKey);
+      } else {
+        const offerType = stepKey.includes("Tripwire") || stepKey.includes("FollowUp_Tripwire")
+          ? "tripwire"
+          : stepKey.includes("Plan") || stepKey.includes("FollowUp_Plan")
+            ? "tariff"
+            : "tripwire";
+        result = await sendEmailDozhim(user, stepKey, offerType);
+      }
+    }
+
+    return result;
+  }
+
+  // === СТАТИСТИКА ПО КАНАЛАМ ===
   const stats = {
     total: usersToProcess.length,
     reminded: 0,
@@ -100,6 +174,13 @@ export async function handleCronJobs(event, context) {
     tripwire_bought: 0,
     skipped: 0,
     failed: 0,
+    // По каналам
+    byChannel: {
+      telegram: { sent: 0, failed: 0 },
+      vk: { sent: 0, failed: 0 },
+      email: { sent: 0, failed: 0 },
+      web: { sent: 0, failed: 0 },
+    },
   };
 
   for (const u of usersToProcess) {
@@ -115,6 +196,9 @@ export async function handleCronJobs(event, context) {
         continue;
       }
 
+      // Определяем основной канал пользователя
+      const primaryChannel = channelManager.getPrimaryChannel(u) || "telegram";
+
       let actionTaken = false;
       let sendResult = null;
 
@@ -123,27 +207,40 @@ export async function handleCronJobs(event, context) {
         const step = `REMINDER_${REMINDER_INTERVALS[u.reminders_count || 0]}H`;
         if (!u.saved_state) u.saved_state = u.state;
 
-        sendResult = await sendStepToUser(u.bot_token, u.user_id, step, u, MAX_RETRIES);
+        sendResult = await sendWithFallback(u, step, MAX_RETRIES);
 
         if (sendResult.sent) {
           u.last_reminder_time = Date.now();
           u.reminders_count = (u.reminders_count || 0) + 1;
           stats.reminded++;
           actionTaken = true;
-          log.info(`[REMINDER] Sent`, { userId: u.user_id, step });
+
+          // Статистика по каналу
+          const ch = sendResult.channel || primaryChannel;
+          if (stats.byChannel[ch]) stats.byChannel[ch].sent++;
+
+          log.info(`[REMINDER] Sent`, {
+            userId: u.user_id,
+            step,
+            channel: ch,
+          });
         } else {
           if (sendResult.errorCode === 403) {
             u.session.is_banned = true;
             u.session.banned_at = Date.now();
             u.session.ban_reason = sendResult.error || "Bot blocked";
-            log.warn(`[CRON] User blocked bot`, { userId: u.user_id });
+            log.warn(`[CRON] User blocked`, { userId: u.user_id, channel: primaryChannel });
             stats.skipped++;
           } else {
             stats.failed++;
+            const ch = sendResult.channel || primaryChannel;
+            if (stats.byChannel[ch]) stats.byChannel[ch].failed++;
+
             log.error(`[REMINDER] Failed`, {
               userId: u.user_id,
               error: sendResult.error,
               code: sendResult.errorCode,
+              channel: ch,
             });
           }
         }
@@ -157,14 +254,21 @@ export async function handleCronJobs(event, context) {
           u.state === "Offer_Tripwire";
 
         if (boughtTripwire && isTripwireDozhim) {
-          sendResult = await sendStepToUser(
-            u.bot_token, u.user_id, "Training_Pro_Main", u, MAX_RETRIES,
+          sendResult = await sendWithFallback(
+            u, "Training_Pro_Main", MAX_RETRIES,
           );
           if (sendResult.sent) {
             u.state = "Training_Pro_Main";
             stats.tripwire_bought++;
             actionTaken = true;
-            log.info(`[DOZHIM] User bought Tripwire! Redirected to PRO`, { userId: u.user_id });
+
+            const ch = sendResult.channel || primaryChannel;
+            if (stats.byChannel[ch]) stats.byChannel[ch].sent++;
+
+            log.info(`[DOZHIM] User bought Tripwire! Redirected to PRO`, {
+              userId: u.user_id,
+              channel: ch,
+            });
           } else {
             if (sendResult.errorCode === 403) {
               u.session.is_banned = true;
@@ -173,6 +277,8 @@ export async function handleCronJobs(event, context) {
               stats.skipped++;
             } else {
               stats.failed++;
+              const ch = sendResult.channel || primaryChannel;
+              if (stats.byChannel[ch]) stats.byChannel[ch].failed++;
             }
           }
         } else if (u.state.includes("Plan") && u.tariff === "PAID") {
@@ -185,13 +291,21 @@ export async function handleCronJobs(event, context) {
             if (next.includes("Tripwire") && u.bought_tripwire) {
               stats.skipped++;
             } else {
-              sendResult = await sendStepToUser(u.bot_token, u.user_id, next, u, MAX_RETRIES);
+              sendResult = await sendWithFallback(u, next, MAX_RETRIES);
               if (sendResult.sent) {
                 u.state = next;
                 u.session.last_dozhim_time = Date.now();
                 stats.dozhim++;
                 actionTaken = true;
-                log.info(`[DOZHIM] Sent`, { userId: u.user_id, nextStep: next });
+
+                const ch = sendResult.channel || primaryChannel;
+                if (stats.byChannel[ch]) stats.byChannel[ch].sent++;
+
+                log.info(`[DOZHIM] Sent`, {
+                  userId: u.user_id,
+                  nextStep: next,
+                  channel: ch,
+                });
               } else {
                 if (sendResult.errorCode === 403) {
                   u.session.is_banned = true;
@@ -200,6 +314,8 @@ export async function handleCronJobs(event, context) {
                   stats.skipped++;
                 } else {
                   stats.failed++;
+                  const ch = sendResult.channel || primaryChannel;
+                  if (stats.byChannel[ch]) stats.byChannel[ch].failed++;
                 }
               }
             }
@@ -232,6 +348,7 @@ export async function handleCronJobs(event, context) {
   log.info(`[CRON] 💰 Куплено Tripwire: ${stats.tripwire_bought}`);
   log.info(`[CRON] ⏭️ Пропущено: ${stats.skipped}`);
   log.info(`[CRON] ❌ Ошибок: ${stats.failed}`);
+  log.info(`[CRON] По каналам:`, stats.byChannel);
   log.info(`[CRON] =================================`);
 
   return response(200, "ok");

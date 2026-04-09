@@ -298,6 +298,119 @@ export const texts = {
         }
       },
 
+  // === MULTI_CHANNEL: Выбор дополнительных каналов ===
+  MULTI_CHANNEL_SELECT: (links, user) => {
+        const channels = user.session?.channels || {};
+        const enabled = Object.keys(channels).filter(ch => channels[ch]?.enabled);
+        const configured = Object.keys(channels).filter(ch => channels[ch]?.configured);
+
+        let summary = "";
+        if (configured.length > 0) {
+          summary = "\n<b>✅ Уже настроены:</b> " + configured.map(ch => {
+            const names = { telegram: "📱 Telegram", vk: "💬 VK", web: "🌐 Web", email: "📧 Email" };
+            return names[ch] || ch;
+          }).join(", ");
+        }
+
+        return (
+          `🌐 <b>МУЛЬТИКАНАЛЬНАЯ СИСТЕМА</b>\n\n` +
+          `Ты уже настроил один канал. Но настоящие деньги — это охват везде, где сидят твои клиенты.\n\n` +
+          `<b>ДОСТУПНЫЕ КАНАЛЫ:</b>\n` +
+          `💬 <b>VKontakte</b> — аудитория 80M+ в РФ (не заблокирован)\n` +
+          `🌐 <b>Чат на сайте</b> — AI-консультант прямо на твоей странице\n` +
+          `📧 <b>Email-рассылка</b> — автоматические дожимы и напоминания\n\n` +
+          `Каждый канал работает автономно: ловит лидов, прогревает, продаёт.\n\n` +
+          `Какие каналы хочешь подключить?${summary || ""}`
+        );
+      },
+
+  // === CHANNEL_SETUP_VK: Шаг 1 — ID сообщества ===
+  CHANNEL_SETUP_VK: (links, user) =>
+        `💬 <b>ПОДКЛЮЧЕНИЕ VKONTAKTE</b>\n\n` +
+        `VK — лучший канал для работы с аудиторией в РФ. Бот не заблокирован, охват огромный.\n\n` +
+        `<b>ЧТО НУЖНО СДЕЛАТЬ:</b>\n` +
+        `1️⃣ Создай сообщество VK (или используй существующее)\n` +
+        `2️⃣ Открой «Управление» → «Работа с API» → «Callback API»\n` +
+        `3️⃣ В настройках Callback API найди <b>ID сообщества</b> (число)\n\n` +
+        `<i>Если сообщества ещё нет — создай его, это займёт 2 минуты.</i>\n\n` +
+        `Напиши ID своего сообщества (число):`,
+
+  // === CHANNEL_SETUP_VK_SUCCESS: VK подключён ===
+  CHANNEL_SETUP_VK_SUCCESS: (links, user) => {
+        const groupId = user.session?.channels?.vk?.group_id || "";
+        return (
+          `✅ <b>VK ПОДКЛЮЧЁН!</b>\n\n` +
+          `ID сообщества: <code>${groupId}</code>\n\n` +
+          `Теперь VK-бот будет принимать лидов и вести их по воронке.\n\n` +
+          `⚠️ <b>ВАЖНО:</b> Не забудь настроить Callback API в сообществе:\n` +
+          `• URL: https://d5dsbah1d4ju0glmp9d0.3zvepvee.apigw.yandexcloud.net\n` +
+          `• Типы событий: message_new, message_event\n\n` +
+          `Хочешь подключить ещё каналы?`
+        );
+      },
+
+  // === CHANNEL_SETUP_WEB: Шаг — веб-виджет ===
+  CHANNEL_SETUP_WEB: (links, user) => {
+        const embedCode = `<script src="https://sethubble.ru/js/widget.js" data-bot="${user.sh_user_id || 'demo'}"></script>`;
+        return (
+          `🌐 <b>ПОДКЛЮЧЕНИЕ ЧАТА НА САЙТЕ</b>\n\n` +
+          `AI-консультант прямо на твоей странице. Посетители задают вопросы — бот отвечает и ведёт по воронке.\n\n` +
+          `<b>КАК ПОДКЛЮЧИТЬ:</b>\n` +
+          `1️⃣ Скопируй код ниже:\n` +
+          `<code>${embedCode}</code>\n\n` +
+          `2️⃣ Вставь его перед закрывающим тегом </body> на своём сайте\n\n` +
+          `3️⃣ Готово! Виджет появится в правом нижнем углу.\n\n` +
+          `Хочешь подключить ещё каналы?`
+        );
+      },
+
+  // === CHANNEL_SETUP_EMAIL: Шаг — подтверждение email ===
+  CHANNEL_SETUP_EMAIL: (links, user) => {
+        const email = user.session?.email || "не указан";
+        return (
+          `📧 <b>ПОДКЛЮЧЕНИЕ EMAIL-РАССЫЛКИ</b>\n\n` +
+          `Email — канал для автоматических дожимов и напоминаний. Работает даже когда пользователь не в мессенджере.\n\n` +
+          `<b>ТВОЙ EMAIL:</b> <code>${email}</code>\n\n` +
+          `Мы отправим проверочный код на этот адрес. Введи его здесь для подтверждения.\n\n` +
+          `<i>Если email неверный — введи новый сейчас.</i>`
+        );
+      },
+
+  // === CHANNEL_SETUP_EMAIL_SUCCESS: Email подтверждён ===
+  CHANNEL_SETUP_EMAIL_SUCCESS: (links, user) =>
+        `✅ <b>EMAIL ПОДТВЕРЖДЁН!</b>\n\n` +
+        `Теперь ты будешь получать:\n` +
+        `• Напоминания о продолжении обучения\n` +
+        `• Дожимы по офферам (Tripwire, тарифы)\n` +
+        `• Уведомления о новых лидах в сети\n\n` +
+        `Хочешь подключить ещё каналы?`,
+
+  // === CHANNEL_SETUP_COMPLETE: Все каналы настроены ===
+  CHANNEL_SETUP_COMPLETE: (links, user) => {
+        const channels = user.session?.channels || {};
+        const configured = Object.keys(channels).filter(ch => channels[ch]?.configured);
+        const names = { telegram: "📱 Telegram", vk: "💬 VK", web: "🌐 Web", email: "📧 Email" };
+
+        return (
+          `🎉 <b>СИСТЕМА ПОЛНОСТЬЮ НАСТРОЕНА!</b>\n\n` +
+          `Подключённые каналы:\n` +
+          configured.map(ch => `  ${names[ch] || ch} ✅`).join("\n") + "\n\n" +
+          `Каждый канал работает автономно:\n` +
+          `• Ловит лидов из твоего трафика\n` +
+          `• Прогревает по воронке\n` +
+          `• Продаёт PRO-статус\n` +
+          `• Отправляет дожимы и напоминания\n\n` +
+          `🚀 <b>Следующий шаг:</b> продолжай обучение или перейди к модулям PRO-уровня.\n\n` +
+          `<i>Управление каналами — кнопка «Инструменты» внизу.</i>`
+        );
+      },
+
+  // === CHANNEL_SKIPPED: Пользователь пропустил ===
+  CHANNEL_SKIPPED: (links, user) =>
+        `👍 <b>Понял!</b>\n\n` +
+        `Можешь подключить дополнительные каналы позже через меню «Инструменты».\n\n` +
+        `А пока — продолжим обучение? Там ещё много интересного 👇`,
+
   // === TOOLS_MENU ===
   TOOLS_MENU: "🎒 <b>ИНСТРУМЕНТЫ АГЕНТА</b>\n\nЗдесь собраны все материалы и сервисы для работы. Некоторые инструменты открываются по мере прохождения обучения.\n\nПродолжай настройку системы, чтобы разблокировать полный арсенал!",
 

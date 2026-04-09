@@ -16,6 +16,10 @@ import { createUpdateCache } from "./src/utils/ttl_cache.js";
 import { getJwtSecret, generateToken, verifyToken } from "./src/utils/jwt_utils.js";
 import { generatePin, generateNeuroPin } from "./src/utils/pin.js";
 
+// === КАНАЛЫ И EMAIL ===
+import channelManager from "./src/core/channels/channel_manager.js";
+import { sendEmail, templates as emailTemplates } from "./src/core/email/email_service.js";
+
 // === ПЛАТФОРМЫ ===
 import { setupTelegramHandlers } from "./src/platforms/telegram/telegram_setup.js";
 import { handleVkWebhook } from "./src/platforms/vk/vk_handler.js";
@@ -540,68 +544,78 @@ const REMIND_MAP = {
   Rocket_Limits: true,
 };
 
-// === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
-
-const createBotContext = (event) => {
-  const params = event.queryStringParameters || {};
-  const headers = event.headers || {};
-  let token = headers["x-bot-token"] || params.bot_token;
-  if (typeof token !== "string" || !token.includes(":")) {
-    token = MAIN_TOKEN;
-  }
-  if (!token) token = "";
-  return { token, bot: new Telegraf(token), isMainBot: token === MAIN_TOKEN };
-};
-
-const getKeyboard = (step, links, user, info) => {
-  if (!step || !step.buttons) return null;
-  const btns =
-    typeof step.buttons === "function"
-      ? step.buttons(links, user, info)
-      : step.buttons;
-
-  // Отладка
-  log.info(`[getKeyboard]`, {
-    hasButtons: !!btns,
-    btnsCount: Array.isArray(btns) ? btns.length : "not-array",
-    firstRow: btns?.[0]?.length,
-    firstButton: btns?.[0]?.[0],
-  });
-
-  // Фильтрация кнопок: каждая кнопка должна иметь callback_data, url или web_app
-  const filteredBtns = btns
-    .map((row) => row.filter((b) => b.callback_data || b.url || b.web_app))
-    .filter((row) => row.length > 0); // Убираем пустые ряды
-
-  if (filteredBtns.length === 0) {
-    log.warn(`[getKeyboard] No valid buttons!`, { stepKey: step });
-    return null;
-  }
-
-  return Markup.inlineKeyboard(
-    filteredBtns.map((r) =>
-      r.map((b) =>
-        b.url
-          ? Markup.button.url(b.text, b.url)
-          : b.web_app
-            ? Markup.button.webApp(b.text, b.web_app.url)
-            : Markup.button.callback(b.text, b.callback_data),
-      ),
-    ),
-  );
-};
+// === МУЛЬТИКАНАЛЬНАЯ ОТПРАВКА СООБЩЕНИЙ ===
 
 /**
- * Отправка сообщения пользователю с обработкой ошибок Telegram и retry для 429
- * @returns {object} { sent: boolean, error?: string, errorCode?: number }
+ * VK API: отправить сообщение пользователю
  */
-const sendStepToUser = async (token, userId, stepKey, user, maxRetries = 2) => {
-  const step = scenario.steps[stepKey];
-  if (!step) return { sent: false, error: "Step not found", errorCode: null };
+async function sendVkMessage(userId, text, keyboard) {
+  if (!process.env.VK_SERVICE_TOKEN) {
+    log.warn("[VK SEND] VK_SERVICE_TOKEN not set");
+    return { sent: false, error: "VK not configured", errorCode: 500 };
+  }
 
-  // Определяем, какой токен использовать: токен клона (если есть) или главный токен
-  const tokenToUse = token || MAIN_TOKEN;
-  const apiUrl = `https://api.telegram.org/bot${tokenToUse}/sendMessage`;
+  const apiUrl = "https://api.vk.com/method/messages.send";
+  const params = new URLSearchParams({
+    user_id: String(userId),
+    random_id: String(Date.now()),
+    message: text.replace(/<[^>]*>/g, ""), // VK doesn't support HTML
+    access_token: process.env.VK_SERVICE_TOKEN,
+    v: "5.199",
+  });
+
+  if (keyboard) {
+    params.set("keyboard", JSON.stringify(keyboard));
+  }
+
+  try {
+    const response = await fetch(`${apiUrl}?${params}`, { method: "POST" });
+    const data = await response.json();
+
+    if (data.error) {
+      log.warn(`[VK SEND] Error`, {
+        errorCode: data.error.error_code,
+        errorMsg: data.error.error_msg,
+        userId,
+      });
+      return {
+        sent: false,
+        error: data.error.error_msg,
+        errorCode: data.error.error_code,
+      };
+    }
+
+    return { sent: true, error: null, errorCode: null };
+  } catch (e) {
+    log.error(`[VK SEND] Network error`, { userId, error: e.message });
+    return { sent: false, error: e.message, errorCode: null };
+  }
+}
+
+/**
+ * Unified step sender — dispatches to the right channel
+ * @param {string} token - Telegram bot token (for TG channel)
+ * @param {string} userId - User identifier (format depends on channel)
+ * @param {string} stepKey - Funnel step key
+ * @param {object} user - Full user object from YDB
+ * @param {number} maxRetries - Max retry attempts
+ * @param {string} [forceChannel] - Override channel: "telegram", "vk", "email"
+ * @returns {object} { sent: boolean, error?: string, errorCode?: number, channel: string }
+ */
+const sendStepToUser = async (
+  token,
+  userId,
+  stepKey,
+  user,
+  maxRetries = 2,
+  forceChannel = null,
+) => {
+  const step = scenario.steps[stepKey];
+  if (!step)
+    return { sent: false, error: "Step not found", errorCode: null, channel: "unknown" };
+
+  // Determine which channel to use
+  const channel = forceChannel || channelManager.getPrimaryChannel(user) || "telegram";
 
   const info = await (token === MAIN_TOKEN
     ? Promise.resolve({
@@ -612,7 +626,6 @@ const sendStepToUser = async (token, userId, stepKey, user, maxRetries = 2) => {
       })
     : ydb.getBotInfo(token));
 
-  // === ИСПРАВЛЕННАЯ ГЕНЕРАЦИЯ ССЫЛОК ===
   const links = scenario.getLinks(
     info?.sh_ref_tail || user.partner_id || "p_qdr",
     info?.tripwire_link,
@@ -622,7 +635,47 @@ const sendStepToUser = async (token, userId, stepKey, user, maxRetries = 2) => {
 
   const messageText =
     typeof step.text === "function" ? step.text(links, user, info) : step.text;
+
+  // === TELEGRAM ===
+  if (channel === "telegram") {
+    return await sendStepViaTelegram(token, userId, stepKey, user, messageText, links, info, maxRetries);
+  }
+
+  // === VK ===
+  if (channel === "vk") {
+    const keyboard = getVkKeyboard(step, links, user, info);
+    const cleanText = messageText.replace(/<[^>]*>/g, ""); // Strip HTML for VK
+    return await sendVkMessage(userId, cleanText, keyboard);
+  }
+
+  // === EMAIL ===
+  if (channel === "email") {
+    const email = user.session?.email;
+    if (!email) {
+      return { sent: false, error: "No email set", errorCode: null, channel: "email" };
+    }
+    const tpl = emailTemplates.reminder(user, stepKey);
+    const result = await sendEmail({ to: email, ...tpl });
+    return {
+      sent: result.success,
+      error: result.error,
+      errorCode: result.success ? null : 500,
+      channel: "email",
+    };
+  }
+
+  // === WEB (no direct push — skip) ===
+  return { sent: false, error: "Web channel has no push notifications", errorCode: null, channel: "web" };
+};
+
+/**
+ * Telegram-specific step sender (extracted from original sendStepToUser)
+ */
+const sendStepViaTelegram = async (token, userId, stepKey, user, messageText, links, info, maxRetries) => {
+  const step = scenario.steps[stepKey];
   const keyboard = getKeyboard(step, links, user, info);
+  const tokenToUse = token || MAIN_TOKEN;
+  const apiUrl = `https://api.telegram.org/bot${tokenToUse}/sendMessage`;
 
   // === RETRY LOGIC ДЛЯ 429 ===
   let lastError = null;
@@ -676,7 +729,7 @@ const sendStepToUser = async (token, userId, stepKey, user, maxRetries = 2) => {
             errorCode,
             errorMsg,
           });
-          return { sent: false, error: errorMsg, errorCode: 403 };
+          return { sent: false, error: errorMsg, errorCode: 403, channel: "telegram" };
         }
 
         // Другие ошибки
@@ -687,10 +740,10 @@ const sendStepToUser = async (token, userId, stepKey, user, maxRetries = 2) => {
           errorMsg,
           attempt: attempt + 1,
         });
-        return { sent: false, error: errorMsg, errorCode };
+        return { sent: false, error: errorMsg, errorCode, channel: "telegram" };
       }
 
-      return { sent: true, error: null, errorCode: null };
+      return { sent: true, error: null, errorCode: null, channel: "telegram" };
     } catch (e) {
       lastError = e;
       const errorCode = e.code || null;
@@ -702,14 +755,99 @@ const sendStepToUser = async (token, userId, stepKey, user, maxRetries = 2) => {
         errorMsg,
         attempt: attempt + 1,
       });
-      return { sent: false, error: `Network error: ${errorMsg}`, errorCode };
+      return { sent: false, error: `Network error: ${errorMsg}`, errorCode, channel: "telegram" };
     }
   }
 
   // Все попытки исчерпаны
   const errorCode = lastError?.code || null;
   const errorMsg = lastError?.message || "Unknown error";
-  return { sent: false, error: `Max retries exceeded: ${errorMsg}`, errorCode };
+  return { sent: false, error: `Max retries exceeded: ${errorMsg}`, errorCode, channel: "telegram" };
+};
+
+/**
+ * Build VK keyboard from step buttons
+ */
+function getVkKeyboard(step, links, user, info) {
+  if (!step || !step.buttons) return null;
+  const btns =
+    typeof step.buttons === "function"
+      ? step.buttons(links, user, info)
+      : step.buttons;
+
+  const filteredBtns = btns
+    .map((row) =>
+      row
+        .filter((b) => b.callback_data || b.url)
+        .map((b) => ({
+          action: {
+            type: b.callback_data ? "callback" : "open_link",
+            payload: b.callback_data ? JSON.stringify({ button: b.callback_data }) : undefined,
+            link: b.url ? { url: b.url } : undefined,
+            label: b.text.substring(0, 40),
+          },
+        })),
+    )
+    .filter((row) => row.length > 0);
+
+  if (filteredBtns.length === 0) return null;
+
+  return {
+    one_time: false,
+    inline: true,
+    buttons: filteredBtns,
+  };
+}
+
+// === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
+
+const createBotContext = (event) => {
+  const params = event.queryStringParameters || {};
+  const headers = event.headers || {};
+  let token = headers["x-bot-token"] || params.bot_token;
+  if (typeof token !== "string" || !token.includes(":")) {
+    token = MAIN_TOKEN;
+  }
+  if (!token) token = "";
+  return { token, bot: new Telegraf(token), isMainBot: token === MAIN_TOKEN };
+};
+
+const getKeyboard = (step, links, user, info) => {
+  if (!step || !step.buttons) return null;
+  const btns =
+    typeof step.buttons === "function"
+      ? step.buttons(links, user, info)
+      : step.buttons;
+
+  // Отладка
+  log.info(`[getKeyboard]`, {
+    hasButtons: !!btns,
+    btnsCount: Array.isArray(btns) ? btns.length : "not-array",
+    firstRow: btns?.[0]?.length,
+    firstButton: btns?.[0]?.[0],
+  });
+
+  // Фильтрация кнопок: каждая кнопка должна иметь callback_data, url или web_app
+  const filteredBtns = btns
+    .map((row) => row.filter((b) => b.callback_data || b.url || b.web_app))
+    .filter((row) => row.length > 0); // Убираем пустые ряды
+
+  if (filteredBtns.length === 0) {
+    log.warn(`[getKeyboard] No valid buttons!`, { stepKey: step });
+    return null;
+  }
+
+  return Markup.inlineKeyboard(
+    filteredBtns.map((r) =>
+      r.map((b) =>
+        b.url
+          ? Markup.button.url(b.text, b.url)
+          : b.web_app
+            ? Markup.button.webApp(b.text, b.web_app.url)
+            : Markup.button.callback(b.text, b.callback_data),
+      ),
+    ),
+  );
 };
 
 const renderStep = async (ctx, stepKey, token, isAuto = false) => {
@@ -1031,6 +1169,8 @@ export const handler = async (event) => {
       processedUpdates,
       renderStep,
       corsHeaders,
+      channelManager,
+      sendEmail,
     });
     if (vkResponse) return vkResponse;
     // === КОНЕЦ VK WEBHOOK ===

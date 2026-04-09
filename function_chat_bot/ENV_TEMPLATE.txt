@@ -1,7 +1,7 @@
 # 📋 ПОЛНЫЙ СПИСОК ПЕРЕМЕННЫХ ОКРУЖЕНИЯ
-# Версия 4.3 — AI Sales Agent + Legal Compliance + Analytics
+# Версия 5.0 — Multi-Channel (Telegram + VK + Email + Web)
 # Скопируй и вставь в Yandex Cloud Functions при деплое
-# Обновлено: 16 марта 2026
+# Обновлено: 9 апреля 2026
 
 # ============================================================
 # 1. TELEGRAM BOT (ОБЯЗАТЕЛЬНО)
@@ -45,7 +45,6 @@ CRM_WEB_APP_URL=https://sethubble-crm.netlify.app
 CRM_DEMO_URL=https://novokreschennih.github.io/crm-dashboard/crm_demo.html
 
 # ID глобального администратора (через запятую) — имеет доступ ко всем ботам
-# Обычные владельцы ботов имеют доступ только к своим данным и только при наличии PRO-статуса
 CRM_ADMIN_IDS=6278976865
 
 # ============================================================
@@ -73,9 +72,6 @@ SYNC_KEY=super_secret_sync_123
 # 9. БЕЗОПАСНОСТЬ — JWT SECRET (КРИТИЧЕСКИ ВАЖНО!)
 # ============================================================
 # СЕКРЕТНЫЙ КЛЮЧ ДЛЯ JWT-ТОКЕНОВ (не используйте BOT_TOKEN!)
-# Сгенерируйте случайную строку: openssl rand -hex 32
-# Это критическая уязвимость безопасности — если JWT_SECRET = BOT_TOKEN,
-# то любой кто узнает токен бота сможет выдать себе PRO-статус во всех WebApp
 JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
 
 # ============================================================
@@ -162,9 +158,7 @@ CRON_USER_PAUSE_MS=35
 # Пауза между пачками сообщений в CRON (секунды)
 CRON_BROADCAST_PAUSE_SEC=1
 
-# === ИСПРАВЛЕНИЕ v4.3: Лимит пользователей за один запуск CRON ===
-# Защита от зависания функции при больших очередях (10,000+ пользователей)
-# Крон запускается каждую минуту — лучше обработать меньше, но стабильно
+# Лимит пользователей за один запуск CRON
 CRON_MAX_USERS_PER_RUN=200
 
 # ============================================================
@@ -190,15 +184,40 @@ SUPABASE_SERVICE_KEY=
 # 20. МОДЕЛИ AI ДЛЯ OPENROUTER (ОПЦИОНАЛЬНО)
 # ============================================================
 # Модель для Telegram-бота (ai_engine.js)
-# Варианты: deepseek/deepseek-v3.2, openai/gpt-4o-mini, anthropic/claude-sonnet-4-20250514
 AI_ENGINE_MODEL=deepseek/deepseek-v3.2
 
 # Модель для Web-чата на сайте
-# Варианты: deepseek/deepseek-v3.2, openai/gpt-4o-mini, anthropic/claude-sonnet-4-20250514
 WEB_CHAT_MODEL=deepseek/deepseek-v3.2
 
 # ============================================================
-# ПРИМЕР ЗАПОЛНЕНИЯ (ВСЕГО 44 ПЕРЕМЕННОЙ):
+# 21. YANDEX CLOUD POSTBOX — EMAIL РАССЫЛКИ (v5.0)
+# ============================================================
+# API-ключ сервисного аккаунта с ролью postbox.messageCreator
+YANDEX_CLOUD_API_KEY=
+
+# ID каталога (folder), в котором создан Postbox
+YANDEX_CLOUD_FOLDER_ID=
+
+# Подтверждённый email-отправитель (должен быть верифицирован в консоли Postbox)
+POSTBOX_FROM_EMAIL=noreply@yourdomain.com
+
+# Отображаемое имя отправителя
+POSTBOX_FROM_NAME=NeuroGen
+
+# ============================================================
+# 22. VKONTAKTE — ИНТЕГРАЦИЯ (v5.0)
+# ============================================================
+# Сервисный токен сообщества для отправки сообщений (messages.send)
+VK_SERVICE_TOKEN=
+
+# ID центрального сообщества (основной бот-клан)
+VK_CENTRAL_GROUP=
+
+# Секретный ключ для VK Callback API (вебхуки)
+VK_SECRET_KEY=
+
+# ============================================================
+# ПРИМЕР ЗАПОЛНЕНИЯ (ВСЕГО 50 ПЕРЕМЕННЫХ):
 # ============================================================
 # BOT_TOKEN=1234567890:ABCdefGHIjklMNOpqrsTUVwxyz
 # YDB_ENDPOINT=grpc.yandexcloud.net:443
@@ -208,7 +227,6 @@ WEB_CHAT_MODEL=deepseek/deepseek-v3.2
 # SETHUBBLE_SECRET=super_secret_key_123
 # MY_SH_USER_ID=1123
 # MY_PARTNER_ID=p_qdr
-# CRM_WEB_APP_URL=https://sethubble-crm.netlify.app
 # CRM_ADMIN_IDS=6278976865
 # DISK_LINK=https://disk.yandex.ru/d/auId7HugR0sdzA
 # FREE_DISK_LINK=https://disk.yandex.ru/d/a2Gsuwnu32eJKg
@@ -243,3 +261,10 @@ WEB_CHAT_MODEL=deepseek/deepseek-v3.2
 # SUPABASE_SERVICE_KEY=...
 # AI_ENGINE_MODEL=deepseek/deepseek-v3.2
 # WEB_CHAT_MODEL=deepseek/deepseek-v3.2
+# YANDEX_CLOUD_API_KEY=ycn_...
+# YANDEX_CLOUD_FOLDER_ID=b1g...
+# POSTBOX_FROM_EMAIL=noreply@sethubble.ru
+# POSTBOX_FROM_NAME=NeuroGen
+# VK_SERVICE_TOKEN=vk1...
+# VK_CENTRAL_GROUP=123456789
+# VK_SECRET_KEY=my_vk_callback_secret

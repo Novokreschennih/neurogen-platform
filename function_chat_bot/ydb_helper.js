@@ -170,9 +170,10 @@ export async function registerPartnerBot(
   shui,
   shrt,
   twLink,
+  vkGroupId = "",
 ) {
   // Валидация токена перед запросом к БД
-  if (!isValidBotToken(token)) {
+  if (token && !isValidBotToken(token)) {
     log.warn(`Invalid bot token format attempt`, { ownerId, token });
     throw new Error("Invalid bot token format");
   }
@@ -182,20 +183,21 @@ export async function registerPartnerBot(
       const query = `
         DECLARE $uid AS Utf8; DECLARE $tok AS Utf8; DECLARE $un AS Utf8;
         DECLARE $ts AS Uint64; DECLARE $shui AS Utf8; DECLARE $shrt AS Utf8;
-        DECLARE $twl AS Utf8;
-        UPSERT INTO bots (bot_token, user_id, bot_username, created_at, sh_user_id, sh_ref_tail, tripwire_link)
-        VALUES ($tok, $uid, $un, $ts, $shui, $shrt, $twl);
+        DECLARE $twl AS Utf8; DECLARE $vkgid AS Utf8;
+        UPSERT INTO bots (bot_token, user_id, bot_username, created_at, sh_user_id, sh_ref_tail, tripwire_link, vk_group_id)
+        VALUES ($tok, $uid, $un, $ts, $shui, $shrt, $twl, $vkgid);
       `;
       await session.executeQuery(query, {
         $uid: TypedValues.utf8(String(ownerId)),
-        $tok: TypedValues.utf8(String(token)),
-        $un: TypedValues.utf8(String(username)),
+        $tok: TypedValues.utf8(String(token || "")),
+        $un: TypedValues.utf8(String(username || "")),
         $ts: TypedValues.uint64(String(Date.now())),
         $shui: TypedValues.utf8(String(shui)),
         $shrt: TypedValues.utf8(String(shrt)),
         $twl: TypedValues.utf8(String(twLink)),
+        $vkgid: TypedValues.utf8(String(vkGroupId)),
       });
-      log.info(`New partner bot registered`, { ownerId, username });
+      log.info(`New partner bot registered`, { ownerId, username, vkGroupId });
     });
   } catch (e) {
     log.error(`Failed to register partner bot`, e, { ownerId, username });
@@ -266,6 +268,35 @@ export async function getBotInfo(token) {
     log.error(`Failed to get bot info`, e, {
       tokenMasked: token.substring(0, 10) + "...",
     });
+    return null;
+  }
+}
+
+/**
+ * Получить информацию о VK-боте по ID группы
+ * @param {string} groupId - VK group ID
+ * @returns {object|null} { owner_id, sh_user_id, sh_ref_tail }
+ */
+export async function getBotInfoByVkGroup(groupId) {
+  if (!groupId) return null;
+
+  try {
+    return await driver.tableClient.withSession(async (session) => {
+      const query = `DECLARE $gid AS Utf8; SELECT user_id, sh_user_id, sh_ref_tail, bot_username FROM bots WHERE vk_group_id = $gid;`;
+      const { resultSets } = await session.executeQuery(query, {
+        $gid: TypedValues.utf8(String(groupId)),
+      });
+      if (!resultSets[0] || resultSets[0].rows.length === 0) return null;
+      const r = resultSets[0].rows[0];
+      return {
+        owner_id: r.items[0].textValue,
+        sh_user_id: r.items[1]?.textValue || "",
+        sh_ref_tail: r.items[2]?.textValue || "",
+        bot_username: r.items[3]?.textValue || "",
+      };
+    });
+  } catch (e) {
+    log.error(`Failed to get VK bot info`, e, { groupId });
     return null;
   }
 }

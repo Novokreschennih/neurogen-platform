@@ -1,260 +1,430 @@
-# NeuroGen Platform (SetHubble) — Инструкция по проекту
+# NeuroGen Platform (SetHubble) — Project Documentation
 
-## Обзор проекта
+## Overview
 
-**NeuroGen Platform** (также известная как **SetHubble**) — SaaS-платформа для Telegram-ботов с AI-консультантом и автоматизированной воронкой продаж. Платформа работает на базе serverless-функций Яндекс.Облака с YDB в качестве базы данных.
+**NeuroGen Platform** (aka **SetHubble**) — SaaS platform for Telegram/VK bots with AI consultant and automated sales funnel. Runs on Yandex Cloud serverless functions with YDB as database.
 
-### Версия
-- **Bot:** 4.3.2
-- **Лицензия:** MIT
+### Version
+- **Bot:** 4.3.2 (moving to 5.0 — multi-channel)
+- **License:** MIT
 
 ---
 
-## Архитектура
+## Architecture
 
 ```
 neurogen-platform/
-├── function_chat_bot/          # Основной бот (serverless-функция)
-│   ├── index.js                # Точка входа: настройка бота, HTTP-обработчики, CRON
-│   ├── ai_engine.js            # AI-движок: генерация ответов, анализ эмоций
-│   ├── ydb_helper.js           # Обёртка над YDB SDK
-│   ├── ydb_schema.sql          # Схема базы данных
-│   ├── ENV_TEMPLATE.txt        # Шаблон переменных окружения (44 переменных)
+├── function_chat_bot/
+│   ├── index.js                # Entry point: bot setup, HTTP handlers, CRON
+│   ├── ai_engine.js            # AI engine: response generation, emotion analysis
+│   ├── ydb_helper.js           # YDB SDK wrapper
+│   ├── ydb_schema.sql          # Database schema
+│   ├── ENV_TEMPLATE.txt        # Environment variables template
 │   └── src/
-│       ├── core/http_handlers/ # HTTP-эндпоинты (web-чат, CRM API, платежи, CRON, партнёрка)
-│       ├── platforms/          # Платформенные обработчики (Telegram, VK)
-│       ├── scenarios/          # Сценарии воронок (tg, vk, общие)
-│       └── utils/              # Утилиты (логгер, retry, JWT, PIN-коды, кэш)
-├── tools/                      # Автономные HTML-инструменты
-│   ├── crm_dashboard.html      # CRM-дашборд для владельцев ботов
-│   ├── crm_demo.html           # Демо-версия CRM (для FREE)
-│   └── promo-kit-v2.html       # Промо-материалы
-└── website/                    # Маркетинговый сайт / блог (Eleventy SSG)
-    ├── eleventy.config.js      # Конфигурация Eleventy
+│       ├── core/
+│       │   ├── http_handlers/  # HTTP endpoints (web-chat, CRM API, payments, CRON, partner)
+│       │   ├── email/          # Email service (Yandex Cloud Postbox)
+│       │   └── channels/       # Channel manager (multi-channel orchestration)
+│       ├── platforms/          # Platform handlers (Telegram, VK)
+│       ├── scenarios/          # Funnel scenarios (tg, vk, common)
+│       │   ├── common/         # Shared: texts.js, step_meta.js, get_links.js, constants.js
+│       │   ├── telegram/       # Telegram buttons + actions
+│       │   └── vk/             # VK buttons + handler
+│       └── utils/              # Utils (logger, retry, JWT, PIN, cache)
+├── tools/
+│   ├── crm_dashboard.html      # CRM dashboard for bot owners
+│   ├── crm_demo.html           # Demo CRM (for FREE users)
+│   └── promo-kit-v2.html       # Promo materials
+└── website/                    # Marketing site / blog (Eleventy SSG)
+    ├── eleventy.config.js
     └── src/
-        ├── content/blog/       # Статьи блога (markdown)
-        ├── content/news/       # Новости платформы
-        ├── content/academy/    # Модули академии
-        └── _includes/          # Шаблоны Nunjucks (layouts, partials)
+        ├── content/blog/       # Blog articles
+        ├── content/news/       # Platform news
+        ├── content/academy/    # Academy modules
+        ├── ai.njk              # AI tools page (full funnel)
+        └── join.njk            # Registration/referral page
 ```
 
 ---
 
-## Технологический стек
+## Tech Stack
 
-| Компонент | Технология |
+| Component | Technology |
 |-----------|------------|
-| **Бэкенд бота** | Node.js 20+, ES Modules |
-| **Telegram-библиотека** | Telegraf 4.x |
-| **База данных** | Yandex Database (YDB) |
-| **AI-движок** | OpenRouter API (DeepSeek v3.2 по умолчанию) |
-| **Платежи** | SetHubble (крипто-платёжный шлюз: USDT, BTC, ETH, TON) |
-| **Сайт** | Eleventy 3.x (Nunjucks, Markdown) |
-| **Деплой** | Yandex Cloud Functions + API Gateway |
-| **Хостинг статики** | GitHub Pages / Netlify |
+| **Bot backend** | Node.js 20+, ES Modules |
+| **Telegram** | Telegraf 4.x |
+| **VK** | VK Callback API (direct HTTP webhook) |
+| **Database** | Yandex Database (YDB) |
+| **AI engine** | OpenRouter API (DeepSeek v3.2 default) |
+| **Payments** | SetHubble (crypto gateway: USDT, BTC, ETH, TON) |
+| **Email** | Yandex Cloud Postbox (HTTP API) |
+| **Site** | Eleventy 3.x (Nunjucks, Markdown) |
+| **Deploy** | Yandex Cloud Functions + API Gateway |
 
 ---
 
-## Компоненты
+## Multi-Channel Architecture (v5.0)
 
-### 1. `function_chat_bot/` — Основной бот
+### Channels
+| Channel | Status | User ID prefix | Sending method |
+|---------|--------|---------------|----------------|
+| **Telegram** | ✅ Full | `user_id` (numeric) | Telegraf `sendMessage` |
+| **VK** | 🔄 Partial | `vk:${userId}` | VK API `messages.send` |
+| **Website** | ❌ Stateless | `web:${uuid}` | Push notification / email |
+| **Email** | ❌ New | email address | Yandex Postbox API |
 
-#### Ключевые возможности
+### Session JSON Structure (no DB migration needed)
 
-- **AI-консультант** — интеллектуальные ответы на основе пройденного материала с анализом эмоций
-- **Воронка продаж** — многошаговый онбординг с tripwire-оффером ($20 за PRO)
-- **10-шаговые дожимы** — drip-кампании с нарастающими интервалами (от 1 часа до 9 дней)
-- **Напоминания** — автоматические напоминания по карте REMIND_MAP (1ч, 3ч, 24ч)
-- **CRON-задачи** — работа с неактивными пользователями, рассылки, обучение
-- **Мультиплатформенность** — Telegram (основная) + VK (через вебхуки)
-- **CRM Web App** — дашборд для владельцев ботов (аналитика, рассылки, управление)
-- **Партнёрская система** — реферальные ссылки, до 10 уровней в глубину
-- **Retry-логика** — экспоненциальный backoff при 429 (Too Many Requests)
-- **TTL-кэш** — защита от дублирования обработанных update_id
+All channel data stored in existing `session` JSON column:
 
-#### Основные HTTP-эндпоинты
+```jsonc
+{
+  "dialog_history": [...],
+  "tags": [],
+  // NEW — Multi-channel:
+  "email": "user@example.com",
+  "email_verified": false,
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "sh_user_id": "123",
+      "sh_ref_tail": "p_xxx",
+      "bot_token": "123456:ABC...",
+      "bot_username": "my_bot",
+      "configured": true,
+      "configured_at": 1712345678000
+    },
+    "vk": {
+      "enabled": false,
+      "group_id": "",
+      "configured": false
+    },
+    "web": {
+      "enabled": false,
+      "session_id": ""
+    },
+    "email": {
+      "enabled": false,
+      "subscribed": false,
+      "last_sent": 0
+    }
+  },
+  "channel_states": {
+    "telegram": "Module_1_Strategy",
+    "vk": "START",
+    "web": "START",
+    "email": "START"
+  }
+}
+```
 
-| Обработчик | Назначение |
-|------------|------------|
-| `web_chat.js` | AI-чат через веб-интерфейс на сайте |
-| `crm_api.js` | CRM API для дашборда (статистика, пользователи, рассылки) |
-| `app_auth.js` | JWT-аутентификация для NeuroGen Apps |
-| `payment_webhook.js` | Вебхуки от платёжной системы SetHubble |
-| `cron_jobs.js` | CRON-задачи: дожимы, напоминания, обучение |
-| `partner_api.js` | API партнёрской программы |
+### How It Works
 
-#### Переменные окружения
+1. User lands on `/join` or `/ai` → enters email
+2. Chooses channel(s): Telegram / VK / Website / Email
+3. Goes through simplified setup per channel (3-4 steps)
+4. After completing one channel → prompted to enable others
+5. All channels share the same funnel steps but track state independently
+6. CRON/dozhim reaches users via their enabled channels
+7. CRM shows all leads with channel badges, supports cross-channel broadcast
 
-Полный список — в `ENV_TEMPLATE.txt`. Ключевые:
+---
+
+## Components
+
+### 1. `function_chat_bot/` — Main Bot
+
+#### Key Features
+
+- **AI consultant** — context-aware answers based on completed material + emotion analysis
+- **Sales funnel** — multi-step onboarding with tripwire offer ($20 for PRO)
+- **10-step follow-ups** — drip campaigns with escalating intervals (1h to 9 days)
+- **Reminders** — auto-reminders via REMIND_MAP (1h, 3h, 24h, 48h)
+- **CRON jobs** — inactive user processing, broadcasts, training
+- **Multi-platform** — Telegram (primary) + VK (via webhooks)
+- **CRM Web App** — dashboard for bot owners (analytics, broadcasts, management)
+- **Partner system** — referral links, up to 10 levels deep
+- **Retry logic** — exponential backoff on 429
+- **TTL cache** — deduplication of processed update_id
+
+#### HTTP Endpoints
+
+| Handler | Purpose |
+|---------|---------|
+| `web_chat.js` | AI chat via website widget |
+| `crm_api.js` | CRM API for dashboard (stats, users, broadcasts) |
+| `app_auth.js` | JWT auth for NeuroGen Apps |
+| `payment_webhook.js` | SetHubble payment webhooks |
+| `cron_jobs.js` | CRON: follow-ups, reminders, training |
+| `partner_api.js` | Partner referral API |
+
+#### Environment Variables
+
+Full list in `ENV_TEMPLATE.txt`. Key ones:
 
 ```bash
-# Обязательные
-BOT_TOKEN=                          # Токен Telegram-бота
-YDB_ENDPOINT=                       # Endpoint YDB (grpc.yandexcloud.net:443)
-YDB_DATABASE=                       # Путь к базе данных
-PRODUCT_ID_FREE=                    # ID бесплатного продукта
-PRODUCT_ID_PRO=                     # ID PRO-продукта
-SETHUBBLE_SECRET=                   # Секрет для платёжных вебхуков
-JWT_SECRET=                         # ⚠️ Ключ для JWT (НЕ используйте BOT_TOKEN!)
+# Required
+BOT_TOKEN=                          # Telegram bot token
+YDB_ENDPOINT=                       # YDB endpoint
+YDB_DATABASE=                       # Database path
+PRODUCT_ID_FREE=                    # Free product ID
+PRODUCT_ID_PRO=                     # PRO product ID
+SETHUBBLE_SECRET=                   # Payment webhook secret
+JWT_SECRET=                         # ⚠️ JWT key (NOT BOT_TOKEN!)
 
 # AI
-OPENROUTER_API_KEY=                 # API-ключ OpenRouter
+OPENROUTER_API_KEY=                 # OpenRouter API key
 AI_ENGINE_MODEL=deepseek/deepseek-v3.2
 WEB_CHAT_MODEL=deepseek/deepseek-v3.2
 
-# Опционально
-SUPABASE_URL=                       # Supabase для генерации PIN-кодов
+# Multi-channel (NEW v5.0)
+YANDEX_CLOUD_API_KEY=               # YC API key for Postbox (role: postbox.messageCreator)
+YANDEX_CLOUD_FOLDER_ID=             # YC folder ID containing Postbox
+POSTBOX_FROM_EMAIL=noreply@yourdomain.com  # Verified Postbox identity
+POSTBOX_FROM_NAME=NeuroGen          # Sender display name
+VK_SERVICE_TOKEN=                   # VK community service token (for bot clones)
+VK_CENTRAL_GROUP=                   # VK central community ID
+
+# Optional
+SUPABASE_URL=                       # Supabase for PIN generation
 SUPABASE_SERVICE_KEY=
-SYNC_KEY=                           # Ключ синхронизации с SalutBot
-CRM_ADMIN_IDS=                      # ID глобальных администраторов
+SYNC_KEY=                           # SalutBot sync key
+CRM_ADMIN_IDS=                      # Global admin Telegram IDs
 ```
 
-#### Команды
+#### Commands
 
 ```bash
-# Проверка синтаксиса
+# Syntax check
 npm run check
 
-# Создание архива для деплоя (function.zip)
+# Create deploy archive (function.zip)
 npm run deploy
 ```
 
-#### AI Engine (`ai_engine.js`)
+### 2. Email Service — Yandex Cloud Postbox
 
-AI-консультант с контекстной осведомлённостью:
+**Authentication:** API key with role `postbox.messageCreator`
 
-- **Карта знаний** — ИИ знает только тот материал, который пользователь уже прошёл
-- **Анализ эмоций** — определяет настроение (позитив/негатив/сомнения/готовность к покупке)
-- **Системные промпты** — адаптируются под контекст (базовый, возражения, горячий/холодный лид, поддержка)
-- **Форматирование** — HTML + эмодзи + CTA в конце каждого ответа
-- **Защита от спойлеров** — ИИ не раскрывает содержание будущих модулей
+**Endpoint:** `https://postbox.api.cloud.yandex.net/postbox/v1/messages:send`
 
-### 2. `tools/` — HTML-инструменты
-
-Автономные HTML-файлы (без сборки, встроены CSS/JS):
-
-| Файл | Назначение |
-|------|------------|
-| `crm_dashboard.html` | Полнофункциональная CRM для владельцев ботов |
-| `crm_demo.html` | Демо-версия для FREE-пользователей (только просмотр) |
-| `promo-kit-v2.html` | Промо-материалы и лендинги |
-
-### 3. `website/` — Маркетинговый сайт
-
-Генератор статических сайтов на базе [eleventy-base-blog v9](https://github.com/11ty/eleventy-base-blog).
-
-#### Команды
+**API Request format:**
 
 ```bash
-# Запуск dev-сервера
-npm start
-
-# Сборка для production
-npm run build
-
-# Сборка с префиксом пути для GitHub Pages
-npm run build-ghpages
-
-# Debug-режим с подробным выводом
-npm run debugstart
+curl -X POST \
+  https://postbox.api.cloud.yandex.net/postbox/v1/messages:send \
+  -H "Authorization: Api-Key <YC_API_KEY>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "folderId": "<FOLDER_ID>",
+    "messages": [
+      {
+        "to": [{ "email": "test@example.com" }],
+        "from": { "email": "noreply@yourdomain.com" },
+        "subject": "Test Message",
+        "text": "Plain text version",
+        "html": "<p>HTML version</p>"
+      }
+    ]
+  }'
 ```
 
-#### Структура контента
+**Node.js integration:**
 
-- `src/content/blog/` — статьи блога (маркетинг, кейсы, инструкции)
-- `src/content/news/` — новости платформы
-- `src/content/academy/` — модули академии
-- `src/ai.njk` — страница AI-инструментов NeuroGen
-- `src/join.njk` — страница регистрации
+```javascript
+async function sendEmail({ to, subject, text, html }) {
+  const apiKey = process.env.YANDEX_CLOUD_API_KEY;
+  const folderId = process.env.YANDEX_CLOUD_FOLDER_ID;
+  const fromEmail = process.env.POSTBOX_FROM_EMAIL;
+  const fromName = process.env.POSTBOX_FROM_NAME || "NeuroGen";
 
-#### Особенности
+  const response = await fetch(
+    "https://postbox.api.cloud.yandex.net/postbox/v1/messages:send",
+    {
+      method: "POST",
+      headers: {
+        "Authorization": `Api-Key ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        folderId,
+        messages: [{
+          to: [{ email: to }],
+          from: { email: fromEmail, name: fromName },
+          subject,
+          text,
+          html,
+        }],
+      }),
+    },
+  );
+  return response.json();
+}
+```
 
-- **Draft-защита** — черновики (`draft: true`) не публикуются в production
-- **RSS-фиды** — `/feed/feed.xml` (блог) и `/feed/news.xml` (новости)
-- **Оптимизация изображений** — автоматическая генерация WebP + JPEG через `@11ty/eleventy-img`
-- **Минификация** — HTML/CSS/JS сжимаются только в production
-- **Поиск** — Fuse.js для полнотекстового поиска на клиенте
+**Limits:** Check Yandex Cloud console for current TPS and daily limits. Design CRON batches accordingly.
+
+**DNS setup required:**
+- SPF: `v=spf1 include:_spf.yandex.net ~all`
+- DKIM: TXT record at `_yandex-postbox._domainkey`
+
+### 3. `tools/` — HTML Tools
+
+Standalone HTML files (no build, inline CSS/JS):
+
+| File | Purpose |
+|------|---------|
+| `crm_dashboard.html` | Full CRM for bot owners |
+| `crm_demo.html` | Demo for FREE users (read-only) |
+| `promo-kit-v2.html` | Promo materials and landing pages |
+
+### 4. `website/` — Marketing Site
+
+Static site generator based on [eleventy-base-blog v9](https://github.com/11ty/eleventy-base-blog).
+
+#### Commands
+
+```bash
+npm start         # Dev server
+npm run build     # Production build
+npm run build-ghpages  # Build with path prefix for GitHub Pages
+npm run debugstart     # Debug mode with verbose output
+```
+
+#### Content Structure
+
+- `src/content/blog/` — blog articles (marketing, case studies, instructions)
+- `src/content/news/` — platform news
+- `src/content/academy/` — academy modules
+- `src/ai.njk` — AI tools page (full funnel v5.0)
+- `src/join.njk` — registration/referral page
+
+#### Features
+
+- **Draft protection** — drafts (`draft: true`) not published in production
+- **RSS feeds** — `/feed/feed.xml` (blog) and `/feed/news.xml` (news)
+- **Image optimization** — auto-generate WebP + JPEG via `@11ty/eleventy-img`
+- **Minification** — HTML/CSS/JS compressed in production only
+- **Search** — Fuse.js for full-text client-side search
 
 ---
 
-## База данных (YDB)
+## Database (YDB)
 
-### Таблицы
+### Tables
 
-| Таблица | Назначение | Первичный ключ |
-|---------|------------|----------------|
-| `users` | Все пользователи всех ботов | `user_id` (Telegram ID) |
-| `bots` | Информация о ботах партнёров | `bot_token` |
-| `link_clicks` | Аналитика переходов по реферальным ссылкам | `(partner_id, clicked_at, user_id)` |
+| Table | Purpose | Primary Key |
+|-------|---------|-------------|
+| `users` | All users across all bots | `user_id` (string) |
+| `bots` | Partner bot info | `bot_token` |
+| `link_clicks` | Referral link click analytics | `(partner_id, clicked_at, user_id)` |
 
-### Индексы
+### Indexes
 
-- `idx_users_bot_token` — поиск по токену бота
-- `idx_users_partner_id` — поиск по партнёрскому хвосту
-- `idx_users_bought_tripwire` — поиск по статусу оплаты
-- `idx_users_last_seen` — поиск по времени последнего визита (для CRON)
+- `idx_users_bot_token` — search by bot token
+- `idx_users_partner_id` — search by partner tail
+- `idx_users_bought_tripwire` — search by payment status
+- `idx_users_last_seen` — search by last visit time (for CRON)
 
-### Миграции (v4.3+)
+### Migrations (v4.3+)
 
 ```sql
--- v4.3.1: Добавить PIN-код
+-- v4.3.1: Add PIN code
 ALTER TABLE users ADD COLUMN pin_code Utf8;
 
--- v4.3.2: Добавить версию сессии (защита от race condition)
+-- v4.3.2: Add session version (race condition protection)
 ALTER TABLE users ADD COLUMN session_version Uint64;
 ```
 
----
-
-## Воронка продаж
-
-### Основные этапы
-
-1. **START** → пользователь заходит в бота
-2. **Start_Choice** → выбор роли (Агент / Онлайн / Офлайн)
-3. **Обучение (FREE)** → 3 модуля (стратегия, онлайн, офлайн)
-4. **Offer_Tripwire** → оффер PRO-статуса ($20 со скидкой, $40 полная цена)
-5. **Delivery_1** → выдача PRO-материалов
-6. **PRO-обучение** → 4 модуля продвинутого уровня
-7. **Rocket/Shuttle** → офферы тарифов масштабирования
-
-### Дожимы (Follow-ups)
-
-- **10 шагов для Tripwire** — интервалы от 50 часов до 216 часов (9 дней)
-- **10 шагов для тарифов** — интервалы от 20 часов до 216 часов
-- **Динамические интервалы** — настраиваются через `DOZHIM_DELAY_HOURS` и карту `DOZHIM_MAP`
-
-### Напоминания
-
-Автоматические напоминания по интервалам `1ч, 3ч, 24ч, 48ч` для ключевых шагов обучения (карта `REMIND_MAP`).
+**Note v5.0:** No schema changes needed for multi-channel. All channel data goes into `session` JSON.
 
 ---
 
-## Безопасность
+## Sales Funnel
 
-- **Валидация Telegram initData** — HMAC-SHA256 проверка подписи с таймаутом 24 часа
-- **JWT-аутентификация** — для CRM Web App и NeuroGen Apps
-- **Глобальные админы** — обход проверки владения ботом через `CRM_ADMIN_IDS`
-- **PRO-верификация** — владельцы ботов должны иметь PRO-статус для доступа к CRM
-- **Race condition защита** — `session_version` для UPSERT-операций
-- **⚠️ Критическое:** `JWT_SECRET` НЕ должен совпадать с `BOT_TOKEN`
+### Main Stages
+
+1. **START** → user enters bot
+2. **Start_Choice** → role selection (Agent / Online / Offline)
+3. **Training (FREE)** → 3 modules (strategy, online, offline)
+4. **Offer_Tripwire** → PRO offer ($20 discounted, $40 full)
+5. **Delivery_1** → PRO materials delivery
+6. **PRO Training** → 4 advanced modules
+7. **Rocket/Shuttle** → scaling tariff offers
+
+### Follow-ups (Dozhim)
+
+- **10 steps for Tripwire** — intervals from 50h to 216h (9 days)
+- **10 steps for tariffs** — intervals from 20h to 216h
+- **Dynamic intervals** — configurable via `DOZHIM_DELAY_HOURS` and `DOZHIM_MAP`
+
+### Reminders
+
+Auto-reminders at `1h, 3h, 24h, 48h` for key training steps (`REMIND_MAP`).
+
+### Multi-Channel Extension (v5.0)
+
+After completing setup for one channel, user is asked:
+> "Want to also set up additional channels?"
+> - [ ] VKontakte
+> - [ ] Website chat widget
+> - [ ] Email newsletter
+> - [ ] Skip
+
+Each channel is a mini-module of 3-4 steps. User progress tracked per-channel in `session.channel_states`.
 
 ---
 
-## Обработка ошибок
+## Security
 
-| Ошибка | Поведение |
-|--------|-----------|
-| **429 (Rate Limit)** | Экспоненциальный backoff, максимум `MAX_RETRIES` попыток |
-| **403 (Блокировка)** | Логирование, пользователь помечается как неактивный |
-| **Сетевые ошибки** | Логирование, функция не падает |
-| **Ошибки YDB** | Возврат `null` для чтения, `{success: false}` для записи |
+- **Telegram initData validation** — HMAC-SHA256 signature check with 24h timeout
+- **JWT authentication** — for CRM Web App and NeuroGen Apps
+- **Global admins** — bypass bot ownership check via `CRM_ADMIN_IDS`
+- **PRO verification** — bot owners need PRO status for CRM access
+- **Race condition protection** — `session_version` for UPSERT operations
+- **⚠️ Critical:** `JWT_SECRET` must NOT match `BOT_TOKEN`
 
 ---
 
-## Особенности serverless-архитектуры
+## Error Handling
 
-- **Cold start** — ожидаемы при холодном запуске функции
-- **State в YDB** — всё состояние хранится в БД, не в памяти
-- **Лимиты** — CRON-задачи ограничены по количеству пользователей за один запуск (`CRON_MAX_USERS_PER_RUN`)
-- **Batch processing** — пользователи обрабатываются пачками с настраиваемыми паузами
+| Error | Behavior |
+|-------|----------|
+| **429 (Rate Limit)** | Exponential backoff, max `MAX_RETRIES` attempts |
+| **403 (Blocked)** | Log, mark user as inactive |
+| **Network errors** | Log, function doesn't crash |
+| **YDB errors** | Return `null` for reads, `{success: false}` for writes |
+
+---
+
+## Serverless Architecture Notes
+
+- **Cold start** — expected on function cold start
+- **State in YDB** — all state in DB, not in memory
+- **Limits** — CRON limited by users per run (`CRON_MAX_USERS_PER_RUN`)
+- **Batch processing** — users processed in batches with configurable pauses
+
+---
+
+## Implementation Plan (v5.0 — Multi-Channel)
+
+### Phase 1: Infrastructure
+1. **Email service** (`src/core/email/email_service.js`) — Postbox API integration
+2. **Channel manager** (`src/core/channels/channel_manager.js`) — read/write channel configs from session
+3. **Update ENV_TEMPLATE.txt** — add Postbox + VK variables
+
+### Phase 2: VK Full Integration
+4. **Enhance VK handler** — complete funnel, keyword commands, CRON reachability
+5. **Extend sendStepToUser** — support VK channel in index.js
+6. **Update VK buttons** — add channel selection buttons
+
+### Phase 3: Website Funnel
+7. **Web chat persistence** — save web users to YDB (`web_chat.js`)
+8. **Full funnel on /ai.njk** — email capture → channel selection → setup → training → offer
+9. **Update /join.njk** — add VK + Email options to modal
+
+### Phase 4: Multi-Channel CRM
+10. **CRM API updates** — multi-channel filtering, stats
+11. **CRM dashboard updates** — channel badges, filters, multi-channel broadcast
+12. **CRON jobs update** — multi-channel dozhim/reminders (TG + VK + email)
+13. **Shared texts update** — add multi-channel setup module texts

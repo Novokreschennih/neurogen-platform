@@ -43,6 +43,7 @@ CREATE TABLE bots (
     sh_user_id Utf8,
     sh_ref_tail Utf8,
     tripwire_link Utf8,
+    vk_group_id Utf8,
     PRIMARY KEY (bot_token)
 );
 
@@ -75,6 +76,9 @@ CREATE INDEX idx_users_bought_tripwire ON users (bought_tripwire);
 
 -- Индекс для поиска пользователей по последнему визиту (для крона)
 CREATE INDEX idx_users_last_seen ON users (last_seen);
+
+-- Индекс для поиска ботов по VK группе
+CREATE INDEX idx_bots_vk_group_id ON bots (vk_group_id);
 
 -- -------------------------------------------------------------
 -- Примечания по использованию
@@ -146,3 +150,9 @@ CREATE INDEX idx_users_last_seen ON users (last_seen);
 
 -- Инициализировать версию для существующих пользователей:
 -- UPDATE users SET session_version = 0 WHERE session_version IS NULL;
+
+-- v5.0: Добавить поле vk_group_id для VK-ботов:
+-- ALTER TABLE bots ADD COLUMN vk_group_id Utf8;
+
+-- Создать индекс для поиска по VK группе:
+-- CREATE INDEX idx_bots_vk_group_id ON bots (vk_group_id);

@@ -1,7 +1,7 @@
 /**
  * VK Webhook Handler
  * Обрабатывает входящие запросы от VK Callback API
- * 
+ *
  * Зависимости (передаются через context):
  * - ydb: модуль работы с базой данных
  * - scenarioVK: сценарий для VK (с callback кнопками)
@@ -9,12 +9,14 @@
  * - processedUpdates: Map для защиты от дублей
  * - renderStep: функция рендера шага сценария
  * - corsHeaders: CORS заголовки
+ * - channelManager: менеджер каналов
+ * - sendEmail: функция отправки email
  */
 
 export async function handleVkWebhook(event, context) {
-  const { ydb, scenarioVK, log, processedUpdates, renderStep, corsHeaders } = context;
+  const { ydb, scenarioVK, log, processedUpdates, renderStep, corsHeaders, channelManager, sendEmail } = context;
 
-  const action = event.httpMethod === "GET" 
+  const action = event.httpMethod === "GET"
     ? new URL(event.path, "http://example.com").searchParams.get("action")
     : null;
 
@@ -25,6 +27,34 @@ export async function handleVkWebhook(event, context) {
 
   if (action === "vk-webhook" || isVkRequest) {
     log.info(`[VK WEBHOOK] Request received`);
+
+    /**
+     * Уведомление владельца VK-бота о новом лиде
+     */
+    async function notifyVkBotOwner(groupId, leadName, leadId) {
+      try {
+        // Ищем бота по group_id
+        const botInfo = await ydb.getBotInfoByVkGroup(groupId);
+        if (!botInfo || !botInfo.owner_id) return;
+
+        // Отправляем уведомление владельцу через VK
+        if (process.env.VK_SERVICE_TOKEN) {
+          const notifyParams = new URLSearchParams({
+            access_token: process.env.VK_SERVICE_TOKEN,
+            v: "5.199",
+            user_id: String(botInfo.owner_id),
+            random_id: String(Math.floor(Math.random() * 2147483647)),
+            message: `🔔 <b>НОВЫЙ ЛИД!</b>\n\n${leadName} (ID: ${leadId}) зашёл в твой бот.\n\nСистема автоматически ведёт его по воронке.`,
+          });
+          await fetch("https://api.vk.com/method/messages.send", {
+            method: "POST",
+            body: notifyParams,
+          });
+        }
+      } catch (e) {
+        log.warn("[VK NOTIFY ERROR]", e.message);
+      }
+    }
 
     try {
       const payloadStr = event.isBase64Encoded
@@ -480,6 +510,62 @@ export async function handleVkWebhook(event, context) {
                 }
                 case "REMINDER_1H_RESUME": case "REMINDER_3H_RESUME": case "REMINDER_24H_RESUME": case "REMINDER_48H_RESUME":
                   return await renderStep(vkCtx, vkUser.saved_state || "START", vkToken);
+
+                // === MULTI_CHANNEL: Выбор дополнительных каналов ===
+                case "MULTI_CHANNEL_SELECT":
+                  return await renderStep(vkCtx, "MULTI_CHANNEL_SELECT", vkToken);
+                case "CHANNEL_SETUP_VK":
+                  vkUser.state = "WAIT_VK_GROUP_ID";
+                  await ydb.saveUser(vkUser);
+                  return await renderStep(vkCtx, "CHANNEL_SETUP_VK", vkToken);
+                case "CHANNEL_SETUP_WEB":
+                  return await renderStep(vkCtx, "CHANNEL_SETUP_WEB", vkToken);
+                case "CHANNEL_SETUP_EMAIL":
+                  const email = vkUser.session?.email;
+                  if (!email) {
+                    vkUser.state = "WAIT_EMAIL_INPUT";
+                    await ydb.saveUser(vkUser);
+                    return await vkCtx.reply("📧 Введи свой email для подключения рассылки:", {});
+                  }
+                  return await renderStep(vkCtx, "CHANNEL_SETUP_EMAIL", vkToken);
+                case "CHANNEL_SKIPPED":
+                  return await renderStep(vkCtx, "CHANNEL_SKIPPED", vkToken);
+                case "CHANNEL_SETUP_COMPLETE":
+                  channelManager.configureChannel(vkUser, "vk");
+                  await ydb.saveUser(vkUser);
+                  return await renderStep(vkCtx, "CHANNEL_SETUP_COMPLETE", vkToken);
+                case "VK_HELP":
+                  return await vkCtx.reply(
+                    `❓ <b>Как найти ID сообщества VK:</b>\n\n` +
+                    `1️⃣ Открой своё сообщество VK\n` +
+                    `2️⃣ Нажми «Управление»\n` +
+                    `3️⃣ В адресной строке увидишь: vk.com/club<b>123456789</b>\n` +
+                    `4️⃣ Число после "club" — это и есть ID\n\n` +
+                    `Или: «Управление» → «Работа с API» → ID указан там.\n\n` +
+                    `Напиши ID (только цифры):`,
+                    {}
+                  );
+
+                // === KEYWORD COMMANDS (аналоги команд Telegram) ===
+                case "VK_STATS": case "VK_STATISTIKA":
+                  // Аналог /stats
+                  const stats = await ydb.getPartnerStats(message.from_id);
+                  return await vkCtx.reply(
+                    `📊 <b>ТВОЯ СТАТИСТИКА</b>\n\n` +
+                    `👥 Всего в сети: ${stats.total || 0}\n` +
+                    `💰 Оплатили: ${stats.sales || 0}\n` +
+                    `🪙 NeuroCoins: ${vkUser.session?.xp || 0}\n\n` +
+                    `${vkUser.bought_tripwire ? '✅ PRO-статус активен' : '🔒 Для CRM нужен PRO-статус'}`,
+                    {}
+                  );
+                case "VK_TOOLS": case "VK_INSTRUMENTY":
+                  // Аналог /tools
+                  return await renderStep(vkCtx, "TOOLS_MENU", vkToken);
+                case "VK_MENU":
+                  // Аналог /menu
+                  vkUser.reminders_count = 0;
+                  vkUser.last_reminder_time = 0;
+                  return await renderStep(vkCtx, "MAIN_MENU", vkToken);
               }
               if (scenarioVK.steps[callbackData]) {
                 const navSteps = ["START", "RESUME_GATE", "MAIN_MENU", "Pre_Training_Logic", "EDIT_PROFILE"];
@@ -493,6 +579,27 @@ export async function handleVkWebhook(event, context) {
 
             if (txt.toLowerCase() === "старт" || txt.toLowerCase() === "/start" || txt.toLowerCase() === "начать") {
               vkUser.state = "START"; await ydb.saveUser(vkUser); return await renderStep(vkCtx, "START", vkToken);
+            }
+
+            // === KEYWORD COMMANDS (текстовые команды) ===
+            if (txt.toLowerCase() === "статистика" || txt.toLowerCase() === "стата") {
+              const stats = await ydb.getPartnerStats(message.from_id);
+              return await vkCtx.reply(
+                `📊 <b>ТВОЯ СТАТИСТИКА</b>\n\n` +
+                `👥 Всего в сети: ${stats.total || 0}\n` +
+                `💰 Оплатили: ${stats.sales || 0}\n` +
+                `🪙 NeuroCoins: ${vkUser.session?.xp || 0}\n\n` +
+                `${vkUser.bought_tripwire ? '✅ PRO-статус активен' : '🔒 Для CRM нужен PRO-статус'}`,
+                {}
+              );
+            }
+            if (txt.toLowerCase() === "инструменты" || txt.toLowerCase() === "tools") {
+              return await renderStep(vkCtx, "TOOLS_MENU", vkToken);
+            }
+            if (txt.toLowerCase() === "меню" || txt.toLowerCase() === "menu") {
+              vkUser.reminders_count = 0;
+              vkUser.last_reminder_time = 0;
+              return await renderStep(vkCtx, "MAIN_MENU", vkToken);
             }
 
             // === ОБРАБОТКА ВВОДА В СОСТОЯНИЯХ ОЖИДАНИЯ ===
@@ -568,6 +675,46 @@ export async function handleVkWebhook(event, context) {
 
               await vkCtx.reply(`🎉 Данные сохранены! Переходим к следующему шагу 👇`, {});
               return await renderStep(vkCtx, "Module_3_Offline", vkToken);
+            }
+
+            // === MULTI_CHANNEL: Настройка VK сообщества ===
+            if (vkUser.state === "WAIT_VK_GROUP_ID") {
+              if (isNaN(txt)) return await vkCtx.reply("❌ ID сообщества — только цифры. Попробуй ещё раз:", {});
+              channelManager.enableChannel(vkUser, "vk");
+              channelManager.setChannelConfig(vkUser, "vk", {
+                group_id: txt,
+                enabled: true,
+                configured: true,
+                configured_at: Date.now(),
+              });
+              channelManager.setChannelState(vkUser, "vk", "CHANNEL_SETUP_VK_SUCCESS");
+              await ydb.saveUser(vkUser);
+              return await renderStep(vkCtx, "CHANNEL_SETUP_VK_SUCCESS", vkToken);
+            }
+
+            // === MULTI_CHANNEL: Ввод email ===
+            if (vkUser.state === "WAIT_EMAIL_INPUT") {
+              const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+              if (!emailRegex.test(txt)) {
+                return await vkCtx.reply("❌ Это не похоже на email. Попробуй ещё раз:", {});
+              }
+              vkUser.session.email = txt;
+              vkUser.session.email_verified = true; // TODO: send verification code
+              channelManager.enableChannel(vkUser, "email");
+              channelManager.configureChannel(vkUser, "email", {
+                subscribed: true,
+              });
+              channelManager.setChannelState(vkUser, "email", "CHANNEL_SETUP_EMAIL_SUCCESS");
+              await ydb.saveUser(vkUser);
+
+              // Отправляем приветственное письмо
+              if (sendEmail) {
+                const { templates } = await import("../../core/email/email_service.js");
+                const tpl = templates.welcome(vkUser);
+                await sendEmail({ to: txt, subject: tpl.subject, text: tpl.text, html: tpl.html });
+              }
+
+              return await renderStep(vkCtx, "CHANNEL_SETUP_EMAIL_SUCCESS", vkToken);
             }
 
             // === СЕКРЕТНЫЕ СЛОВА ===

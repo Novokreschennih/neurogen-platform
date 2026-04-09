@@ -1,11 +1,17 @@
 /**
- * CRM API Handler
- * Обрабатывает запросы из CRM-дашборда
+ * CRM API Handler — v5.0 Multi-Channel
  * actions: "get_crm_data", "export_csv", "send_crm_broadcast"
+ *
+ * Поддерживает фильтрацию и статистику по каналам:
+ * - Telegram
+ * - VK
+ * - Web
+ * - Email
  */
 
 import TelegrafPkg from "telegraf";
 const { Telegraf } = TelegrafPkg;
+import channelManager from "../channels/channel_manager.js";
 
 export async function handleCrmApi(event, context) {
   const { action, ydb, log, corsHeaders, authorizeCrmRequest, BROADCAST_RATE_LIMIT } = context;
@@ -45,16 +51,40 @@ export async function handleCrmApi(event, context) {
     const users = await ydb.getBotUsers(botToken, pageSize, offset);
     const stats = await ydb.getBotStats(botToken);
 
+    // Фильтр по каналу
+    const channelFilter = data.channel || null;
+
     const leads = users
-      .map((u) => ({
-        user_id: u.user_id,
-        first_name: u.first_name,
-        state: u.state,
-        bought_tripwire: u.bought_tripwire,
-        last_seen: u.last_seen,
-        tags: u.session?.tags || [],
-      }))
+      .map((u) => {
+        // Определяем канал пользователя
+        const channels = channelManager.getChannelSummary(u);
+        const primaryChannel = channelManager.getPrimaryChannel(u);
+
+        // Если задан фильтр по каналу — пропускаем неподходящих
+        if (channelFilter && primaryChannel !== channelFilter) return null;
+
+        return {
+          user_id: u.user_id,
+          first_name: u.first_name,
+          state: u.state,
+          bought_tripwire: u.bought_tripwire,
+          last_seen: u.last_seen,
+          tags: u.session?.tags || [],
+          email: u.session?.email || "",
+          // Мультиканальная информация
+          primary_channel: primaryChannel,
+          channels: channels,
+          channel_states: u.session?.channel_states || {},
+        };
+      })
       .filter((u) => u !== null);
+
+    // Статистика по каналам
+    const channelStats = { telegram: 0, vk: 0, web: 0, email: 0 };
+    users.forEach((u) => {
+      const ch = channelManager.getPrimaryChannel(u);
+      if (ch && channelStats[ch] !== undefined) channelStats[ch]++;
+    });
 
     return {
       statusCode: 200,
@@ -62,6 +92,7 @@ export async function handleCrmApi(event, context) {
       body: JSON.stringify({
         stats,
         leads,
+        channelStats,
         pagination: {
           page,
           pageSize,
@@ -86,14 +117,30 @@ export async function handleCrmApi(event, context) {
       };
     }
 
-    if (Object.keys(filters).length > 0) {
-      const allIds = await ydb.getBotUsers(botToken);
-      const allUsers = await Promise.all(allIds.map((id) => ydb.getUser(id)));
+    if (Object.keys(filters).length > 0 || filters.channel) {
+      const allUsers = await ydb.getBotUsers(botToken, 10000, 0);
+      // Для не-Telegram пользователей загружаем напрямую
+      if (filters.channel && filters.channel !== "telegram") {
+        const staleAll = await ydb.getStaleUsers(99999, 10000, 0); // Все пользователи
+        const existingIds = new Set(allUsers.map(u => u.user_id));
+        for (const u of staleAll) {
+          if (!existingIds.has(u.user_id)) {
+            allUsers.push(u);
+            existingIds.add(u.user_id);
+          }
+        }
+      }
 
       targetUserIds = allUsers
         .filter((u) => u !== null)
         .filter((u) => {
           let isMatch = true;
+
+          // === Фильтр по каналу ===
+          if (filters.channel) {
+            const primaryCh = channelManager.getPrimaryChannel(u);
+            isMatch = isMatch && primaryCh === filters.channel;
+          }
 
           if (filters.filter_tab) {
             const tab = filters.filter_tab;
@@ -149,27 +196,95 @@ export async function handleCrmApi(event, context) {
       };
     }
 
-    const extraOptions = { parse_mode: "HTML" };
-    if (data.reply_markup) {
-      extraOptions.reply_markup = data.reply_markup;
+    // === Мультиканальная рассылка ===
+    const allUsersForBroadcast = await ydb.getBotUsers(botToken, 10000, 0);
+    const userMap = new Map(allUsersForBroadcast.map(u => [u.user_id, u]));
+
+    const tgUserIds = [];
+    const vkUserIds = [];
+    const emailUsers = [];
+
+    for (const uid of targetUserIds) {
+      const u = userMap.get(uid) || await ydb.getUser(uid);
+      if (!u) continue;
+
+      const ch = channelManager.getPrimaryChannel(u);
+      if (ch === "telegram") tgUserIds.push(uid);
+      else if (ch === "vk") vkUserIds.push(uid);
+      else if (ch === "email") emailUsers.push(u);
     }
 
-    const broadcastBot = new Telegraf(botToken);
-    const results = await ydb.broadcastWithRateLimit(
-      broadcastBot,
-      targetUserIds,
-      message,
-      extraOptions,
-      BROADCAST_RATE_LIMIT,
-    );
+    let totalSent = 0, totalFailed = 0;
+    const results = {};
+
+    // Telegram рассылка
+    if (tgUserIds.length > 0) {
+      const broadcastBot = new Telegraf(botToken);
+      const tgResults = await ydb.broadcastWithRateLimit(
+        broadcastBot,
+        tgUserIds,
+        message,
+        { parse_mode: "HTML", ...(data.reply_markup ? { reply_markup: data.reply_markup } : {}) },
+        BROADCAST_RATE_LIMIT,
+      );
+      totalSent += tgResults.sent;
+      totalFailed += tgResults.failed;
+      results.telegram = tgResults;
+    }
+
+    // VK рассылка
+    if (vkUserIds.length > 0 && process.env.VK_SERVICE_TOKEN) {
+      for (const uid of vkUserIds) {
+        try {
+          const vkUserId = uid.replace("vk:", "");
+          const params = new URLSearchParams({
+            access_token: process.env.VK_SERVICE_TOKEN,
+            v: "5.199",
+            user_id: vkUserId,
+            random_id: String(Math.floor(Math.random() * 2147483647)),
+            message: message.replace(/<[^>]*>/g, ""), // VK doesn't support HTML
+          });
+          const resp = await fetch("https://api.vk.com/method/messages.send", {
+            method: "POST",
+            body: params,
+          });
+          const vkData = await resp.json();
+          if (vkData.response) totalSent++;
+          else totalFailed++;
+        } catch {
+          totalFailed++;
+        }
+      }
+      results.vk = { sent: totalSent, failed: totalFailed };
+    }
+
+    // Email рассылка
+    if (emailUsers.length > 0) {
+      const { sendEmailBatch } = await import("../email/email_service.js");
+      const emails = emailUsers
+        .filter(u => u.session?.email)
+        .map(u => ({
+          to: u.session.email,
+          subject: message.substring(0, 80),
+          text: message.replace(/<[^>]*>/g, ""),
+          html: message,
+        }));
+      if (emails.length > 0) {
+        const emailResults = await sendEmailBatch(emails, { pauseBetweenMs: 200 });
+        totalSent += emailResults.sent;
+        totalFailed += emailResults.failed;
+        results.email = emailResults;
+      }
+    }
 
     return {
       statusCode: 200,
       headers: corsHeaders,
       body: JSON.stringify({
         matched_users: targetUserIds.length,
-        sent: results.sent,
-        failed: results.failed,
+        sent: totalSent,
+        failed: totalFailed,
+        byChannel: results,
       }),
     };
   }
@@ -180,16 +295,19 @@ export async function handleCrmApi(event, context) {
     const allUsers = await Promise.all(allIds.map((id) => ydb.getUser(id)));
 
     const csvRows = [
-      ["user_id", "first_name", "state", "is_pro", "last_seen"],
+      ["user_id", "first_name", "state", "is_pro", "primary_channel", "email", "last_seen"],
     ];
     allUsers
       .filter((u) => u !== null)
       .forEach((u) => {
+        const primaryChannel = channelManager.getPrimaryChannel(u) || "telegram";
         csvRows.push([
           u.user_id,
           u.first_name || "",
           u.state || "",
           u.bought_tripwire ? "PRO" : "FREE",
+          primaryChannel,
+          u.session?.email || "",
           u.last_seen || 0,
         ]);
       });

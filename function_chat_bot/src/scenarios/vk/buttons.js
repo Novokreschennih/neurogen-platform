@@ -549,6 +549,76 @@ export const vkButtons = {
         return r;
       },
 
+  // === MULTI_CHANNEL_SELECT: Выбор дополнительных каналов ===
+  MULTI_CHANNEL_SELECT: (links, user) => {
+        const channels = user.session?.channels || {};
+        const r = [];
+
+        // VK
+        const vkConfigured = channels.vk?.configured;
+        r.push([{
+          text: vkConfigured ? "✅ VKontakte (настроено)" : "💬 ПОДКЛЮЧИТЬ VK",
+          callback: vkConfigured ? "CHANNEL_SETUP_VK" : "CHANNEL_SETUP_VK",
+        }]);
+
+        // Web
+        const webConfigured = channels.web?.configured;
+        r.push([{
+          text: webConfigured ? "✅ Чат на сайте (настроено)" : "🌐 ЧАТ НА САЙТЕ",
+          callback: webConfigured ? "CHANNEL_SETUP_WEB" : "CHANNEL_SETUP_WEB",
+        }]);
+
+        // Email
+        const emailConfigured = channels.email?.configured;
+        r.push([{
+          text: emailConfigured ? "✅ Email (настроено)" : "📧 EMAIL-РАССЫЛКА",
+          callback: emailConfigured ? "CHANNEL_SETUP_EMAIL" : "CHANNEL_SETUP_EMAIL",
+        }]);
+
+        // Skip
+        r.push([{ text: "⏭ ПРОПУСТИТЬ", callback: "CHANNEL_SKIPPED" }]);
+
+        return r;
+      },
+
+  // === CHANNEL_SETUP_VK ===
+  CHANNEL_SETUP_VK: (links, user) => {
+        const r = [];
+        r.push([{ text: "❓ КАК НАЙТИ ID СООБЩЕСТВА?", callback: "VK_HELP" }]);
+        r.push([{ text: "⏭ НАЗАД", callback: "MULTI_CHANNEL_SELECT" }]);
+        return r;
+      },
+
+  // === CHANNEL_SETUP_WEB ===
+  CHANNEL_SETUP_WEB: (links, user) => {
+        const r = [];
+        r.push([{ text: "⏭ НАЗАД К ВЫБОРУ КАНАЛОВ", callback: "MULTI_CHANNEL_SELECT" }]);
+        r.push([{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback: "MAIN_MENU" }]);
+        return r;
+      },
+
+  // === CHANNEL_SETUP_EMAIL ===
+  CHANNEL_SETUP_EMAIL: (links, user) => {
+        const r = [];
+        r.push([{ text: "⏭ НАЗАД К ВЫБОРУ КАНАЛОВ", callback: "MULTI_CHANNEL_SELECT" }]);
+        return r;
+      },
+
+  // === CHANNEL_SETUP_COMPLETE ===
+  CHANNEL_SETUP_COMPLETE: (links, user) => {
+        const r = [];
+        r.push([{ text: "🚀 ПРОДОЛЖИТЬ ОБУЧЕНИЕ", callback: "Training_Main" }]);
+        r.push([{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback: "MAIN_MENU" }]);
+        return r;
+      },
+
+  // === CHANNEL_SKIPPED ===
+  CHANNEL_SKIPPED: (links, user) => {
+        const r = [];
+        r.push([{ text: "🚀 ПРОДОЛЖИТЬ ОБУЧЕНИЕ", callback: "Training_Main" }]);
+        return r;
+      },
+
   // === TOOLS_MENU ===
   TOOLS_MENU: (links, user) => {
         const isPro = user.bought_tripwire;

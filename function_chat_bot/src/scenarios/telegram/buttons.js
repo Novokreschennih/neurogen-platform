@@ -546,6 +546,99 @@ export const telegramButtons = {
         return r;
       },
 
+  // === MULTI_CHANNEL_SELECT: Выбор дополнительных каналов ===
+  MULTI_CHANNEL_SELECT: (links, user) => {
+        const channels = user.session?.channels || {};
+        const r = [];
+
+        // VK
+        const vkConfigured = channels.vk?.configured;
+        r.push([{
+          text: vkConfigured ? "✅ VKontakte (настроено)" : "💬 ПОДКЛЮЧИТЬ VK",
+          callback_data: "MULTI_CHANNEL_VK",
+        }]);
+
+        // Web
+        const webConfigured = channels.web?.configured;
+        r.push([{
+          text: webConfigured ? "✅ Чат на сайте (настроено)" : "🌐 ЧАТ НА САЙТЕ",
+          callback_data: "MULTI_CHANNEL_WEB",
+        }]);
+
+        // Email
+        const emailConfigured = channels.email?.configured;
+        r.push([{
+          text: emailConfigured ? "✅ Email (настроено)" : "📧 EMAIL-РАССЫЛКА",
+          callback_data: "MULTI_CHANNEL_EMAIL",
+        }]);
+
+        // Skip
+        r.push([{ text: "⏭ ПРОПУСТИТЬ", callback_data: "CHANNEL_SKIPPED" }]);
+
+        return r;
+      },
+
+  // === MULTI_CHANNEL_VK ===
+  MULTI_CHANNEL_VK: (links, user) => {
+        const r = [];
+        r.push([{ text: "💬 НАСТРОИТЬ VK", callback_data: "CHANNEL_SETUP_VK" }]);
+        r.push([{ text: "⏭ НАЗАД", callback_data: "MULTI_CHANNEL_SELECT" }]);
+        return r;
+      },
+
+  // === MULTI_CHANNEL_WEB ===
+  MULTI_CHANNEL_WEB: (links, user) => {
+        const r = [];
+        r.push([{ text: "🌐 ПОДКЛЮЧИТЬ ЧАТ", callback_data: "CHANNEL_SETUP_WEB" }]);
+        r.push([{ text: "⏭ НАЗАД", callback_data: "MULTI_CHANNEL_SELECT" }]);
+        return r;
+      },
+
+  // === MULTI_CHANNEL_EMAIL ===
+  MULTI_CHANNEL_EMAIL: (links, user) => {
+        const r = [];
+        r.push([{ text: "📧 НАСТРОИТЬ EMAIL", callback_data: "CHANNEL_SETUP_EMAIL" }]);
+        r.push([{ text: "⏭ НАЗАД", callback_data: "MULTI_CHANNEL_SELECT" }]);
+        return r;
+      },
+
+  // === CHANNEL_SETUP_VK ===
+  CHANNEL_SETUP_VK: (links, user) => {
+        const r = [];
+        r.push([{ text: "⏭ НАЗАД К ВЫБОРУ КАНАЛОВ", callback_data: "MULTI_CHANNEL_SELECT" }]);
+        return r;
+      },
+
+  // === CHANNEL_SETUP_WEB ===
+  CHANNEL_SETUP_WEB: (links, user) => {
+        const r = [];
+        r.push([{ text: "⏭ НАЗАД К ВЫБОРУ КАНАЛОВ", callback_data: "MULTI_CHANNEL_SELECT" }]);
+        r.push([{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }]);
+        return r;
+      },
+
+  // === CHANNEL_SETUP_EMAIL ===
+  CHANNEL_SETUP_EMAIL: (links, user) => {
+        const r = [];
+        r.push([{ text: "⏭ НАЗАД К ВЫБОРУ КАНАЛОВ", callback_data: "MULTI_CHANNEL_SELECT" }]);
+        return r;
+      },
+
+  // === CHANNEL_SETUP_COMPLETE ===
+  CHANNEL_SETUP_COMPLETE: (links, user) => {
+        const r = [];
+        r.push([{ text: "🚀 ПРОДОЛЖИТЬ ОБУЧЕНИЕ", callback_data: "Training_Main" }]);
+        r.push([{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }]);
+        return r;
+      },
+
+  // === CHANNEL_SKIPPED ===
+  CHANNEL_SKIPPED: (links, user) => {
+        const r = [];
+        r.push([{ text: "🚀 ПРОДОЛЖИТЬ ОБУЧЕНИЕ", callback_data: "Training_Main" }]);
+        return r;
+      },
+
   // === TOOLS_MENU ===
   TOOLS_MENU: (links, user) => {
         const isPro = user.bought_tripwire;
