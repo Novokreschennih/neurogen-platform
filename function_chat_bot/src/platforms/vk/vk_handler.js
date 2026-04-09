@@ -368,29 +368,22 @@ export async function handleVkWebhook(event, context) {
           let partnerId = process.env.MY_PARTNER_ID || "p_qdr";
 
           // v5.0: Поддержка partner_id из разных источников
-          // 1. Из message.payload (JSON с command)
+          // 1. Из message.payload (JSON с command или ref)
           if (message.payload) {
             try {
               const parsedPayload = JSON.parse(message.payload);
-              // Формат: {"command": "p_xxx"} или {"ref": "p_xxx"}
-              if (
-                parsedPayload.command &&
-                parsedPayload.command.startsWith("p_")
-              ) {
+              if (parsedPayload.command) {
                 partnerId = parsedPayload.command;
-              } else if (
-                parsedPayload.ref &&
-                parsedPayload.ref.startsWith("p_")
-              ) {
+              } else if (parsedPayload.ref) {
                 partnerId = parsedPayload.ref;
               }
             } catch (e) {}
           }
 
-          // 2. Из текста сообщения (если пользователь вручную ввёл p_xxx)
-          if (!partnerId.startsWith("p_")) {
-            const refMatch = text.match(/p_([a-zA-Z0-9]+)/);
-            if (refMatch) partnerId = `p_${refMatch[1]}`;
+          // 2. Из текста сообщения (если пользователь ввёл ref-хвост вручную)
+          if (partnerId === (process.env.MY_PARTNER_ID || "p_qdr")) {
+            const refMatch = text.match(/^([a-zA-Z0-9_]+)$/);
+            if (refMatch && refMatch[1].length > 1) partnerId = refMatch[1];
           }
 
           let firstName = "VK Lead";

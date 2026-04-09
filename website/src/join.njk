@@ -764,16 +764,6 @@ body {
       || DEFAULT_PARTNER_ID;
   }
 
-  // Для обратной совместимости: если ?page= ещё содержит bot_username
-  // Определяем по формату: partner_id начинается с "p_", bot_username — нет
-  if (partnerId && !partnerId.startsWith("p_")) {
-    // Старый формат — bot_username, конвертируем в дефолтный partner_id
-    console.log(
-      "[JOIN] Legacy bot_username detected, using default partner_id",
-    );
-    partnerId = DEFAULT_PARTNER_ID;
-  }
-
   // Сохраняем bot_username для Telegram (из настроек или дефолт)
   refBot = localStorage.getItem("neurogen_partner_bot") || DEFAULT_BOT;
 
