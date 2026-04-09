@@ -12,7 +12,8 @@
       "Bash(mkdir *)",
       "Bash(ls *)",
       "Bash(git *)",
-      "Bash(node *)"
+      "Bash(node *)",
+      "Bash(npm run *)"
     ]
   },
   "$version": 3
