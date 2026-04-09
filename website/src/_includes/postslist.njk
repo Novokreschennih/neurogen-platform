@@ -1,0 +1,27 @@
+<ol reversed class="postlist" style="list-style: none; padding: 0;">
+{%- for post in postslist -%}
+  <li class="postlist-item">
+    <a href="{{ post.url | url }}" class="postlist-link">
+      <div class="post-card-content">
+        <h2>{{ post.data.title }}</h2>
+        {% if post.data.description %}
+          <p class="postlist-excerpt">{{ post.data.description }}</p>
+        {% else %}
+          <p class="postlist-excerpt">Читать далее…</p>
+        {% endif %}
+      </div>
+      
+      {# --- НОВЫЙ БЛОК ДЛЯ ТЕГОВ --- #}
+      {% if post.data.tags %}
+      <div class="post-card-tags">
+        {# Выводим только первые два тега, чтобы не перегружать карточку #}
+        {% for tag in post.data.tags | filterTagList | head(4) %}
+          <span class="post-tag-on-card">{{ tagDictionary[tag] or tag }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {# --------------------------- #}
+    </a>
+  </li>
+{%- endfor -%}
+</ol>

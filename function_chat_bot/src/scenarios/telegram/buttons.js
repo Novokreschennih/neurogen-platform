@@ -1,0 +1,1475 @@
+/**
+ * Кнопки для Telegram (inline keyboard)
+ * Сгенерировано автоматически: scripts/convert_scenario.js
+ *
+ * Формат: callback_data, url, web_app
+ */
+
+import {
+  PROMO_KIT_URL,
+  CRM_DEMO_URL,
+  TRIPWIRE_PRICE,
+  ACADEMY_BASE_URL,
+  STORAGE_BUCKET_URL,
+} from "../common/constants.js";
+
+/**
+ * Кнопки Telegram для каждого шага воронки
+ * Может быть массивом или функцией (links, user, info) => array
+ */
+export const telegramButtons = {
+
+  // === START ===
+  START: [
+        [{ text: "ДА, ПОКАЖИ МНЕ ЭТО!", callback_data: "Start_Choice" }],
+      ],
+
+  // === Start_Choice ===
+  Start_Choice: [
+        [
+          {
+            text: "💻 Я В ОНЛАЙНЕ (БЛОГЕР, ИНФОБИЗ)",
+            callback_data: "Business_Online_Pain",
+          },
+        ],
+        [
+          {
+            text: "🏢 МОЙ БИЗНЕС (ОФЛАЙН)",
+            callback_data: "Business_Offline_Pain",
+          },
+        ],
+        [
+          {
+            text: "🚀 Я АГЕНТ (ХОЧУ ЗАРАБОТАТЬ С НУЛЯ)",
+            callback_data: "Agent_1_Pain",
+          },
+        ],
+        [{ text: "❓ ЭТО ПИРАМИДА / СКАМ?", callback_data: "AntiMLM" }],
+      ],
+
+  // === AntiMLM ===
+  AntiMLM: [
+        [{ text: "🚀 ПОНЯТНО, Я АГЕНТ", callback_data: "Agent_1_Pain" }],
+        [{ text: "🏢 Я БИЗНЕСМЕН", callback_data: "Business_Offline_Pain" }],
+      ],
+
+  // === Agent_1_Pain ===
+  Agent_1_Pain: [
+        [
+          {
+            text: "🏙 ОФЛАЙН (МАГАЗИНЫ, СТО, КАФЕ)",
+            callback_data: "Agent_2_Offline",
+          },
+        ],
+        [
+          {
+            text: "🤳 ОНЛАЙН (БЛОГЕРЫ, КУРСЫ)",
+            callback_data: "Agent_2_Online",
+          },
+        ],
+      ],
+
+  // === Agent_2_Offline ===
+  Agent_2_Offline: [
+        [
+          {
+            text: "📊 ГДЕ ДЕНЬГИ? КЕЙС АНТОНА",
+            callback_data: "Agent_3_Case_Anton",
+          },
+        ],
+        [{ text: "🔙 НАЗАД К ВЫБОРУ", callback_data: "Agent_1_Pain" }],
+      ],
+
+  // === Agent_3_Case_Anton ===
+  Agent_3_Case_Anton: [
+        [
+          {
+            text: "💰 ХОЧУ ТАКУЮ ЖЕ СИСТЕМУ",
+            callback_data: "Pre_Training_Logic",
+          },
+        ],
+        [{ text: "🔙 НАЗАД", callback_data: "Agent_2_Offline" }],
+      ],
+
+  // === Agent_2_Online ===
+  Agent_2_Online: [
+        [{ text: "💸 ПОКАЖИ МАТЕМАТИКУ", callback_data: "Agent_Math" }],
+        [{ text: "🔙 НАЗАД К ВЫБОРУ", callback_data: "Agent_1_Pain" }],
+      ],
+
+  // === Agent_Math ===
+  Agent_Math: [
+        [
+          {
+            text: "🚀 ДА, ДАЙТЕ МНЕ ИНСТРУМЕНТЫ!",
+            callback_data: "Pre_Training_Logic",
+          },
+        ],
+        [{ text: "🔙 НАЗАД", callback_data: "Agent_2_Online" }],
+      ],
+
+  // === Business_Offline_Pain ===
+  Business_Offline_Pain: [
+        [
+          {
+            text: "КАК ЭТО ВОЗМОЖНО? ПОКАЖИ!",
+            callback_data: "Business_Offline_Solution",
+          },
+        ],
+        [{ text: "🔙 НАЗАД К ВЫБОРУ РОЛИ", callback_data: "Start_Choice" }],
+      ],
+
+  // === Business_Offline_Solution ===
+  Business_Offline_Solution: [
+        [
+          {
+            text: "📊 ПОКАЖИ КЕЙС САЛОНА КРАСОТЫ",
+            callback_data: "Business_Offline_Case",
+          },
+        ],
+        [{ text: "🔙 НАЗАД", callback_data: "Business_Offline_Pain" }],
+      ],
+
+  // === Business_Offline_Case ===
+  Business_Offline_Case: [
+        [
+          {
+            text: "🪂 ХОЧУ ТАКУЮ ЖЕ КЛИЕНТСКУЮ БАЗУ",
+            callback_data: "Business_Offline_Parachute",
+          },
+        ],
+        [{ text: "🔙 НАЗАД", callback_data: "Business_Offline_Solution" }],
+      ],
+
+  // === Business_Offline_Parachute ===
+  Business_Offline_Parachute: [
+        [
+          {
+            text: "🚀 ДА, ДАЙТЕ МНЕ ИНСТРУМЕНТЫ!",
+            callback_data: "Pre_Training_Logic",
+          },
+        ],
+        [{ text: "🔙 НАЗАД", callback_data: "Business_Offline_Case" }],
+      ],
+
+  // === Business_Online_Pain ===
+  Business_Online_Pain: [
+        [
+          {
+            text: "ДА, ЧТО ВЫ ПРЕДЛАГАЕТЕ?",
+            callback_data: "Business_Online_Solution",
+          },
+        ],
+        [{ text: "🔙 НАЗАД К ВЫБОРУ РОЛИ", callback_data: "Start_Choice" }],
+      ],
+
+  // === Business_Online_Solution ===
+  Business_Online_Solution: [
+        [
+          {
+            text: "📊 ПОКАЖИ КЕЙС БЛОГЕРА МАКСА",
+            callback_data: "Business_Online_Case",
+          },
+        ],
+        [{ text: "🔙 НАЗАД", callback_data: "Business_Online_Pain" }],
+      ],
+
+  // === Business_Online_Case ===
+  Business_Online_Case: [
+        [
+          {
+            text: "💎 ПОКАЖИ, КАК ЭТО РАБОТАЕТ",
+            callback_data: "Pre_Training_Logic",
+          },
+        ],
+        [{ text: "🔙 НАЗАД", callback_data: "Business_Online_Solution" }],
+      ],
+
+  // === REGISTRATION_EXIST ===
+  REGISTRATION_EXIST: [
+        [{ text: "✅ ИСПОЛЬЗОВАТЬ ТЕКУЩИЙ", callback_data: "Training_Main" }],
+        [{ text: "✏️ ВВЕСТИ НОВЫЙ ID", callback_data: "FORCE_REG_UPDATE" }],
+        [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
+      ],
+
+  // === Pre_Training_Logic ===
+  Pre_Training_Logic: (links) => [
+        [{ text: "🔗 ЗАРЕГИСТРИРОВАТЬСЯ", url: links.reg }],
+        [{ text: "✅ Я ЗАРЕГИСТРИРОВАН", callback_data: "CLICK_REG_ID" }],
+      ],
+
+  // === Theory_Mod1 ===
+  Theory_Mod1: [
+        [{ text: "➡️ ЭТАП 2: ТЕНЕВОЙ ПАРТНЕР", callback_data: "Theory_Mod2" }],
+        [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
+      ],
+
+  // === Theory_Mod2 ===
+  Theory_Mod2: [
+        [{ text: "➡️ УРОК 3: ОНЛАЙН-БИЗНЕС", callback_data: "Theory_Mod3" }],
+        [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
+      ],
+
+  // === Theory_Mod3 ===
+  Theory_Mod3: [
+        [{ text: "➡️ УРОК 4: ОФЛАЙН-БИЗНЕС", callback_data: "Theory_Mod4" }],
+        [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
+      ],
+
+  // === Theory_Mod4 ===
+  Theory_Mod4: [
+        [
+          {
+            text: "➡️ УРОК 5: ФИНАНСЫ И СТРУКТУРА",
+            callback_data: "Theory_Mod5",
+          },
+        ],
+        [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
+      ],
+
+  // === Theory_Mod5 ===
+  Theory_Mod5: [
+        [
+          {
+            text: "🚀 ЗАВЕРШИТЬ ТЕОРИЮ (+10 🪙)",
+            callback_data: "THEORY_COURSE_COMPLETE",
+          },
+        ],
+      ],
+
+  // === Theory_Reward_Spoilers ===
+  Theory_Reward_Spoilers: (links, user) => [
+        [
+          {
+            text: "🔥 НАЧАТЬ НАСТРОЙКУ (МОДУЛЬ 1)",
+            callback_data: "Module_1_Strategy",
+          },
+        ],
+        [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
+      ],
+
+  // === Training_Main ===
+  Training_Main: (links, user) => {
+        const r = [];
+        r.push([
+          { text: "📖 ВВОДНАЯ БАЗА (10%)", callback_data: "Theory_Mod1" },
+        ]);
+        r.push([
+          { text: "🔥 ПРАКТИКА (90%)", callback_data: "Module_1_Strategy" },
+        ]);
+
+        if (user.session?.mod3_done || user.bought_tripwire) {
+          r.push([{ text: "📥 БАЗА ЗНАНИЙ B2B (PDF)", url: links.free_disk }]);
+        } else {
+          r.push([
+            {
+              text: "🔒 БАЗА ЗНАНИЙ (После Модуля 3)",
+              callback_data: "LOCKED_B2B_INFO",
+            },
+          ]);
+        }
+
+        r.push([{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }]);
+        return r;
+      },
+
+  // === Module_1_Strategy ===
+  Module_1_Strategy: (links, user, info) => {
+        const botName = info?.bot_username || "sethubble_biz_bot";
+        const isCompleted = user.session?.mod1_done;
+        return [
+          [
+            {
+              text: `📖 ЧИТАТЬ СТАТЬЮ ${isCompleted ? "✅" : ""}`,
+              url: `${ACADEMY_BASE_URL}/module-1/?bot=${botName}`,
+            },
+          ],
+          isCompleted
+            ? [
+                {
+                  text: "➡️ ПЕРЕЙТИ К МОДУЛЮ 2",
+                  callback_data: "GO_TO_MODULE_2",
+                },
+              ]
+            : [
+                {
+                  text: "🔑 ВВЕСТИ СЕКРЕТНОЕ СЛОВО (+20 🪙)",
+                  callback_data: "ENTER_SECRET_1",
+                },
+              ],
+          [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
+        ];
+      },
+
+  // === Module_2_Online ===
+  Module_2_Online: (links, user, info) => {
+        const botName = info?.bot_username || "sethubble_biz_bot";
+        const isCompleted = user.session?.mod2_done;
+
+        if (isCompleted) {
+          return [
+            [
+              {
+                text: "📘 ЧИТАТЬ УРОК 2 ✅",
+                url: `${ACADEMY_BASE_URL}/module-2/?bot=${botName}`,
+              },
+            ],
+            [
+              {
+                text: "➡️ ПОЛУЧИТЬ ИНСТРУМЕНТЫ",
+                callback_data: "Module_2_Reward_PromoKit",
+              },
+            ],
+            [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
+          ];
+        } else {
+          return [
+            [
+              {
+                text: "📖 ОТКРЫТЬ УРОК 2",
+                url: `${ACADEMY_BASE_URL}/module-2/?bot=${botName}`,
+              },
+            ],
+            [
+              {
+                text: "🔑 ВВЕСТИ СЕКРЕТНОЕ СЛОВО",
+                callback_data: "ENTER_SECRET_2",
+              },
+            ],
+            [
+              {
+                text: "🔙 НАЗАД (К Стратегии)",
+                callback_data: "Module_1_Strategy",
+              },
+            ],
+          ];
+        }
+      },
+
+  // === Module_2_Reward_PromoKit ===
+  Module_2_Reward_PromoKit: (links, user) => {
+        const botName = user.session?.bot_username || "sethubble_biz_bot";
+        const apiGw =
+          process.env.API_GW_HOST ||
+          "d5dsbah1d4ju0glmp9d0.3zvepvee.apigw.yandexcloud.net";
+
+        // === ИСПРАВЛЕНИЕ v4.3.6: Добавляем параметр mod3=1 для прошедших Модуль 3 ===
+        const mod3Done = user.session?.mod3_done;
+        const isPro = user.bought_tripwire;
+        const mod3Param = mod3Done || isPro ? "&mod3=1" : "";
+
+        return [
+          [
+            {
+              text: "📲 ОТКРЫТЬ PROMO-KIT",
+              web_app: {
+                url: `${PROMO_KIT_URL}?bot=${botName}&api=https://${apiGw}${mod3Param}`,
+              },
+            },
+          ],
+          [
+            {
+              text: "➡️ Я ИЗУЧИЛ, ВЕДИ НА МОДУЛЬ 3",
+              callback_data: "Module_3_Offline",
+            },
+          ],
+          [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
+        ];
+      },
+
+  // === Module_3_Offline ===
+  Module_3_Offline: (links, user, info) => {
+        const botName = info?.bot_username || "sethubble_biz_bot";
+        const isCompleted = user.session?.mod3_done;
+
+        if (isCompleted) {
+          return [
+            [
+              {
+                text: "📖 ЧИТАТЬ СТАТЬЮ ✅",
+                url: `${ACADEMY_BASE_URL}/module-3/?bot=${botName}`,
+              },
+            ],
+            [
+              {
+                text: "➡️ К ФИНАЛЬНОМУ ОФФЕРУ",
+                callback_data: "Lesson_Final_Comparison",
+              },
+            ],
+            [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
+          ];
+        } else {
+          return [
+            [
+              {
+                text: "📖 ОТКРЫТЬ УРОК 3",
+                url: `${ACADEMY_BASE_URL}/module-3/?bot=${botName}`,
+              },
+            ],
+            [
+              {
+                text: "🔑 ВВЕСТИ СЕКРЕТНОЕ СЛОВО",
+                callback_data: "ENTER_SECRET_3",
+              },
+            ],
+            [
+              {
+                text: "🔙 НАЗАД (К Promo-Kit)",
+                callback_data: "Module_2_Reward_PromoKit",
+              },
+            ],
+          ];
+        }
+      },
+
+  // === LOCKED_B2B_INFO ===
+  LOCKED_B2B_INFO: [
+        [{ text: "⚙️ ПРОДОЛЖИТЬ НАСТРОЙКУ", callback_data: "Training_Main" }],
+        [{ text: "🔙 НАЗАД", callback_data: "MAIN_MENU" }],
+      ],
+
+  // === Lesson_Final_Comparison ===
+  Lesson_Final_Comparison: (links, user) => {
+        const xp = user.session?.xp || 0;
+
+        if (xp >= 100) {
+          return [
+            [
+              {
+                text: "🎟 ОБМЕНЯТЬ 100 🪙 НА PRO (-50%)",
+                callback_data: "Offer_Tripwire",
+              },
+            ],
+            [
+              {
+                text: "🏠 В МЕНЮ (Остаться на FREE 31%)",
+                callback_data: "MAIN_MENU",
+              },
+            ],
+          ];
+        } else {
+          return [
+            [
+              {
+                text: "💎 АКТИВИРОВАТЬ PRO ($40)",
+                callback_data: "Offer_Tripwire",
+              },
+            ],
+            [
+              {
+                text: "🏠 В МЕНЮ (Остаться на FREE 31%)",
+                callback_data: "MAIN_MENU",
+              },
+            ],
+          ];
+        }
+      },
+
+  // === Offer_Tripwire ===
+  Offer_Tripwire: (links, user) => {
+        const xp = user.session?.xp || 0;
+        const price = xp >= 100 ? TRIPWIRE_PRICE : TRIPWIRE_BASE_PRICE;
+        const payLink = xp >= 100 ? links.pay_20 : links.pay_40;
+        return [
+          [{ text: `💎 АКТИВИРОВАТЬ PRO ЗА $${price}`, url: payLink }],
+          [{ text: "❓ У меня остались вопросы", callback_data: "FAQ_PRO" }],
+        ];
+      },
+
+  // === FAQ_PRO ===
+  FAQ_PRO: (links, user) => {
+        const xp = user.session?.xp || 0;
+        const price = xp >= 100 ? TRIPWIRE_PRICE : TRIPWIRE_BASE_PRICE;
+        const payLink = xp >= 100 ? links.pay_20 : links.pay_40;
+        return [
+          [{ text: `💎 АКТИВИРОВАТЬ PRO ЗА $${price}`, url: payLink }],
+          [{ text: "🔙 Назад к офферу", callback_data: "Offer_Tripwire" }],
+        ];
+      },
+
+  // === Tripwire_Features ===
+  Tripwire_Features: [
+        [{ text: "💰 СКОЛЬКО ЭТО СТОИТ?", callback_data: "Tripwire_Math" }],
+      ],
+
+  // === Tripwire_Math ===
+  Tripwire_Math: (links) => [
+        [
+          {
+            text: `🚀 ЗАБРАТЬ ПАКЕТ NEUROGEN ($${TRIPWIRE_PRICE})`,
+            url: links.pay,
+          },
+        ],
+        [{ text: "➡️ ДАЛЕЕ (ПЛАНЫ И БИНАР)", callback_data: "Rocket_Limits" }],
+        [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
+      ],
+
+  // === SYSTEM_SETUP ===
+  SYSTEM_SETUP: (links, user) => {
+        const r = [];
+        const hasBot = !!user.bot_token;
+
+        // Кнопка «Повторить обучение» (всегда доступна для зарегистрированных)
+        r.push([
+          { text: "📚 ПОВТОРИТЬ ОБУЧЕНИЕ", callback_data: "Training_Main" },
+        ]);
+
+        if (!hasBot) {
+          // Если бота нет — предлагаем настроить
+          r.push([
+            {
+              text: "🚀 НАСТРОИТЬ БОТА СЕЙЧАС",
+              callback_data: "SETUP_BOT_START",
+            },
+          ]);
+        } else {
+          // Если бот настроен — кнопка обновления токена
+          r.push([
+            {
+              text: "🔄 ОБНОВИТЬ ТОКЕН БОТА",
+              callback_data: "SETUP_BOT_START",
+            },
+          ]);
+        }
+
+        // Кнопка смены данных SetHubble (всегда доступна)
+        r.push([
+          {
+            text: "🔄 ОБНОВИТЬ ДАННЫЕ SETHUBBLE",
+            callback_data: "CLICK_REG_ID",
+          },
+        ]);
+
+        // Кнопка возврата в меню
+        r.push([{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }]);
+
+        return r;
+      },
+
+  // === TOOLS_MENU ===
+  TOOLS_MENU: (links, user) => {
+        const isPro = user.bought_tripwire;
+        const hasMod3 = user.session?.mod3_done || isPro;
+
+        const r = [];
+
+        // 1. Твои клиенты (CRM)
+        if (isPro) {
+          const webAppUrl =
+            process.env.CRM_WEB_APP_URL ||
+            "https://novokreschennih.github.io/crm-dashboard/";
+          r.push([
+            {
+              text: "👥 ТВОИ КЛИЕНТЫ",
+              web_app: {
+                url: `${webAppUrl}?bot_token=${user.bot_token || ""}`,
+              },
+            },
+          ]);
+        } else {
+          r.push([{ text: "🔒 ТВОИ КЛИЕНТЫ", callback_data: "LOCKED_CRM" }]);
+        }
+
+        // 2. Промо-кит
+        if (hasMod3) {
+          r.push([{ text: "📦 ПРОМО-КИТ", callback_data: "PROMO_KIT" }]);
+        } else {
+          r.push([{ text: "🔒 ПРОМО-КИТ", callback_data: "LOCKED_PROMO" }]);
+        }
+
+        // 3. База знаний (Яндекс.Диск)
+        if (hasMod3) {
+          r.push([
+            {
+              text: "📥 БАЗА ЗНАНИЙ",
+              url: links.free_disk || "https://disk.yandex.ru/d/...",
+            },
+          ]);
+        } else {
+          r.push([
+            { text: "🔒 БАЗА ЗНАНИЙ", callback_data: "LOCKED_KNOWLEDGE" },
+          ]);
+        }
+
+        // 4. ИИ-приложения (только PRO)
+        if (isPro) {
+          r.push([{ text: "🤖 NEUROGEN APPS", callback_data: "apps_menu" }]);
+        } else {
+          r.push([
+            { text: "🔒 NEUROGEN APPS", callback_data: "LOCKED_AI_APPS" },
+          ]);
+        }
+
+        // 5. Назад
+        r.push([{ text: "🔙 НАЗАД", callback_data: "MAIN_MENU" }]);
+
+        return r;
+      },
+
+  // === LOCKED_CRM ===
+  LOCKED_CRM: [
+        [{ text: "💎 ХОЧУ PRO-СТАТУС", callback_data: "Offer_Tripwire" }],
+        [{ text: "🔙 К ИНСТРУМЕНТАМ", callback_data: "TOOLS_MENU" }],
+      ],
+
+  // === LOCKED_PROMO ===
+  LOCKED_PROMO: [
+        [{ text: "🎓 ПРОДОЛЖИТЬ ОБУЧЕНИЕ", callback_data: "RESUME_LAST" }],
+        [{ text: "🔙 К ИНСТРУМЕНТАМ", callback_data: "TOOLS_MENU" }],
+      ],
+
+  // === LOCKED_KNOWLEDGE ===
+  LOCKED_KNOWLEDGE: [
+        [{ text: "🎓 ПРОДОЛЖИТЬ ОБУЧЕНИЕ", callback_data: "RESUME_LAST" }],
+        [{ text: "🔙 К ИНСТРУМЕНТАМ", callback_data: "TOOLS_MENU" }],
+      ],
+
+  // === LOCKED_AI_APPS ===
+  LOCKED_AI_APPS: [
+        [{ text: "💎 ХОЧУ PRO-СТАТУС", callback_data: "Offer_Tripwire" }],
+        [{ text: "🔙 К ИНСТРУМЕНТАМ", callback_data: "TOOLS_MENU" }],
+      ],
+
+  // === MY_AI_BOT ===
+  MY_AI_BOT: (links, user) => {
+        const r = [];
+        if (user.session?.bot_username) {
+          // Если бот настроен — кнопки управления
+          r.push([
+            {
+              text: "⚙️ ИЗМЕНИТЬ ТОКЕН БОТА",
+              callback_data: "SETUP_BOT_START",
+            },
+          ]);
+          r.push([
+            { text: "✅ ОСТАВИТЬ КАК ЕСТЬ", callback_data: "MAIN_MENU" },
+          ]);
+        } else {
+          // Если бота нет — кнопка запуска
+          r.push([
+            { text: "🚀 ПОДКЛЮЧИТЬ БОТА", callback_data: "SETUP_BOT_START" },
+          ]);
+          r.push([{ text: "🔙 НАЗАД", callback_data: "MAIN_MENU" }]);
+        }
+        return r;
+      },
+
+  // === Delivery_1 ===
+  Delivery_1: (links) => [
+        [
+          {
+            text: "🚀 СКОПИРОВАТЬ СИСТЕМУ (ОБЯЗАТЕЛЬНО)",
+            callback_data: "SETUP_BOT_START",
+          },
+        ],
+        [{ text: "📥 СКАЧАТЬ ИНСТРУМЕНТЫ NEUROGEN", url: links.pro_disk }],
+        [
+          {
+            text: "🎓 ПЕРЕЙТИ К PRO-ОБУЧЕНИЮ",
+            callback_data: "Training_Pro_Main",
+          },
+        ],
+      ],
+
+  // === Training_Pro_Main ===
+  Training_Pro_Main: [
+        [
+          {
+            text: "🟢 ЧАСТЬ 1: БЫСТРЫЙ ЗАПУСК",
+            callback_data: "Training_Pro_P1_1",
+          },
+        ],
+        [
+          {
+            text: "🟣 ЧАСТЬ 2: ИИ-МАСТЕРСТВО",
+            callback_data: "Training_Pro_P2_1",
+          },
+        ],
+        [{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }],
+      ],
+
+  // === Training_Pro_P1_1 ===
+  Training_Pro_P1_1: [
+        [{ text: "➡️ УРОК 2: ЛЕНДИНГ", callback_data: "Training_Pro_P1_2" }],
+        [{ text: "🔙 НАЗАД К ВЫБОРУ", callback_data: "Training_Pro_Main" }],
+      ],
+
+  // === Training_Pro_P1_2 ===
+  Training_Pro_P1_2: (links, user) => {
+        const token = jwt.sign({ uid: user.user_id, isPro: true }, JWT_SECRET, {
+          expiresIn: "3h",
+        });
+        return [
+          [
+            {
+              text: "🖥 СМОТРЕТЬ УРОК 2",
+              url: `${ACADEMY_BASE_URL}/pro-lesson-2-landing?token=${token}`,
+            },
+          ],
+          [
+            {
+              text: "✅ Я СДЕЛАЛ САЙТ. ЧТО ДАЛЬШЕ?",
+              callback_data: "Training_Pro_P1_3",
+            },
+          ],
+          [{ text: "🔙 НАЗАД", callback_data: "Training_Pro_P1_1" }],
+        ];
+      },
+
+  // === Training_Pro_P1_3 ===
+  Training_Pro_P1_3: (links, user) => {
+        const token = jwt.sign({ uid: user.user_id, isPro: true }, JWT_SECRET, {
+          expiresIn: "3h",
+        });
+        return [
+          [
+            {
+              text: "🖥 СМОТРЕТЬ УРОК 3",
+              url: `${ACADEMY_BASE_URL}/pro-lesson-3-deploy?token=${token}`,
+            },
+          ],
+          [
+            {
+              text: "✅ Я УПАКОВАЛ. ЧТО ДАЛЬШЕ?",
+              callback_data: "Training_Pro_P1_4",
+            },
+          ],
+          [{ text: "🔙 НАЗАД", callback_data: "Training_Pro_P1_2" }],
+        ];
+      },
+
+  // === Training_Pro_P1_4 ===
+  Training_Pro_P1_4: (links, user) => {
+        const token = jwt.sign({ uid: user.user_id, isPro: true }, JWT_SECRET, {
+          expiresIn: "3h",
+        });
+        return [
+          [
+            {
+              text: "🖥 СМОТРЕТЬ УРОК 4",
+              url: `${ACADEMY_BASE_URL}/pro-lesson-4-github?token=${token}`,
+            },
+          ],
+          [
+            {
+              text: "✅ Я ОПУБЛИКОВАЛ. ЧТО ДАЛЬШЕ?",
+              callback_data: "Training_Pro_P1_5",
+            },
+          ],
+          [{ text: "🔙 НАЗАД", callback_data: "Training_Pro_P1_3" }],
+        ];
+      },
+
+  // === Training_Pro_P1_5 ===
+  Training_Pro_P1_5: (links, user) => {
+        const token = jwt.sign({ uid: user.user_id, isPro: true }, JWT_SECRET, {
+          expiresIn: "3h",
+        });
+        return [
+          [
+            {
+              text: "🖥 СМОТРЕТЬ УРОК 5",
+              url: `${ACADEMY_BASE_URL}/pro-lesson-5-yandex-ads?token=${token}`,
+            },
+          ],
+          [
+            {
+              text: "🟣 ПЕРЕЙТИ К ЧАСТИ 2",
+              callback_data: "Training_Pro_P2_1",
+            },
+          ],
+          [{ text: "🏠 В МЕНЮ PRO", callback_data: "Training_Pro_Main" }],
+        ];
+      },
+
+  // === Training_Pro_P2_1 ===
+  Training_Pro_P2_1: (links, user) => {
+        const token = jwt.sign({ uid: user.user_id, isPro: true }, JWT_SECRET, {
+          expiresIn: "3h",
+        });
+        return [
+          [
+            {
+              text: "🖥 СМОТРЕТЬ УРОК 6",
+              url: `${ACADEMY_BASE_URL}/pro-lesson-6-strategy?token=${token}`,
+            },
+          ],
+          [
+            {
+              text: "➡️ УРОК 7: СЦЕНАРИИ И n8n",
+              callback_data: "Training_Pro_P2_2",
+            },
+          ],
+          [{ text: "🔙 НАЗАД", callback_data: "Training_Pro_P1_5" }],
+        ];
+      },
+
+  // === Training_Pro_P2_2 ===
+  Training_Pro_P2_2: (links, user) => {
+        const token = jwt.sign({ uid: user.user_id, isPro: true }, JWT_SECRET, {
+          expiresIn: "3h",
+        });
+        return [
+          [
+            {
+              text: "🖥 СМОТРЕТЬ УРОК 7",
+              url: `${ACADEMY_BASE_URL}/pro-lesson-7-automation?token=${token}`,
+            },
+          ],
+          [
+            {
+              text: "➡️ УРОК 8: ВИРАЛЬНЫЙ ТРАФИК",
+              callback_data: "Training_Pro_P2_3",
+            },
+          ],
+          [{ text: "🔙 НАЗАД", callback_data: "Training_Pro_P2_1" }],
+        ];
+      },
+
+  // === Training_Pro_P2_3 ===
+  Training_Pro_P2_3: (links, user) => {
+        const token = jwt.sign({ uid: user.user_id, isPro: true }, JWT_SECRET, {
+          expiresIn: "3h",
+        });
+        return [
+          [
+            {
+              text: "🖥 СМОТРЕТЬ УРОК 8",
+              url: `${ACADEMY_BASE_URL}/pro-lesson-8-viral-video?token=${token}`,
+            },
+          ],
+          [
+            {
+              text: "➡️ УРОК 9: МАСШТАБ SETHUBBLE",
+              callback_data: "Training_Pro_P2_4",
+            },
+          ],
+          [{ text: "🔙 НАЗАД", callback_data: "Training_Pro_P2_2" }],
+        ];
+      },
+
+  // === Training_Pro_P2_4 ===
+  Training_Pro_P2_4: [
+        [{ text: "🚀 В ЦЕНТР УПРАВЛЕНИЯ", callback_data: "MAIN_MENU" }],
+      ],
+
+  // === Training_Bot_Success ===
+  Training_Bot_Success: [
+        [
+          {
+            text: "🎁 ОТКРЫТЬ ИНВЕНТАРЬ (ЗАБРАТЬ PIN)",
+            callback_data: "CHESTS_INVENTORY",
+          },
+        ],
+        [{ text: "🏬 ПЕРЕЙТИ К МОДУЛЮ 3", callback_data: "Module_3_Offline" }],
+        [{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }],
+      ],
+
+  // === Token_Success ===
+  Token_Success: [
+        [{ text: "📦 ОТКРЫТЬ ИНВЕНТАРЬ", callback_data: "CHESTS_INVENTORY" }],
+        [
+          {
+            text: "⚙️ ПРОДОЛЖИТЬ НАСТРОЙКУ (МОДУЛЬ 3)",
+            callback_data: "Module_3_Offline",
+          },
+        ],
+      ],
+
+  // === Rocket_Limits ===
+  Rocket_Limits: (links) => [
+        [{ text: "🚀 ВЗЯТЬ РАКЕТУ (САЙТ SETHUBBLE)", url: links.rocket }],
+        [
+          {
+            text: "🛸 УЗНАТЬ ПРО SHUTTLE (БЕЗЛИМИТ)",
+            callback_data: "Shuttle_Offer",
+          },
+        ],
+        [{ text: "🔙 НАЗАД", callback_data: "Lesson_Final_Comparison" }],
+      ],
+
+  // === Shuttle_Offer ===
+  Shuttle_Offer: (links) => [
+        [{ text: "🛸 ВЗЯТЬ SHUTTLE (САЙТ SETHUBBLE)", url: links.rocket }],
+        [{ text: "✅ Я УЖЕ ОПЛАТИЛ ТАРИФ", callback_data: "CONFIRM_UPGRADE" }],
+        [{ text: "🔙 НАЗАД К ROCKET", callback_data: "Rocket_Limits" }],
+      ],
+
+  // === UPGRADE_CONFIRMED ===
+  UPGRADE_CONFIRMED: [[{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }]],
+
+  // === SUPPORT_ASK ===
+  SUPPORT_ASK: [[{ text: "🔙 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }]],
+
+  // === FollowUp_Tripwire_1 ===
+  FollowUp_Tripwire_1: (links, user) => {
+        if (user.bought_tripwire) {
+          return [
+            [
+              {
+                text: "🎓 ПЕРЕЙТИ К PRO-ОБУЧЕНИЮ",
+                callback_data: "Training_Pro_Main",
+              },
+            ],
+          ];
+        }
+        return [
+          [{ text: `💰 КУПИТЬ PRO ЗА $${TRIPWIRE_PRICE}`, url: links.pay }],
+          [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
+        ];
+      },
+
+  // === FollowUp_Tripwire_2 ===
+  FollowUp_Tripwire_2: (links, user) => {
+        if (user.bought_tripwire) {
+          return [
+            [
+              {
+                text: "🎓 ПЕРЕЙТИ К PRO-ОБУЧЕНИЮ",
+                callback_data: "Training_Pro_Main",
+              },
+            ],
+          ];
+        }
+        return [
+          [{ text: "🚀 ЗАБРАТЬ ИИ-ТРАФИК", url: links.pay }],
+          [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
+        ];
+      },
+
+  // === FollowUp_Tripwire_3 ===
+  FollowUp_Tripwire_3: (links, user) => {
+        if (user.bought_tripwire) {
+          return [
+            [
+              {
+                text: "🎓 ПЕРЕЙТИ К PRO-ОБУЧЕНИЮ",
+                callback_data: "Training_Pro_Main",
+              },
+            ],
+          ];
+        }
+        return [
+          [{ text: "💎 СТАТЬ АРХИТЕКТОРОМ", url: links.pay }],
+          [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
+        ];
+      },
+
+  // === FollowUp_Tripwire_4 ===
+  FollowUp_Tripwire_4: (links, user) => {
+        if (user.bought_tripwire) {
+          return [
+            [
+              {
+                text: "🎓 ПЕРЕЙТИ К PRO-ОБУЧЕНИЮ",
+                callback_data: "Training_Pro_Main",
+              },
+            ],
+          ];
+        }
+        return [
+          [{ text: "🎨 ЗАБРАТЬ STYLE TRANSFER", url: links.pay }],
+          [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
+        ];
+      },
+
+  // === FollowUp_Tripwire_5 ===
+  FollowUp_Tripwire_5: (links, user) => {
+        if (user.bought_tripwire) {
+          return [
+            [
+              {
+                text: "🎓 ПЕРЕЙТИ К PRO-ОБУЧЕНИЮ",
+                callback_data: "Training_Pro_Main",
+              },
+            ],
+          ];
+        }
+        return [
+          [{ text: "💰 ХОЧУ ПАССИВ", url: links.pay }],
+          [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
+        ];
+      },
+
+  // === FollowUp_Tripwire_6 ===
+  FollowUp_Tripwire_6: (links, user) => {
+        if (user.bought_tripwire) {
+          return [
+            [
+              {
+                text: "🎓 ПЕРЕЙТИ К PRO-ОБУЧЕНИЮ",
+                callback_data: "Training_Pro_Main",
+              },
+            ],
+          ];
+        }
+        return [
+          [{ text: "🚀 АКТИВИРОВАТЬ ИИ-БОТ", url: links.pay }],
+          [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
+        ];
+      },
+
+  // === FollowUp_Tripwire_7 ===
+  FollowUp_Tripwire_7: (links, user) => {
+        if (user.bought_tripwire) {
+          return [
+            [
+              {
+                text: "🎓 ПЕРЕЙТИ К PRO-ОБУЧЕНИЮ",
+                callback_data: "Training_Pro_Main",
+              },
+            ],
+          ];
+        }
+        return [
+          [{ text: "💎 ЗАБРАТЬ ИТ-ОТДЕЛ", url: links.pay }],
+          [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
+        ];
+      },
+
+  // === FollowUp_Tripwire_8 ===
+  FollowUp_Tripwire_8: (links, user) => {
+        if (user.bought_tripwire) {
+          return [
+            [
+              {
+                text: "🎓 ПЕРЕЙТИ К PRO-ОБУЧЕНИЮ",
+                callback_data: "Training_Pro_Main",
+              },
+            ],
+          ];
+        }
+        return [
+          [{ text: "📊 ПОЛУЧИТЬ CRM", url: links.pay }],
+          [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
+        ];
+      },
+
+  // === FollowUp_Tripwire_9 ===
+  FollowUp_Tripwire_9: (links, user) => {
+        if (user.bought_tripwire) {
+          return [
+            [
+              {
+                text: "🎓 ПЕРЕЙТИ К PRO-ОБУЧЕНИЮ",
+                callback_data: "Training_Pro_Main",
+              },
+            ],
+          ];
+        }
+        return [
+          [{ text: "🚀 НАЧАТЬ С БАЗЫ", url: links.pay }],
+          [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
+        ];
+      },
+
+  // === FollowUp_Tripwire_10 ===
+  FollowUp_Tripwire_10: (links, user) => {
+        if (user.bought_tripwire) {
+          return [
+            [
+              {
+                text: "🎓 ПЕРЕЙТИ К PRO-ОБУЧЕНИЮ",
+                callback_data: "Training_Pro_Main",
+              },
+            ],
+          ];
+        }
+        return [
+          [{ text: `💰 ЗАБРАТЬ ВСЁ ЗА $${TRIPWIRE_PRICE}`, url: links.pay }],
+          [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
+        ];
+      },
+
+  // === FollowUp_Plan_1 ===
+  FollowUp_Plan_1: (links, user) => {
+        if (user.tariff === "PAID") {
+          return [[{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }]];
+        }
+        return [
+          [{ text: "🛰 ВЗЯТЬ ROCKET", url: links.rocket }],
+          [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
+        ];
+      },
+
+  // === FollowUp_Plan_2 ===
+  FollowUp_Plan_2: (links, user) => {
+        if (user.tariff === "PAID") {
+          return [[{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }]];
+        }
+        return [
+          [{ text: "🛸 ВЗЯТЬ SHUTTLE", url: links.rocket }],
+          [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
+        ];
+      },
+
+  // === FollowUp_Plan_3 ===
+  FollowUp_Plan_3: (links, user) => {
+        if (user.tariff === "PAID") {
+          return [[{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }]];
+        }
+        return [
+          [{ text: "🚀 МОНЕТИЗИРОВАТЬ ТРАФИК", url: links.rocket }],
+          [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
+        ];
+      },
+
+  // === FollowUp_Plan_4 ===
+  FollowUp_Plan_4: (links, user) => {
+        if (user.tariff === "PAID") {
+          return [[{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }]];
+        }
+        return [
+          [{ text: "💎 ЗАБРАТЬ КОМПРЕССИЮ", url: links.rocket }],
+          [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
+        ];
+      },
+
+  // === FollowUp_Plan_5 ===
+  FollowUp_Plan_5: (links, user) => {
+        if (user.tariff === "PAID") {
+          return [[{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }]];
+        }
+        return [
+          [{ text: "🚀 ДОЛЯ ОТ РЫНКА", url: links.rocket }],
+          [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
+        ];
+      },
+
+  // === FollowUp_Plan_6 ===
+  FollowUp_Plan_6: (links, user) => {
+        if (user.tariff === "PAID") {
+          return [[{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }]];
+        }
+        return [
+          [{ text: "🛸 ЗАРАБАТЫВАТЬ НА КОНКУРЕНТАХ", url: links.rocket }],
+          [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
+        ];
+      },
+
+  // === FollowUp_Plan_7 ===
+  FollowUp_Plan_7: (links, user) => {
+        if (user.tariff === "PAID") {
+          return [[{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }]];
+        }
+        return [
+          [{ text: "🚀 СТРОИТЬ ИМПЕРИЮ", url: links.rocket }],
+          [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
+        ];
+      },
+
+  // === FollowUp_Plan_8 ===
+  FollowUp_Plan_8: (links, user) => {
+        if (user.tariff === "PAID") {
+          return [[{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }]];
+        }
+        return [
+          [{ text: "⚡️ АВТОМАТИЗИРОВАТЬ ВЫПЛАТЫ", url: links.rocket }],
+          [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
+        ];
+      },
+
+  // === FollowUp_Plan_9 ===
+  FollowUp_Plan_9: (links, user) => {
+        if (user.tariff === "PAID") {
+          return [[{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }]];
+        }
+        return [
+          [{ text: "🚀 ВЫБРАТЬ ТАРИФ", url: links.rocket }],
+          [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
+        ];
+      },
+
+  // === FollowUp_Plan_10 ===
+  FollowUp_Plan_10: (links, user) => {
+        if (user.tariff === "PAID") {
+          return [[{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }]];
+        }
+        return [
+          [{ text: "💎 АКТИВИРОВАТЬ ТАРИФ", url: links.rocket }],
+          [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
+        ];
+      },
+
+  // === REMINDER_1H ===
+  REMINDER_1H: [
+        [{ text: "▶️ ПРОДОЛЖИТЬ", callback_data: "REMINDER_1H_RESUME" }],
+        [{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }],
+      ],
+
+  // === REMINDER_3H ===
+  REMINDER_3H: [
+        [{ text: "▶️ ПРОДОЛЖИТЬ", callback_data: "REMINDER_3H_RESUME" }],
+        [{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }],
+      ],
+
+  // === REMINDER_24H ===
+  REMINDER_24H: [
+        [{ text: "▶️ ПРОДОЛЖИТЬ", callback_data: "REMINDER_24H_RESUME" }],
+        [{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }],
+      ],
+
+  // === REMINDER_48H ===
+  REMINDER_48H: [
+        [
+          {
+            text: "▶️ ХОЧУ ТАК ЖЕ (ПРОДОЛЖИТЬ)",
+            callback_data: "REMINDER_48H_RESUME",
+          },
+        ],
+        [{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }],
+      ],
+
+  // === RESUME_GATE ===
+  RESUME_GATE: (links, user) => [
+        [{ text: "▶️ ПРОДОЛЖИТЬ ПУТЬ", callback_data: "RESUME_LAST" }],
+        [{ text: "🏠 ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }],
+        [{ text: "🔄 НАЧАТЬ СНАЧАЛА", callback_data: "RESTART_FUNNEL" }],
+      ],
+
+  // === REMINDER_1H_RESUME ===
+  REMINDER_1H_RESUME: (links, user) => {
+        const lastState = user.state || "START";
+        return [
+          [{ text: "✅ ДА, ПРОДОЛЖИТЬ", callback_data: lastState }],
+          [{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }],
+        ];
+      },
+
+  // === REMINDER_3H_RESUME ===
+  REMINDER_3H_RESUME: (links, user) => {
+        const lastState = user.state || "START";
+        return [
+          [{ text: "✅ ДА, ВПЕРЁД", callback_data: lastState }],
+          [{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }],
+        ];
+      },
+
+  // === REMINDER_24H_RESUME ===
+  REMINDER_24H_RESUME: (links, user) => {
+        const lastState = user.state || "START";
+        return [
+          [{ text: "✅ ДА, ЗАБРАТЬ ДЕНЬГИ", callback_data: lastState }],
+          [{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }],
+        ];
+      },
+
+  // === REMINDER_48H_RESUME ===
+  REMINDER_48H_RESUME: (links, user) => {
+        const lastState = user.state || "START";
+        return [
+          [{ text: "✅ ДА, ХОЧУ ДЕНЬГИ", callback_data: lastState }],
+          [{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }],
+        ];
+      },
+
+  // === RESUME_LAST ===
+  RESUME_LAST: (links, user) => {
+        const lastState = user.state || "START";
+        return [
+          [{ text: "🔄 ВЕРНУТЬСЯ К ШАГУ", callback_data: lastState }],
+          [{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }],
+        ];
+      },
+
+  // === MAIN_MENU ===
+  MAIN_MENU: (links, user) => {
+        const r = [];
+        const hasData = !!user.sh_ref_tail;
+        const isPro = user.bought_tripwire;
+        const hasMod3 = user.session?.mod3_done || isPro;
+        const seenPlans = user.session?.tags?.includes("seen_plans");
+
+        // --- БЛОК 1: ТОЛЬКО ДЛЯ НОВИЧКОВ (У кого еще нет аккаунта) ---
+        if (!hasData) {
+          r.push([
+            {
+              text: "🚀 ПУТЬ АГЕНТА (Старт без вложений)",
+              callback_data: "Agent_1_Pain",
+            },
+          ]);
+          r.push([
+            {
+              text: "💻 ДЛЯ ОНЛАЙН-БИЗНЕСА",
+              callback_data: "Business_Online_Pain",
+            },
+          ]);
+          r.push([
+            {
+              text: "🏢 ДЛЯ ОФЛАЙН-БИЗНЕСА",
+              callback_data: "Business_Offline_Pain",
+            },
+          ]);
+          r.push([{ text: "📞 ПОДДЕРЖКА", callback_data: "SUPPORT_ASK" }]);
+          return r;
+        }
+
+        // --- БЛОК 2: ЗАРЕГИСТРИРОВАНЫ (ID есть) ---
+        // Верхняя кнопка меняется в зависимости от прогресса
+        if (isPro) {
+          // PRO — показываем PRO-инструменты
+          r.push([
+            { text: "💎 PRO-ИНСТРУМЕНТЫ", callback_data: "Training_Pro_Main" },
+          ]);
+          // Настройка системы (для PRO)
+          const setupStep = user.bot_token ? "SYSTEM_SETUP" : "Training_Main";
+          r.push([{ text: "⚙️ НАСТРОЙКА СИСТЕМЫ", callback_data: setupStep }]);
+        } else if (hasMod3 || seenPlans) {
+          // Прошёл 3 модуля или видел оффер — показываем Масштаб
+          r.push([{ text: "💎 МАСШТАБ", callback_data: "Rocket_Limits" }]);
+          // Настройка системы (после 3 модулей)
+          const setupStep = user.bot_token ? "SYSTEM_SETUP" : "Training_Main";
+          r.push([{ text: "⚙️ НАСТРОЙКА СИСТЕМЫ", callback_data: setupStep }]);
+        } else {
+          // В процессе — продолжаем обучение с того места где остановился
+          // Проверяем, является ли saved_state шагом обучения
+          const trainingSteps = [
+            "Training_Main",
+            "Theory_Mod1",
+            "Module_1_Strategy",
+            "Module_2_Online",
+            "Module_3_Offline",
+            "Lesson_Final_Comparison",
+            "Offer_Tripwire",
+          ];
+          const resumeStep =
+            user.saved_state && trainingSteps.includes(user.saved_state)
+              ? user.saved_state
+              : "Training_Main";
+          r.push([
+            { text: "🎓 ПРОДОЛЖИТЬ НАСТРОЙКУ", callback_data: resumeStep },
+          ]);
+        }
+
+        // Инструменты (всегда для зарегистрированных)
+        r.push([{ text: "🎒 ИНСТРУМЕНТЫ", callback_data: "TOOLS_MENU" }]);
+
+        // Профиль (всегда для зарегистрированных)
+        r.push([{ text: "👤 ПРОФИЛЬ", callback_data: "EDIT_PROFILE" }]);
+
+        // Поддержка (всегда внизу)
+        r.push([{ text: "📞 ПОДДЕРЖКА", callback_data: "SUPPORT_ASK" }]);
+
+        return r;
+      },
+
+  // === LOCKED_TRAINING_INFO ===
+  LOCKED_TRAINING_INFO: (links) => [
+        [
+          {
+            text: "🔗 ЗАРЕГИСТРИРОВАТЬСЯ В SETHUBBLE",
+            url: links.reg,
+          },
+        ],
+        [
+          {
+            text: "✅ Я ЗАРЕГИСТРИРОВАЛСЯ",
+            callback_data: "Pre_Training_Logic",
+          },
+        ],
+        [{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }],
+      ],
+
+  // === LOCKED_CRM_INFO ===
+  LOCKED_CRM_INFO: (links, user) => {
+        // Подтягиваем ссылку на демо (если нет в env, берем дефолтную)
+        const crmDemoUrl =
+          process.env.CRM_DEMO_URL ||
+          "https://novokreschennih.github.io/crm-dashboard/crm_demo.html";
+
+        return [
+          [
+            {
+              text: "💎 АКТИВИРОВАТЬ PRO",
+              url: links.pay,
+            },
+          ],
+          [
+            {
+              text: "📱 ОТКРЫТЬ ДЕМО-ДАШБОРД",
+              web_app: { url: crmDemoUrl },
+            },
+          ],
+          [{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }],
+        ];
+      },
+
+  // === LOCKED_PRO_TRAINING_INFO ===
+  LOCKED_PRO_TRAINING_INFO: [
+        [
+          {
+            text: "🎓 ПРОЙТИ БАЗОВОЕ ОБУЧЕНИЕ",
+            callback_data: "Training_Main",
+          },
+        ],
+        [{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }],
+      ],
+
+  // === LOCKED_PLANS_INFO ===
+  LOCKED_PLANS_INFO: () => [
+        [
+          {
+            text: "🎓 НАЧАТЬ ОБУЧЕНИЕ",
+            callback_data: "Training_Main",
+          },
+        ],
+        [{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }],
+      ],
+
+  // === EDIT_PROFILE ===
+  EDIT_PROFILE: [[{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }]],
+
+  // === CHESTS_INVENTORY ===
+  CHESTS_INVENTORY: (links, user) => {
+        const r = [];
+        const isPro = user.bought_tripwire;
+        const mod3Done = user.session?.mod3_done;
+
+        // 1. Promo-Kit добавляем ВСЕМ, у кого есть бот (и FREE, и PRO)
+        if (!!user.session?.bot_username) {
+          const botName = user.session?.bot_username || "";
+          const apiGw =
+            process.env.API_GW_HOST ||
+            "d5dsbah1d4ju0glmp9d0.3zvepvee.apigw.yandexcloud.net";
+          // Если пройден модуль 3, передаем параметр mod3=1 во фронтенд
+          const mod3Param = mod3Done || isPro ? "&mod3=1" : "";
+          r.push([
+            {
+              text: "📲 ОТКРЫТЬ PROMO-KIT",
+              web_app: {
+                url: `${PROMO_KIT_URL}?bot=${botName}&api=https://${apiGw}${mod3Param}`,
+              },
+            },
+          ]);
+        }
+
+        // 2. Если юзер PRO — закрываем список кнопок (ему не нужен купон на скидку)
+        if (isPro) {
+          r.push([
+            { text: "📥 СКАЧАТЬ БАЗУ ЗНАНИЙ B2B", url: links.free_disk },
+          ]);
+          r.push([{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }]);
+          return r;
+        }
+
+        // 3. База знаний B2B (только после Модуля 3)
+        if (mod3Done) {
+          r.push([
+            { text: "📥 СКАЧАТЬ БАЗУ ЗНАНИЙ B2B", url: links.free_disk },
+          ]);
+        }
+
+        // 4. Купон на скидку (только если набрал 100 монет)
+        if (user.session?.xp >= 100) {
+          r.push([
+            {
+              text: "🎟 ИСПОЛЬЗОВАТЬ КУПОН (-50%)",
+              callback_data: "Offer_Tripwire",
+            },
+          ]);
+        }
+
+        r.push([{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }]);
+        return r;
+      },
+};

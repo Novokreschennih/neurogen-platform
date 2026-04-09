@@ -1,0 +1,109 @@
+{# === TELEGRAM SUBSCRIBE FORM === #}
+<section class="telegram-subscribe">
+	<div class="subscribe-content">
+		<h3>🎁 Заберите бесплатно</h3>
+		<p class="subscribe-offer">Получите <strong>систему заработка на SetHubble</strong> и <strong>продукт с правами перепродажи</strong> прямо сейчас!</p>
+		
+		<a href="https://t.me/sethubble_biz_bot" target="_blank" class="telegram-subscribe-btn js-bot-link">
+			<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.75-.33 1.42.18 1.16 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/></svg>
+			Получить бесплатно
+		</a>
+		
+		<p class="subscribe-note">🔹 Мгновенный доступ · 🔹 100% бесплатно · 🔹 Права перепродажи</p>
+	</div>
+</section>
+
+<style>
+	.telegram-subscribe {
+		max-width: 700px;
+		margin: 60px auto 0;
+		padding: 40px 30px;
+		background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.1));
+		border: 2px solid rgba(99, 102, 241, 0.3);
+		border-radius: 20px;
+		text-align: center;
+		position: relative;
+		overflow: hidden;
+	}
+	.telegram-subscribe::before {
+		content: "";
+		position: absolute;
+		top: -50%;
+		left: -50%;
+		width: 200%;
+		height: 200%;
+		background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 70%);
+		animation: pulse 4s ease-in-out infinite;
+		pointer-events: none;
+	}
+	@keyframes pulse {
+		0%, 100% { transform: scale(1); opacity: 0.5; }
+		50% { transform: scale(1.1); opacity: 0.8; }
+	}
+	.subscribe-content {
+		position: relative;
+		z-index: 2;
+	}
+	.subscribe-content h3 {
+		font-size: 1.8rem;
+		margin: 0 0 15px 0;
+		background: linear-gradient(135deg, var(--primary), var(--neon));
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		background-clip: text;
+	}
+	.subscribe-offer {
+		color: var(--text-gray);
+		margin-bottom: 30px;
+		line-height: 1.7;
+		font-size: 1.05rem;
+	}
+	.subscribe-offer strong {
+		color: var(--text-light);
+		font-weight: 700;
+	}
+	.telegram-subscribe-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 12px;
+		padding: 18px 45px;
+		background: linear-gradient(135deg, #229ED9, #1b8ac4);
+		color: white;
+		text-decoration: none;
+		border-radius: 50px;
+		font-weight: 700;
+		font-size: 1.1rem;
+		transition: all 0.3s;
+		box-shadow: 0 6px 25px rgba(34, 158, 217, 0.4), 0 0 0 0 rgba(34, 158, 217, 0.7);
+		animation: glow 2s ease-in-out infinite;
+	}
+	@keyframes glow {
+		0%, 100% { box-shadow: 0 6px 25px rgba(34, 158, 217, 0.4), 0 0 0 0 rgba(34, 158, 217, 0.7); }
+		50% { box-shadow: 0 6px 30px rgba(34, 158, 217, 0.6), 0 0 20px 5px rgba(34, 158, 217, 0.3); }
+	}
+	.telegram-subscribe-btn:hover {
+		transform: translateY(-3px) scale(1.02);
+		box-shadow: 0 10px 35px rgba(34, 158, 217, 0.5), 0 0 30px 10px rgba(34, 158, 217, 0.4);
+	}
+	.telegram-subscribe-btn:active {
+		transform: translateY(-1px) scale(0.98);
+	}
+	.telegram-subscribe-btn svg {
+		width: 26px;
+		height: 26px;
+	}
+	.subscribe-note {
+		font-size: 0.85rem;
+		color: var(--text-gray);
+		margin: 25px 0 0;
+		display: flex;
+		justify-content: center;
+		gap: 20px;
+		flex-wrap: wrap;
+	}
+	.subscribe-note::before {
+		content: "✓ ";
+		color: var(--neon);
+		font-weight: 700;
+	}
+</style>

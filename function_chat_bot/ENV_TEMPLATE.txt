@@ -1,0 +1,245 @@
+# 📋 ПОЛНЫЙ СПИСОК ПЕРЕМЕННЫХ ОКРУЖЕНИЯ
+# Версия 4.3 — AI Sales Agent + Legal Compliance + Analytics
+# Скопируй и вставь в Yandex Cloud Functions при деплое
+# Обновлено: 16 марта 2026
+
+# ============================================================
+# 1. TELEGRAM BOT (ОБЯЗАТЕЛЬНО)
+# ============================================================
+BOT_TOKEN=1234567890:ABCdefGHIjklMNOpqrsTUVwxyz
+
+# ============================================================
+# 2. YANDEX DATABASE (ОБЯЗАТЕЛЬНО)
+# ============================================================
+YDB_ENDPOINT=grpc.yandexcloud.net:443
+YDB_DATABASE=/ru/home/...
+
+# ============================================================
+# 3. SETHUBBLE — ПРОДУКТЫ И ОПЛАТЫ (ОБЯЗАТЕЛЬНО)
+# ============================================================
+# Продукт с комиссией 25% (для новичков)
+PRODUCT_ID_FREE=140_9d5d2
+
+# Продукт с комиссией 50% (для PRO)
+PRODUCT_ID_PRO=103_97999
+
+# Секретный ключ для вебхуков оплаты
+SETHUBBLE_SECRET=super_secret_key_123
+
+# ============================================================
+# 4. МОИ ДАННЫЕ В SETHUBBLE (ОБЯЗАТЕЛЬНО)
+# ============================================================
+# Мой цифровой ID в SetHubble
+MY_SH_USER_ID=1123
+
+# Мой хвост партнерской ссылки
+MY_PARTNER_ID=p_qdr
+
+# ============================================================
+# 5. CRM WEB APP (ОБЯЗАТЕЛЬНО)
+# ============================================================
+# URL дашборда после деплоя
+CRM_WEB_APP_URL=https://sethubble-crm.netlify.app
+
+# URL демо-режима CRM (для FREE-пользователей)
+CRM_DEMO_URL=https://novokreschennih.github.io/crm-dashboard/crm_demo.html
+
+# ID глобального администратора (через запятую) — имеет доступ ко всем ботам
+# Обычные владельцы ботов имеют доступ только к своим данным и только при наличии PRO-статуса
+CRM_ADMIN_IDS=6278976865
+
+# ============================================================
+# 6. ССЫЛКИ НА КОНТЕНТ (ОБЯЗАТЕЛЬНО)
+# ============================================================
+# Ссылка на платный архив (NeuroGen PRO)
+DISK_LINK=https://disk.yandex.ru/d/auId7HugR0sdzA
+
+# Ссылка на бесплатный архив (шаблоны)
+FREE_DISK_LINK=https://disk.yandex.ru/d/a2Gsuwnu32eJKg
+
+# ============================================================
+# 7. АДМИНИСТРИРОВАНИЕ (ОБЯЗАТЕЛЬНО)
+# ============================================================
+# Мой Telegram ID для команды /send
+ADMIN_TELEGRAM_ID=6278976865
+
+# ============================================================
+# 8. ИНТЕГРАЦИИ (ОПЦИОНАЛЬНО, НУЖНО ДЛЯ SALUTBOT)
+# ============================================================
+# Ключ синхронизации с SalutBot
+SYNC_KEY=super_secret_sync_123
+
+# ============================================================
+# 9. БЕЗОПАСНОСТЬ — JWT SECRET (КРИТИЧЕСКИ ВАЖНО!)
+# ============================================================
+# СЕКРЕТНЫЙ КЛЮЧ ДЛЯ JWT-ТОКЕНОВ (не используйте BOT_TOKEN!)
+# Сгенерируйте случайную строку: openssl rand -hex 32
+# Это критическая уязвимость безопасности — если JWT_SECRET = BOT_TOKEN,
+# то любой кто узнает токен бота сможет выдать себе PRO-статус во всех WebApp
+JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
+
+# ============================================================
+# 10. API GATEWAY (ЖЕЛАТЕЛЬНО)
+# ============================================================
+# Хост твоего API Gateway (без https://)
+API_GW_HOST=d5d...apigw.yandexcloud.net
+
+# ============================================================
+# 11. URLs И РЕСУРСЫ (РЕКОМЕНДУЕМЫЕ)
+# ============================================================
+# URL хранилища с изображениями для бота
+STORAGE_BUCKET_URL=https://storage.yandexcloud.net/sethubble-assets
+
+# Базовый URL академии SetHubble
+ACADEMY_BASE_URL=https://sethubble.ru/academy
+
+# Домен платежной системы
+PAYMENT_DOMAIN=hubblepay.net
+
+# Ссылка на чат поддержки
+SUPPORT_CHAT_URL=https://t.me/sethubble_support
+
+# ============================================================
+# 12. NEUROGEN APPS — ССЫЛКИ НА ИИ-ИНСТРУМЕНТЫ (СУНДУКИ)
+# ============================================================
+# Сундук 1: Генератор вирусных видео
+NEUROGEN_VIRAL_VIDEO_URL=https://neurogen-viral-video.vercel.app
+
+# Сундук 2: Фабрика сценариев для ботов
+NEUROGEN_BOT_SCENARIOS_URL=https://telegram-bot-script-factory.vercel.app
+
+# Сундук 3: Master Architect (воронки)
+NEUROGEN_MASTER_ARCHITECT_URL=https://funnel-ai-rho.vercel.app
+
+# ============================================================
+# 13. AI ЛИМИТЫ (НАСТРАИВАЕМЫЕ)
+# ============================================================
+# Лимит AI-запросов в день для FREE пользователей
+AI_FREE_LIMIT=3
+
+# Лимит AI-запросов в день для PRO пользователей
+AI_PRO_LIMIT=30
+
+# ============================================================
+# 14. ВОРОНКА И ДОЖИМЫ (НАСТРАИВАЕМЫЕ)
+# ============================================================
+# Через сколько часов неактивности включать дожим
+DOZHIM_DELAY_HOURS=20
+
+# Сколько пользователей обрабатывать за один запуск крона
+CRON_BATCH_SIZE=50
+
+# Интервалы напоминаний в часах (через запятую)
+REMINDER_INTERVALS=1,3,24
+
+# ============================================================
+# 15. ТЕХНИЧЕСКИЕ ЛИМИТЫ (НАСТРАИВАЕМЫЕ)
+# ============================================================
+# Максимальное количество update_id в кэше (защита от дублей)
+MAX_STORED_UPDATES=100
+
+# Лимит сообщений в секунду при рассылке
+BROADCAST_RATE_LIMIT=30
+
+# ============================================================
+# 16. RETRY LOGIC — ОБРАБОТКА 429 (НАСТРАИВАЕМЫЕ)
+# ============================================================
+# Максимум попыток отправки при ошибке 429 (Too Many Requests)
+MAX_RETRIES=2
+
+# Максимальная задержка между попытками в секундах (cap)
+MAX_RETRY_DELAY_SEC=10
+
+# ============================================================
+# 17. CRON — НАСТРОЙКИ РАССЫЛОК (НАСТРАИВАЕМЫЕ)
+# ============================================================
+# Через сколько часов неактивности пользователь считается "старым"
+CRON_STALE_HOURS=1
+
+# Пауза между обработкой пользователей в CRON (миллисекунды)
+CRON_USER_PAUSE_MS=35
+
+# Пауза между пачками сообщений в CRON (секунды)
+CRON_BROADCAST_PAUSE_SEC=1
+
+# === ИСПРАВЛЕНИЕ v4.3: Лимит пользователей за один запуск CRON ===
+# Защита от зависания функции при больших очередях (10,000+ пользователей)
+# Крон запускается каждую минуту — лучше обработать меньше, но стабильно
+CRON_MAX_USERS_PER_RUN=200
+
+# ============================================================
+# 18. UPDATE TTL — ЗАЩИТА ОТ ДУБЛЕЙ (НАСТРАИВАЕМЫЕ)
+# ============================================================
+# Сколько хранить update_id в памяти (миллисекунды, по умолчанию 5 минут)
+UPDATE_TTL_MS=300000
+
+# Как часто чистить устаревшие update_id (миллисекунды, по умолчанию 1 минута)
+UPDATE_CLEANUP_INTERVAL_MS=60000
+
+# ============================================================
+# 19. API КЛЮЧИ (ОПЦИОНАЛЬНО)
+# ============================================================
+# Ключ для OpenRouter (DeepSeek AI)
+OPENROUTER_API_KEY=
+
+# Supabase для генерации PIN-кодов
+SUPABASE_URL=
+SUPABASE_SERVICE_KEY=
+
+# ============================================================
+# 20. МОДЕЛИ AI ДЛЯ OPENROUTER (ОПЦИОНАЛЬНО)
+# ============================================================
+# Модель для Telegram-бота (ai_engine.js)
+# Варианты: deepseek/deepseek-v3.2, openai/gpt-4o-mini, anthropic/claude-sonnet-4-20250514
+AI_ENGINE_MODEL=deepseek/deepseek-v3.2
+
+# Модель для Web-чата на сайте
+# Варианты: deepseek/deepseek-v3.2, openai/gpt-4o-mini, anthropic/claude-sonnet-4-20250514
+WEB_CHAT_MODEL=deepseek/deepseek-v3.2
+
+# ============================================================
+# ПРИМЕР ЗАПОЛНЕНИЯ (ВСЕГО 44 ПЕРЕМЕННОЙ):
+# ============================================================
+# BOT_TOKEN=1234567890:ABCdefGHIjklMNOpqrsTUVwxyz
+# YDB_ENDPOINT=grpc.yandexcloud.net:443
+# YDB_DATABASE=/ru/home/...
+# PRODUCT_ID_FREE=140_9d5d2
+# PRODUCT_ID_PRO=103_97999
+# SETHUBBLE_SECRET=super_secret_key_123
+# MY_SH_USER_ID=1123
+# MY_PARTNER_ID=p_qdr
+# CRM_WEB_APP_URL=https://sethubble-crm.netlify.app
+# CRM_ADMIN_IDS=6278976865
+# DISK_LINK=https://disk.yandex.ru/d/auId7HugR0sdzA
+# FREE_DISK_LINK=https://disk.yandex.ru/d/a2Gsuwnu32eJKg
+# ADMIN_TELEGRAM_ID=6278976865
+# SYNC_KEY=super_secret_sync_123
+# JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
+# API_GW_HOST=d5d...apigw.yandexcloud.net
+# STORAGE_BUCKET_URL=https://storage.yandexcloud.net/sethubble-assets
+# ACADEMY_BASE_URL=https://sethubble.ru/academy
+# PAYMENT_DOMAIN=hubblepay.net
+# SUPPORT_CHAT_URL=https://t.me/sethubble_support
+# NEUROGEN_VIRAL_VIDEO_URL=https://neurogen-viral-video.vercel.app
+# NEUROGEN_BOT_SCENARIOS_URL=https://telegram-bot-script-factory.vercel.app
+# NEUROGEN_MASTER_ARCHITECT_URL=https://funnel-ai-rho.vercel.app
+# AI_FREE_LIMIT=3
+# AI_PRO_LIMIT=30
+# DOZHIM_DELAY_HOURS=20
+# CRON_BATCH_SIZE=50
+# REMINDER_INTERVALS=1,3,24
+# MAX_STORED_UPDATES=1000
+# BROADCAST_RATE_LIMIT=30
+# MAX_RETRIES=2
+# MAX_RETRY_DELAY_SEC=10
+# CRON_STALE_HOURS=1
+# CRON_USER_PAUSE_MS=35
+# CRON_BROADCAST_PAUSE_SEC=1
+# CRON_MAX_USERS_PER_RUN=200
+# UPDATE_TTL_MS=300000
+# UPDATE_CLEANUP_INTERVAL_MS=60000
+# OPENROUTER_API_KEY=sk-...
+# SUPABASE_URL=https://...
+# SUPABASE_SERVICE_KEY=...
+# AI_ENGINE_MODEL=deepseek/deepseek-v3.2
+# WEB_CHAT_MODEL=deepseek/deepseek-v3.2

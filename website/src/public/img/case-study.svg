@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#10b981;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#059669;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#grad)"/>
+  <polygon points="600,180 720,420 480,420" fill="rgba(255,255,255,0.15)" stroke="white" stroke-width="3"/>
+  <path d="M600 240 L600 380 M540 320 L600 380 L660 320" stroke="white" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="850" cy="200" r="25" fill="rgba(255,255,255,0.3)"/>
+  <text x="600" y="520" font-family="Arial, sans-serif" font-size="42" fill="white" text-anchor="middle" font-weight="bold">Кейс</text>
+</svg>

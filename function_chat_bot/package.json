@@ -1,0 +1,23 @@
+{
+  "name": "sethubble-bot",
+  "version": "4.3.2",
+  "type": "module",
+  "main": "index.js",
+  "description": "NeuroGen Bot — SaaS-платформа для Telegram-ботов с AI-консультантом и воронкой продаж",
+  "author": "NeuroGen Team",
+  "license": "MIT",
+  "dependencies": {
+    "@yandex-cloud/nodejs-sdk": "^2.7.0",
+    "jsonwebtoken": "^9.0.2",
+    "lru-cache": "^11.2.7",
+    "telegraf": "^4.16.0",
+    "ydb-sdk": "^5.2.0"
+  },
+  "scripts": {
+    "check": "node --check index.js",
+    "deploy": "zip -r function.zip . -x '*.git*' '*.env' 'node_modules/*' '*.md' 'знания/*'"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

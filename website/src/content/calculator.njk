@@ -1,0 +1,19 @@
+---
+title: Калькулятор Дохода SetHubble
+layout: layouts/base.njk
+permalink: /calculator/index.html
+eleventyNavigation:
+  key: Калькулятор
+  order: 2
+---
+
+{# Подключаем стили только для этой страницы #}
+<link rel="stylesheet" href="/css/simulator.css">
+<link rel="stylesheet" href="/css/fonts.css" />
+
+
+{% include "partials/calculator.njk" %}
+
+<!-- ✅ ИЗМЕНЕНО: Простое и надежное подключение скриптов -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+<script src="/js/calculator.js" defer></script>

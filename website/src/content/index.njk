@@ -1,0 +1,173 @@
+---
+title: "Блог SetHubble: Новости и Статьи"
+layout: layouts/base.njk
+permalink: /blog/index.html
+eleventyNavigation:
+  key: Блог
+  order: 1
+---
+
+{# --- БЛОК 0: ФИЛЬТР ПО ТЕГАМ --- #}
+<section class="tag-filter-section">
+	<div class="tag-filter-container">
+		<span class="filter-label">🏷 Фильтр:</span>
+		<button class="filter-btn active" data-filter="all">Все</button>
+		<button class="filter-btn" data-filter="sethubble-guide">О SetHubble</button>
+		<button class="filter-btn" data-filter="affiliate-marketing">Партнёрство</button>
+		<button class="filter-btn" data-filter="crypto-payments">Крипто</button>
+		<button class="filter-btn" data-filter="for-business">Бизнесу</button>
+		<button class="filter-btn" data-filter="for-bloggers">Блогерам</button>
+	</div>
+</section>
+
+{# --- БЛОК 1: ПОСЛЕДНИЕ НОВОСТИ --- #}
+{% set newslist = collections.news | reverse %}
+{% if newslist.length %}
+<section class="latest-news">
+  <div class="section-header">
+    <h2 class="section-title-small">📰 Последние Новости</h2>
+  </div>
+  <ol class="news-snapshot-list" style="list-style: none; padding: 0;">
+  {%- for item in newslist | head(3) -%}
+    <li class="news-snapshot-item">
+      <time datetime="{{ item.date | htmlDateString }}">{{ item.date | readableDate }}</time>
+      <h3><a href="{{ item.url | url }}">{{ item.data.title }}</a></h3>
+    </li>
+  {%- endfor -%}
+  </ol>
+  <a href="/news/" class="view-all-link">Все новости →</a>
+</section>
+{% endif %}
+
+{# --- БЛОК 2: ГЛАВНАЯ СТАТЬЯ (С ОБЛОЖКОЙ) --- #}
+{% set allPosts = collections.posts | reverse %}
+{% set featuredPost = allPosts[0] %}
+{% if featuredPost %}
+<section class="featured-post">
+  <div class="featured-post-image">
+    {% if featuredPost.data.image %}
+    <img src="{{ featuredPost.data.image }}" alt="{{ featuredPost.data.title }}" loading="lazy" width="800" height="450" style="object-fit: cover; width: 100%; height: 100%;">
+    {% else %}
+    <img src="/img/blog-cover.svg" alt="{{ featuredPost.data.title }}" loading="lazy" width="800" height="450">
+    {% endif %}
+  </div>
+  <div class="featured-post-content">
+    <span class="featured-tag">🔥 Свежая Статья</span>
+    <h2><a href="{{ featuredPost.url | url }}">{{ featuredPost.data.title }}</a></h2>
+    {% if featuredPost.data.description %}
+      <p>{{ featuredPost.data.description }}</p>
+    {% endif %}
+    {% if featuredPost.data.tags %}
+    <div class="post-card-tags">
+      {% for tag in featuredPost.data.tags | filterTagList | head(5) %}
+        <span class="post-tag-on-card">{{ tagDictionary[tag] or tag }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
+
+{# --- БЛОК 3: ПОПУЛЯРНОЕ (ТОП-3 ПО ТЕГАМ) --- #}
+<section class="popular-posts">
+  <h2 class="section-title">📈 Популярное за неделю</h2>
+  <div class="popular-posts-grid">
+    {%- for post in allPosts | head(3) -%}
+    <article class="popular-post-card" data-tags="{{ post.data.tags | join(' ') }}">
+      <a href="{{ post.url | url }}" class="popular-post-link">
+        <div class="popular-post-image">
+          {% if post.data.image %}
+          <img src="{{ post.data.image }}" alt="{{ post.data.title }}" loading="lazy" width="400" height="250">
+          {% else %}
+          <img src="/img/blog-cover.svg" alt="{{ post.data.title }}" loading="lazy" width="400" height="250">
+          {% endif %}
+        </div>
+        <div class="popular-post-content">
+          <h3>{{ post.data.title }}</h3>
+          <div class="popular-post-meta">
+            <span class="read-time">⏱ {{ post.content | readingTime }}</span>
+            <span class="post-views">👁 {{ 100 + loop.index * 47 }}</span>
+          </div>
+        </div>
+      </a>
+    </article>
+    {%- endfor -%}
+  </div>
+</section>
+
+{# --- БЛОК 4: ВСЕ СТАТЬИ (СЕТКА) --- #}
+<h2 class="section-title">📚 Все Статьи</h2>
+
+<ol reversed class="postlist posts-grid" style="list-style: none; padding: 0;">
+{%- for post in allPosts | head(12) -%}
+  <li class="post-card" data-tags="{{ post.data.tags | join(' ') }}">
+    <a href="{{ post.url | url }}" class="post-card-link">
+      <div class="post-card-image">
+        {% if post.data.image %}
+        <img src="{{ post.data.image }}" alt="{{ post.data.title }}" loading="lazy" width="400" height="220">
+        {% else %}
+        <img src="/img/blog-cover.svg" alt="{{ post.data.title }}" loading="lazy" width="400" height="220">
+        {% endif %}
+      </div>
+      <div class="post-card-content">
+        <h2>{{ post.data.title }}</h2>
+        {% if post.data.description %}
+          <p class="post-card-excerpt">{{ post.data.description }}</p>
+        {% endif %}
+        <div class="post-card-meta">
+          <span class="read-time">⏱ {{ post.content | readingTime }}</span>
+          {% if post.data.tags %}
+          <div class="post-card-tags">
+            {% for tag in post.data.tags | filterTagList | head(3) %}
+              <span class="post-tag-on-card">{{ tagDictionary[tag] or tag }}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </a>
+  </li>
+{%- endfor -%}
+</ol>
+
+{# --- НАВИГАЦИЯ --- #}
+{% if collections.posts.length > 12 %}
+<div class="view-all-wrapper">
+  <a href="/archive/" class="cta-button">Посмотреть все статьи</a>
+</div>
+{% endif %}
+
+<script>
+// Фильтр по тегам
+document.addEventListener('DOMContentLoaded', () => {
+  const filterBtns = document.querySelectorAll('.filter-btn');
+  const allCards = document.querySelectorAll('.post-card, .popular-post-card');
+  
+  filterBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      // Активная кнопка
+      filterBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      
+      const filter = btn.dataset.filter;
+      
+      allCards.forEach(card => {
+        const tags = card.dataset.tags || '';
+        if (filter === 'all' || tags.includes(filter)) {
+          card.style.display = 'block';
+          setTimeout(() => {
+            card.style.opacity = '1';
+            card.style.transform = 'scale(1)';
+          }, 10);
+        } else {
+          card.style.opacity = '0';
+          card.style.transform = 'scale(0.9)';
+          setTimeout(() => {
+            card.style.display = 'none';
+          }, 300);
+        }
+      });
+    });
+  });
+});
+</script>

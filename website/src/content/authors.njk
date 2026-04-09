@@ -1,0 +1,96 @@
+---
+title: "Авторы блога"
+description: "Команда экспертов SetHubble, которая делится знаниями о маркетинге, технологиях и росте бизнеса."
+layout: layouts/base.njk
+permalink: /authors/index.html
+eleventyExcludeFromCollections: true
+---
+
+<section class="authors-page">
+	<h1>{{ title }}</h1>
+	<p class="authors-intro">{{ description }}</p>
+
+	<div class="authors-grid">
+		{%- for authorSlug, authorData in authors %}
+		<article class="author-card">
+			<div class="author-avatar">
+				<img src="{{ authorData.image }}" alt="{{ authorData.name }}" width="120" height="120" loading="lazy">
+			</div>
+			<h2>{{ authorData.name }}</h2>
+			<p class="author-bio">{{ authorData.bio }}</p>
+			<a href="{{ authorData.url }}" class="author-link" target="_blank" rel="noopener">
+				Перейти на сайт →
+			</a>
+		</article>
+		{%- endfor %}
+	</div>
+</section>
+
+<style>
+	.authors-page {
+		max-width: 900px;
+		margin: 0 auto;
+	}
+	.authors-page h1 {
+		font-size: 2.5rem;
+		text-align: center;
+		margin-bottom: 15px;
+	}
+	.authors-intro {
+		text-align: center;
+		color: var(--text-gray);
+		font-size: 1.1rem;
+		max-width: 600px;
+		margin: 0 auto 50px;
+	}
+	.authors-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+		gap: 30px;
+	}
+	.author-card {
+		background: var(--card-bg);
+		padding: 30px;
+		border-radius: 20px;
+		border: 1px solid var(--border);
+		text-align: center;
+		transition: transform 0.2s, border-color 0.2s;
+	}
+	.author-card:hover {
+		transform: translateY(-5px);
+		border-color: var(--primary);
+	}
+	.author-avatar {
+		width: 120px;
+		height: 120px;
+		border-radius: 50%;
+		overflow: hidden;
+		margin: 0 auto 20px;
+		border: 3px solid var(--primary);
+	}
+	.author-avatar img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+	.author-card h2 {
+		font-size: 1.4rem;
+		margin: 0 0 15px 0;
+		color: var(--text-light);
+	}
+	.author-bio {
+		color: var(--text-gray);
+		line-height: 1.6;
+		margin-bottom: 20px;
+	}
+	.author-link {
+		display: inline-block;
+		color: var(--primary);
+		text-decoration: none;
+		font-weight: 600;
+		transition: color 0.2s;
+	}
+	.author-link:hover {
+		color: var(--secondary);
+	}
+</style>

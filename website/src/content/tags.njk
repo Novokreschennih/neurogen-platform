@@ -1,0 +1,27 @@
+---
+title: Все Теги
+layout: layouts/base.njk
+permalink: /tags/index.html
+---
+<h1>{{ title }}</h1>
+
+<div class="tag-cloud">
+{# `tagDictionary` - это наш глобальный словарь из _data/tagDictionary.js #}
+{# Мы будем итерировать по нему, а не по сырой коллекции тегов #}
+
+{# Сначала получим все ключи (slug'и) из нашего словаря и отсортируем их #}
+{%- set tagSlugs = tagDictionary | getKeys | sortAlphabetically -%}
+
+{# Теперь перебираем отсортированные slug'и #}
+{%- for tagSlug in tagSlugs -%}
+	{# Проверяем, что для этого slug'а есть русское название в словаре #}
+	{%- if tagDictionary[tagSlug] -%}
+		{# Формируем URL из slug'а #}
+		{%- set tagUrl %}/tags/{{ tagSlug }}/{% endset %}
+		<a href="{{ tagUrl }}" class="tag-cloud-item">
+			{# Отображаем красивое русское имя из словаря #}
+			{{ tagDictionary[tagSlug] }}
+		</a>
+	{%- endif -%}
+{%- endfor -%}
+</div>

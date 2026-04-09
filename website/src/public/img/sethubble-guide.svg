@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7c3aed;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#grad)"/>
+  <rect x="400" y="200" width="400" height="250" rx="15" fill="rgba(255,255,255,0.15)" stroke="white" stroke-width="3"/>
+  <path d="M480 280 L560 280 M480 310 L560 310 M480 340 L620 340" stroke="white" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="650" cy="340" r="15" fill="#10b981"/>
+  <text x="600" y="520" font-family="Arial, sans-serif" font-size="42" fill="white" text-anchor="middle" font-weight="bold">SetHubble Гайды</text>
+</svg>

@@ -1,0 +1,32 @@
+---js
+const pagination = {
+	data: "collections",
+	size: 1,
+	alias: "tag",
+	filter: ["all", "nav", "post", "posts"],
+};
+
+const eleventyExcludeFromCollections = true;
+
+const eleventyComputed = {
+	// --- ГЛАВНЫЙ ФИКС ДЛЯ ЗАГОЛОВКА ---
+	// Мы создаем функцию, которая получает все данные (включая наш словарь)
+	// и генерирует правильный русский заголовок.
+	title: data => {
+		// `data.tag` - это английский slug (напр. "deep-dive")
+		// `data.tagDictionary` - это наш словарь
+		const tagName = data.tagDictionary[data.tag] || data.tag;
+		return `Статьи по тегу “${tagName}”`;
+	},
+
+	layout: "layouts/base.njk",
+	permalink: function(data) {
+		return `/tags/${this.slugify(data.tag)}/`;
+	}
+};
+---
+<h1>{{ title }}</h1>
+
+{% set postslist = collections[tag] | reverse %}
+{% include "postslist.njk" %}
+

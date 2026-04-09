@@ -1,0 +1,48 @@
+---
+title: Новости Сервиса
+layout: layouts/base.njk
+eleventyNavigation:
+  key: Новости
+  order: 2
+# --- МАГИЯ ПАГИНАЦИИ ДЛЯ НОВОСТЕЙ ---
+pagination:
+  data: collections.news    # <-- Используем коллекцию новостей
+  size: 6                   # <-- Сколько новостей на одной странице
+  reverse: true
+  alias: postslist          # <-- Мы используем то же имя, чтобы наш компонент `postslist.njk` его понял
+# Генерируем URL: /news/ для первой страницы, /news/page/2/ для второй и т.д.
+permalink: "/news/{% if pagination.pageNumber > 0 %}page/{{ pagination.pageNumber + 1 }}/{% endif %}index.html"
+---
+<h1 class="page-title">{{ title }}</h1>
+
+{# Используем наш рабочий компонент, который теперь получает данные от пагинации #}
+{% include "postslist.njk" %}
+
+
+{# --- НАВИГАЦИЯ ПО СТРАНИЦАМ (ПАГИНАЦИЯ) --- #}
+{# Этот блок кода точно такой же, как в архиве статей #}
+<nav class="pagination">
+  <ol class="pagination-list">
+    <li>
+      {% if pagination.href.previous %}
+        <a href="{{ pagination.href.previous }}" class="pagination-link pagination-link-prev">← Новее</a>
+      {% else %}
+        <span class="pagination-link-disabled">← Новее</span>
+      {% endif %}
+    </li>
+    {%- for pageEntry in pagination.pages %}
+      <li>
+        <a href="{{ pagination.hrefs[loop.index0] }}" class="pagination-link {% if page.url == pagination.hrefs[loop.index0] %}pagination-link-active{% endif %}">
+          {{ loop.index }}
+        </a>
+      </li>
+    {%- endfor %}
+    <li>
+      {% if pagination.href.next %}
+        <a href="{{ pagination.href.next }}" class="pagination-link pagination-link-next">Старее →</a>
+      {% else %}
+        <span class="pagination-link-disabled">Старее →</span>
+      {% endif %}
+    </li>
+  </ol>
+</nav>

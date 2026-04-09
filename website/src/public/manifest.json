@@ -1,0 +1,21 @@
+{
+  "name": "Блог SetHubble",
+  "short_name": "SetHubble",
+  "description": "Новости, обновления и инсайты про SetHubble",
+  "start_url": "/blog/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#6366f1",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/public/og-image.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity", "news"],
+  "lang": "ru",
+  "dir": "ltr"
+}

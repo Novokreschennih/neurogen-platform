@@ -1,0 +1,145 @@
+---
+layout: layouts/base.njk
+---
+
+{# === SCHEMA.ORG JSON-LD === #}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "{{ title }}",
+  "description": "{{ description or metadata.description }}",
+  "datePublished": "{{ page.date | htmlDateString }}",
+  "dateModified": "{{ page.date | htmlDateString }}",
+  "author": {
+    "@type": "Organization",
+    "name": "{{ authors[author].name or 'SetHubble' }}"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "SetHubble",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "{{ metadata.url }}/public/og-image.png"
+    }
+  },
+  "url": "{{ metadata.url }}{{ page.url }}",
+  "image": "{{ image or metadata.url + '/public/og-image.png' }}",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "{{ metadata.url }}{{ page.url }}"
+  },
+  "wordCount": "{{ content | readingTime }}",
+  "articleSection": "{{ tags | first or 'Блог' }}"
+}
+</script>
+
+<article class="post-content">
+	{# === ХЛЕБНЫЕ КРОШКИ === #}
+	<nav class="breadcrumbs" aria-label="Breadcrumb">
+		<a href="/blog/">Блог</a>
+		<span class="separator">/</span>
+		<span class="current">{{ title }}</span>
+	</nav>
+
+	<h1 class="post-title">{{ title }}</h1>
+
+	{# === ВРЕМЯ ЧТЕНИЯ, ДАТА, АВТОР, ТЕГИ === #}
+	<div class="post-metadata">
+		<span class="reading-time">⏱ {{ content | readingTime }}</span>
+		<time datetime="{{ page.date | htmlDateString }}">{{ page.date | readableDate }}</time>
+
+		{# === АВТОР === #}
+		{%- if author %}
+		<span class="post-author">
+			{%- set authorData = authors[author] or authors["sethubble"] %}
+			👤 {{ authorData.name }}
+		</span>
+		{%- endif %}
+
+		{# `tags` здесь - это массив slug'ов из Front Matter вашего поста #}
+		{%- if tags %}
+		<div class="tags-list">
+			{# Перебираем теги (slug'и) текущего поста #}
+			{%- for tagSlug in tags | filterTagList %}
+				{# `tagDictionary` - это наш глобальный словарь из _data/tagDictionary.js #}
+				{# Проверяем, есть ли такой slug в нашем словаре #}
+				{%- if tagDictionary[tagSlug] %}
+					{# Формируем URL из slug'а #}
+					{%- set tagUrl %}/tags/{{ tagSlug }}/{% endset %}
+					<a href="{{ tagUrl }}" class="post-tag">
+						{# Отображаем красивое русское имя из нашего словаря #}
+						{{ tagDictionary[tagSlug] }}
+					</a>
+				{%- endif %}
+			{%- endfor %}
+		</div>
+		{%- endif %}
+	</div>
+
+	{# === ОГЛАВЛЕНИЕ СТАТЬИ === #}
+	{%- set headings = content | getHeadings %}
+	{%- if headings and headings.length > 1 %}
+	<nav class="table-of-contents" aria-label="Оглавление статьи">
+		<h2 class="toc-title">📑 Содержание</h2>
+		<ol class="toc-list">
+			{%- for heading in headings %}
+			<li class="toc-item toc-level-{{ heading.level }}">
+				<a href="#{{ heading.id }}">{{ heading.text }}</a>
+			</li>
+			{%- endfor %}
+		</ol>
+	</nav>
+	{%- endif %}
+
+	{{ content | safe }}
+</article>
+
+{# --- НОВЫЙ CTA-БЛОК --- #}
+<section class="cta-block">
+  <h2>Увидели потенциал?</h2>
+  <p>Не просто верьте нам на слово. Рассчитайте свой собственный годовой доход на нашем интерактивном симуляторе.</p>
+  <a href="{{ '/calculator/' | url }}" class="cta-button">Открыть Калькулятор Дохода</a>
+</section>
+
+{# Навигация "Следующий/Предыдущий пост" #}
+{%- set previousPost = collections.posts | getPreviousCollectionItem %}
+{%- set nextPost = collections.posts | getNextCollectionItem %}
+{%- if nextPost or previousPost %}
+<nav class="links-nextprev">
+	{%- if previousPost %}<a class="links-nextprev-prev" href="{{ previousPost.url }}">
+		<span>← Предыдущая</span>
+		<strong>{{ previousPost.data.title }}</strong>
+	</a>{% else %}<span></span>{% endif %}
+
+	{%- if nextPost %}<a class="links-nextprev-next" href="{{ nextPost.url }}">
+		<span>Следующая →</span>
+		<strong>{{ nextPost.data.title }}</strong>
+	</a>{% endif %}
+</nav>
+{%- endif %}
+
+{# === RELATED POSTS (ЧИТАЙТЕ ТАКЖЕ) === #}
+{%- set relatedPosts = collections.posts | getRelatedPosts(tags, page.fileSlug, 3) %}
+{%- if relatedPosts and relatedPosts.length > 0 %}
+<section class="related-posts">
+	<h2>Читайте также</h2>
+	<div class="related-posts-list">
+		{%- for related in relatedPosts %}
+		<article class="related-post">
+			<a href="{{ related.url }}">
+				<h3>{{ related.data.title }}</h3>
+			</a>
+			<p class="related-meta">
+				<time datetime="{{ related.date | htmlDateString }}">{{ related.date | readableDate }}</time>
+				<span>·</span>
+				<span>{{ related.content | readingTime }}</span>
+			</p>
+		</article>
+		{%- endfor %}
+	</div>
+</section>
+{%- endif %}
+
+{# === TELEGRAM SUBSCRIBE (ВМЕСТО КОММЕНТАРИЕВ) === #}
+{% include "partials/subscribe.njk" %}

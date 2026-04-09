@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>DEMO CRM | NeuroGen</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      body {
+        background-color: var(--tg-theme-bg-color, #f3f4f6);
+        color: var(--tg-theme-text-color, #000000);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+          Arial, sans-serif;
+      }
+      .stat-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+      .stat-card.paid {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      }
+      .btn-primary {
+        background-color: var(--tg-theme-button-color, #667eea);
+        color: var(--tg-theme-button-text-color, #ffffff);
+      }
+      /* Скроллбар для таблицы */
+      ::-webkit-scrollbar {
+        width: 4px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 2px;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen pb-24 pt-6">
+    <div
+      class="bg-red-500 text-white text-center text-xs font-bold py-1 px-2 fixed top-0 left-0 w-full z-50 animate-pulse shadow-md"
+    >
+      ОЗНАКОМИТЕЛЬНЫЙ ДЕМО-РЕЖИМ
+    </div>
+
+    <header class="bg-white dark:bg-gray-800 shadow-sm p-4 sticky top-6 z-10">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-lg font-bold dark:text-white">📊 CRM NeuroGen</h1>
+          <p class="text-xs text-gray-500" id="adminWelcome">
+            Админ: Гость (Демо)
+          </p>
+        </div>
+        <div
+          class="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wide"
+        >
+          PRO Feature
+        </div>
+      </div>
+    </header>
+
+    <div class="p-4 grid grid-cols-2 gap-3">
+      <div
+        class="stat-card rounded-xl p-4 shadow-md cursor-pointer"
+        onclick="showProAlert('Аналитика лидов')"
+      >
+        <div class="text-3xl font-bold">124</div>
+        <div class="text-xs opacity-90 uppercase tracking-wider">
+          Всего лидов
+        </div>
+      </div>
+      <div
+        class="stat-card paid rounded-xl p-4 shadow-md cursor-pointer"
+        onclick="showProAlert('Аналитика продаж')"
+      >
+        <div class="text-3xl font-bold">15</div>
+        <div class="text-xs opacity-90 uppercase tracking-wider">
+          Продажи (PRO)
+        </div>
+      </div>
+    </div>
+
+    <div class="px-4 mb-4">
+      <div
+        class="bg-white dark:bg-gray-800 rounded-xl p-3 shadow-sm overflow-x-auto cursor-pointer"
+        onclick="showProAlert('Воронка продаж')"
+      >
+        <div class="flex gap-4 min-w-max">
+          <div class="flex flex-col items-center px-2">
+            <span class="text-xs text-gray-400">🚀 Старт</span>
+            <span class="font-bold dark:text-white">45</span>
+          </div>
+          <div class="w-px bg-gray-200 dark:bg-gray-700"></div>
+          <div class="flex flex-col items-center px-2">
+            <span class="text-xs text-gray-400">🎓 Обуч.</span>
+            <span class="font-bold dark:text-white">40</span>
+          </div>
+          <div class="w-px bg-gray-200 dark:bg-gray-700"></div>
+          <div class="flex flex-col items-center px-2">
+            <span class="text-xs text-gray-400">⚡ Оффер</span>
+            <span class="font-bold dark:text-white">24</span>
+          </div>
+          <div class="w-px bg-gray-200 dark:bg-gray-700"></div>
+          <div class="flex flex-col items-center px-2">
+            <span class="text-xs text-gray-400">🎁 Выдача</span>
+            <span class="font-bold text-green-500">15</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="px-4 mb-2 sticky top-20 z-10 bg-gray-50/90 dark:bg-gray-900/90 backdrop-blur-sm py-2"
+    >
+      <div class="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+        <button
+          onclick="showProAlert('Сегментация базы')"
+          class="filter-btn active px-4 py-1.5 rounded-full text-xs font-bold transition-all bg-gray-800 text-white dark:bg-white dark:text-black shadow-sm whitespace-nowrap"
+        >
+          ВСЕ
+        </button>
+        <button
+          onclick="showProAlert('Сегментация базы')"
+          class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:border dark:border-gray-700 hover:opacity-80 whitespace-nowrap"
+        >
+          ✅ PRO
+        </button>
+        <button
+          onclick="showProAlert('Сегментация базы')"
+          class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:border dark:border-gray-700 hover:opacity-80 whitespace-nowrap"
+        >
+          🆓 FREE
+        </button>
+        <button
+          onclick="showProAlert('Сегментация базы')"
+          class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:border dark:border-gray-700 hover:opacity-80 whitespace-nowrap"
+        >
+          🚀 СТАРТ
+        </button>
+        <button
+          onclick="showProAlert('Сегментация базы')"
+          class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:border dark:border-gray-700 hover:opacity-80 whitespace-nowrap"
+        >
+          🎓 ОБУЧЕНИЕ
+        </button>
+        <button
+          onclick="showProAlert('Сегментация базы')"
+          class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:border dark:border-gray-700 hover:opacity-80 whitespace-nowrap"
+        >
+          ⌛ ДУМАЮТ
+        </button>
+      </div>
+    </div>
+
+    <div class="px-4">
+      <div class="mb-3 relative">
+        <div
+          class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
+        >
+          <span class="text-gray-400">🔍</span>
+        </div>
+        <input
+          type="text"
+          class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-2.5 pl-10 pr-4 text-sm outline-none transition-all shadow-sm dark:text-white"
+          placeholder="Поиск по имени или ID..."
+          onfocus="
+            showProAlert('Поиск по базе');
+            this.blur();
+          "
+        />
+      </div>
+
+      <div
+        class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden mb-6"
+      >
+        <div
+          class="p-3 border-b dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-700/50"
+        >
+          <div
+            class="flex items-center gap-2"
+            onclick="showProAlert('Массовые действия')"
+          >
+            <input
+              type="checkbox"
+              disabled
+              class="w-4 h-4 rounded border-gray-300"
+            />
+            <span
+              class="text-xs font-medium text-gray-500 uppercase cursor-pointer"
+              >Выбрать всех</span
+            >
+          </div>
+          <span
+            class="text-xs font-bold bg-gray-200 dark:bg-gray-600 px-2 py-0.5 rounded-md"
+            >124</span
+          >
+        </div>
+
+        <div>
+          <table class="w-full">
+            <tbody>
+              <tr
+                class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                onclick="showProAlert('Работа с лидами')"
+              >
+                <td class="px-3 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    disabled
+                    class="w-4 h-4 rounded border-gray-300"
+                  />
+                </td>
+                <td class="px-3 py-3">
+                  <div class="flex flex-col">
+                    <span class="text-sm font-medium dark:text-gray-200"
+                      >Александр (Бизнес)</span
+                    >
+                    <span class="text-[10px] text-gray-400">ID: 849201</span>
+                  </div>
+                </td>
+                <td class="px-3 py-3 text-right">
+                  <div class="flex flex-col items-end gap-1">
+                    <span
+                      class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700"
+                      >PRO</span
+                    >
+                    <span class="text-xs text-green-500 font-bold">Выдача</span>
+                  </div>
+                </td>
+              </tr>
+              <tr
+                class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                onclick="showProAlert('Работа с лидами')"
+              >
+                <td class="px-3 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    disabled
+                    class="w-4 h-4 rounded border-gray-300"
+                  />
+                </td>
+                <td class="px-3 py-3">
+                  <div class="flex flex-col">
+                    <span class="text-sm font-medium dark:text-gray-200"
+                      >Елена Смирнова</span
+                    >
+                    <span class="text-[10px] text-gray-400">ID: 938211</span>
+                  </div>
+                </td>
+                <td class="px-3 py-3 text-right">
+                  <div class="flex flex-col items-end gap-1">
+                    <span
+                      class="px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600"
+                      >FREE</span
+                    >
+                    <span class="text-xs text-orange-500 font-medium"
+                      >Думает</span
+                    >
+                  </div>
+                </td>
+              </tr>
+              <tr
+                class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                onclick="showProAlert('Работа с лидами')"
+              >
+                <td class="px-3 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    disabled
+                    class="w-4 h-4 rounded border-gray-300"
+                  />
+                </td>
+                <td class="px-3 py-3">
+                  <div class="flex flex-col">
+                    <span class="text-sm font-medium dark:text-gray-200"
+                      >Михаил Т.</span
+                    >
+                    <span class="text-[10px] text-gray-400">ID: 102938</span>
+                  </div>
+                </td>
+                <td class="px-3 py-3 text-right">
+                  <div class="flex flex-col items-end gap-1">
+                    <span
+                      class="px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600"
+                      >FREE</span
+                    >
+                    <span class="text-xs text-blue-500 font-medium"
+                      >Обучение</span
+                    >
+                  </div>
+                </td>
+              </tr>
+              <tr
+                class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                onclick="showProAlert('Работа с лидами')"
+              >
+                <td class="px-3 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    disabled
+                    class="w-4 h-4 rounded border-gray-300"
+                  />
+                </td>
+                <td class="px-3 py-3">
+                  <div class="flex flex-col">
+                    <span class="text-sm font-medium dark:text-gray-200"
+                      >Иван</span
+                    >
+                    <span class="text-[10px] text-gray-400">ID: 111000</span>
+                  </div>
+                </td>
+                <td class="px-3 py-3 text-right">
+                  <div class="flex flex-col items-end gap-1">
+                    <span
+                      class="px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600"
+                      >FREE</span
+                    >
+                    <span class="text-xs text-gray-400 font-medium">Старт</span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="p-3 text-center border-t dark:border-gray-700">
+          <span
+            class="text-xs text-gray-400 cursor-pointer"
+            onclick="showProAlert('Пагинация')"
+            >Показать еще...</span
+          >
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="fixed bottom-0 left-0 right-0 p-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-t dark:border-gray-700 shadow-[0_-4px_6_-1px_rgba(0,0,0,0.1)] z-20"
+    >
+      <div class="flex gap-3 max-w-md mx-auto">
+        <button
+          onclick="showProAlert('Умная рассылка')"
+          class="flex-1 btn-primary py-3 rounded-xl font-bold text-sm shadow-lg transition-all flex items-center justify-center gap-2"
+        >
+          <span>✉️</span> Рассылка (124)
+        </button>
+        <button
+          onclick="showProAlert('Экспорт CSV')"
+          class="px-4 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white rounded-xl font-bold text-sm hover:bg-gray-200 transition-all"
+        >
+          📥 CSV
+        </button>
+      </div>
+    </div>
+
+    <script>
+      const tg = window.Telegram.WebApp;
+      tg.expand();
+      tg.ready();
+
+      if (tg.initDataUnsafe?.user) {
+        document.getElementById("adminWelcome").textContent =
+          `Админ: ${tg.initDataUnsafe.user.first_name} (Демо)`;
+      }
+
+      // Функция вызова всплывающего окна "Купи PRO"
+      function showProAlert(featureName) {
+        if (tg.HapticFeedback) {
+          tg.HapticFeedback.notificationOccurred("warning");
+        }
+
+        const message = `Функция «${featureName}» заблокирована 🔒\n\nВ демо-режиме управление базой недоступно. Активируйте PRO-статус в боте, чтобы получить доступ к своим реальным лидам и делать по ним рассылки!`;
+
+        if (tg.isVersionAtLeast && tg.isVersionAtLeast("6.2")) {
+          tg.showPopup({
+            title: "Требуется PRO-статус",
+            message: message,
+            buttons: [{ type: "close", text: "Понятно" }],
+          });
+        } else {
+          alert(message);
+        }
+      }
+    </script>
+  </body>
+</html>

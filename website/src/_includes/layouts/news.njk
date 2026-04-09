@@ -1,0 +1,40 @@
+---
+layout: layouts/base.njk
+---
+
+
+<article class="post-content">
+	<h1>{{ title }}</h1>
+
+	{# Блок для даты и тегов #}
+	<div class="post-metadata">
+		<time datetime="{{ page.date | htmlDateString }}">{{ page.date | readableDate }}</time>
+		{%- if tags %}
+		<div class="tags-list">
+			{%- for tag in tags | filterTagList %}
+			{%- set tagUrl %}/tags/{{ tag | slugify }}/{% endset %}
+			<a href="{{ tagUrl }}" class="post-tag">{{ tag }}</a>
+			{%- endfor %}
+		</div>
+		{%- endif %}
+	</div>
+
+	{{ content | safe }}
+</article>
+
+
+{%- set previousPost = collections.news | getPreviousCollectionItem %}
+{%- set nextPost = collections.news | getNextCollectionItem %}
+{%- if nextPost or previousPost %}
+<nav class="links-nextprev">
+	{%- if previousPost %}<a class="links-nextprev-prev" href="{{ previousPost.url }}">
+		<span>← Предыдущая новость</span>
+		<strong>{{ previousPost.data.title }}</strong>
+	</a>{% else %}<span></span>{% endif %}
+	
+	{%- if nextPost %}<a class="links-nextprev-next" href="{{ nextPost.url }}">
+		<span>Следующая новость →</span>
+		<strong>{{ nextPost.data.title }}</strong>
+	</a>{% endif %}
+</nav>
+{%- endif %}

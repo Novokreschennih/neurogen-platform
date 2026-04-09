@@ -1,0 +1,47 @@
+---
+title: Архив Статей
+layout: layouts/base.njk
+eleventyNavigation:
+  key: Статьи
+  order: 4
+# --- МАГИЯ ПАГИНАЦИИ ЖИВЕТ ЗДЕСЬ ---
+pagination:
+  data: collections.posts
+  size: 6
+  reverse: true
+  alias: postslist
+# Генерируем красивые URL: /archive/ для первой страницы, /archive/page/2/ для второй и т.д.
+permalink: "/archive/{% if pagination.pageNumber > 0 %}page/{{ pagination.pageNumber + 1 }}/{% endif %}index.html"
+---
+
+<h1 class="page-title">{{ title }}</h1>
+
+{# Используем наш рабочий компонент для вывода постов #}
+{% include "postslist.njk" %}
+
+{# --- НАВИГАЦИЯ ПО СТРАНИЦАМ (ПАГИНАЦИЯ) --- #}
+<nav class="pagination">
+  <ol class="pagination-list">
+    <li>
+      {% if pagination.href.previous %}
+        <a href="{{ pagination.href.previous }}" class="pagination-link pagination-link-prev">←</a>
+      {% else %}
+        <span class="pagination-link-disabled">←</span>
+      {% endif %}
+    </li>
+    {%- for pageEntry in pagination.pages %}
+      <li>
+        <a href="{{ pagination.hrefs[loop.index0] }}" class="pagination-link {% if page.url == pagination.hrefs[loop.index0] %}pagination-link-active{% endif %}">
+          {{ loop.index }}
+        </a>
+      </li>
+    {%- endfor %}
+    <li>
+      {% if pagination.href.next %}
+        <a href="{{ pagination.href.next }}" class="pagination-link pagination-link-next">→</a>
+      {% else %}
+        <span class="pagination-link-disabled">→</span>
+      {% endif %}
+    </li>
+  </ol>
+</nav>

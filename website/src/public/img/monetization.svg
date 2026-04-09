@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#14b8a6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0d9488;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#grad)"/>
+  <path d="M600 200 L650 300 L750 300 L675 360 L700 460 L600 400 L500 460 L525 360 L450 300 L550 300 Z" fill="rgba(255,255,255,0.15)" stroke="white" stroke-width="3"/>
+  <text x="600" y="340" font-family="Arial, sans-serif" font-size="80" fill="white" text-anchor="middle" font-weight="bold">$</text>
+  <text x="600" y="520" font-family="Arial, sans-serif" font-size="42" fill="white" text-anchor="middle" font-weight="bold">Монетизация</text>
+</svg>

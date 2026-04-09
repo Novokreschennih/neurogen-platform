@@ -1,0 +1,28 @@
+---
+permalink: /sitemap.xml
+layout: false
+eleventyExcludeFromCollections: true
+---
+<?xml version="1.0" encoding="utf-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  
+  {# === ШАГ 1: Вручную добавляем главную страницу лендинга === #}
+  <url>
+    <loc>{{ metadata.url }}/</loc>
+    <lastmod>{{ buildDate | htmlDateString }}</lastmod> {# Используем текущую дату сборки #}
+    <priority>1.0</priority>
+  </url>
+  
+  {# === ШАГ 2: Автоматически добавляем все страницы блога === #}
+  {%- for page in collections.all %}
+    {# Исключаем дубликаты и служебные страницы #}
+    {% if page.url and page.url != "/" and page.data.permalink != false and not page.data.eleventyExcludeFromCollections %}
+      <url>
+        <loc>{{ metadata.url }}{{ page.url }}</loc>
+        <lastmod>{{ page.date | htmlDateString }}</lastmod>
+        <priority>0.8</priority>
+      </url>
+    {% endif %}
+  {%- endfor %}
+  
+</urlset>

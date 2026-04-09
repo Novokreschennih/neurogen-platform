@@ -1,0 +1,125 @@
+<section id="simulator" class="simulator island-dark">
+    
+    <div class="simulator-header">
+        <h2>Калькулятор Эффективности</h2>
+        <p id="simulatorSubtitle" style="color: var(--text-gray); max-width: 700px; margin: auto; transition: opacity 0.3s;">
+            Рассчитайте потенциальный экономический эффект от внедрения программы лояльности.
+        </p>
+    </div>
+    
+    <div id="simulatorModeSwitcher" class="simulator-mode-switcher" data-mode="author">
+        <div class="mode-switch-indicator"></div>
+        <button class="mode-switch-btn active" data-mode="author">Я — Владелец Бизнеса</button>
+        <button class="mode-switch-btn" data-mode="partner">Я — Партнер</button>
+    </div>
+
+    <!-- Переключатель Типа -->
+    <div id="businessTypeSwitcher" class="simulator-mode-switcher" data-type="online" style="margin-top: -20px; transform: scale(0.9);">
+        <div class="mode-switch-indicator"></div>
+        <button class="mode-switch-btn active" data-type="online">Онлайн</button>
+        <button class="mode-switch-btn" data-type="offline">Офлайн</button>
+    </div>
+
+    <div class="controls-area">
+        <div class="general-controls">
+            <div class="control-group">
+                <label for="price">
+                    <span id="priceLabel">Средний чек (у.е.)</span> 
+                    <span class="value-display" id="priceValue">100 у.е.</span>
+                </label>
+                <input type="range" id="price" class="slider" min="10" max="2000" value="100" step="10">
+            </div>
+            <div class="control-group">
+                <label for="initialPartners">
+                    <span id="initialPartnersLabel">Клиентов/Продаж в месяц</span> 
+                    <span class="value-display" id="initialPartnersValue">10</span>
+                </label>
+                <input type="range" id="initialPartners" class="slider" min="1" max="100" value="10" step="1">
+            </div>
+            <div class="control-group">
+                <label for="partnerDuplication">
+                    <span id="duplicationLabel">Коэффициент виральности</span> 
+                    <span class="value-display" id="partnerDuplicationValue">2</span>
+                </label>
+                <input type="range" id="partnerDuplication" class="slider" min="0" max="10" value="2" step="1" title="Сколько новых клиентов приведет каждый участник">
+            </div>
+        </div>
+    </div>
+
+    <div class="results-grid">
+        <div class="result-column classic">
+            <h3>Классический маркетинг</h3>
+            <p class="subtitle" id="classicSubtitle">1-2 уровня рекомендаций</p>
+            <div class="simulator-controls">
+                <div class="control-group">
+                    <label style="display:flex; justify-content: space-between;">Глубина (уровни) <span class="value-display" id="classicLevelsValue" style="color: var(--text-gray);">2</span></label>
+                    <input type="range" id="classicLevels" class="slider" min="0" max="2" value="2" style="opacity: 0.7;">
+                </div>
+                <div class="control-row" id="classicL1Row">
+                    <label for="classicL1">Вознаграждение ур. 1, %</label>
+                    <input type="number" id="classicL1" class="number-input" value="30" min="0" max="100" step="1">
+                </div>
+                <div class="control-row" id="classicL2Row">
+                    <label for="classicL2">Вознаграждение ур. 2, %</label>
+                    <input type="number" id="classicL2" class="number-input" value="5" min="0" max="100" step="1">
+                </div>
+            </div>
+             <div class="metrics-container">
+                <div class="result-item">
+                    <div class="label" id="classicPartnersLabel">Охват аудитории</div>
+                    <div class="value" id="classicTotalPartners">0</div>
+                </div>
+                <div class="income-box">
+                    <span class="income-label" id="classicIncomeLabel">Экономический эффект</span>
+                    <div class="income-value" id="classicAuthorIncome">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="result-column sethubble">
+            <h3>🚀 Модель SetHubble</h3>
+            <p class="subtitle" id="sethubbleSubtitle">Deep Tier System (5 уровней)</p>
+             <div class="simulator-controls">
+                <div class="control-group">
+                    <label style="display:flex; justify-content: space-between; color: white;">Глубина (уровни) <span class="value-display" id="sethubbleLevelsValue" style="color: var(--neon);">5</span></label>
+                    <input type="range" id="sethubbleLevels" class="slider" min="0" max="10" value="5">
+                </div>
+                <div class="control-row" id="sethubbleL1Row">
+                    <label for="sethubbleL1" style="color: white;">Вознаграждение ур. 1, %</label>
+                    <input type="number" id="sethubbleL1" class="number-input" value="40" min="0" max="90" step="1" style="border-color: var(--neon-glow);">
+                </div>
+                <div class="control-row" id="sethubbleL2plusRow">
+                    <label for="sethubbleL2plus" id="sethubbleL2plusLabel" style="color: white;">Вознаграждение ур. 2-10</label>
+                    <input type="number" id="sethubbleL2plus" class="number-input" value="5" min="0" max="50" step="1" style="border-color: var(--neon-glow);">
+                </div>
+                <div class="warning" id="sethubbleWarning"></div>
+            </div>
+            <div class="metrics-container">
+                <div class="result-item">
+                    <div class="label" id="sethubblePartnersLabel">Охват аудитории</div>
+                    <div class="value" id="sethubbleTotalPartners" style="color: var(--neon);">0</div>
+                </div>
+                <div class="income-box">
+                    <span class="income-label" id="sethubbleIncomeLabel">Экономический эффект</span>
+                    <div class="income-value" id="sethubbleAuthorIncome">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="conclusion-box">
+        <p id="conclusionText">Передвиньте ползунки, чтобы увидеть потенциал масштабирования.</p>
+    </div>
+
+    <!-- ✅ ЮРИДИЧЕСКИЙ ДИСКЛЕЙМЕР -->
+    <div style="font-size: 0.75rem; color: var(--text-gray); margin-top: 15px; opacity: 0.7; line-height: 1.4;">
+        * 1 у.е. (условная единица) эквивалентна 1 USDT. Расчет носит исключительно информационный характер и демонстрирует математическую модель маркетинговой системы. Не является гарантией дохода. Выплаты вознаграждений осуществляются в соответствии с условиями лицензионного договора.
+    </div>
+
+    <div class="chart-container">
+        <canvas id="salesChart"></canvas>
+        <div id="chart-error" style="display: none; text-align: center; color: var(--text-gray); padding-top: 50px;">
+            Не удалось загрузить библиотеку для построения графика.
+        </div>
+    </div>
+</section>
