@@ -21,31 +21,71 @@ eleventyExcludeFromCollections: true
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
 @keyframes blob {
-  0% { transform: translate(0px, 0px) scale(1); }
-  33% { transform: translate(30px, -50px) scale(1.1); }
-  66% { transform: translate(-20px, 20px) scale(0.9); }
-  100% { transform: translate(0px, 0px) scale(1); }
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
 }
-.animate-blob { animation: blob 7s infinite; }
-.animation-delay-2000 { animation-delay: 2s; }
-.animation-delay-4000 { animation-delay: 4s; }
+.animate-blob {
+  animation: blob 7s infinite;
+}
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
 
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
-.msg-animate { animation: fadeInUp 0.4s ease-out both; }
+.msg-animate {
+  animation: fadeInUp 0.4s ease-out both;
+}
 
 @keyframes bounce {
-  0%, 80%, 100% { transform: scale(0); }
-  40% { transform: scale(1); }
+  0%,
+  80%,
+  100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1);
+  }
 }
-.typing-dot { animation: bounce 1.4s infinite ease-in-out both; }
-.typing-dot:nth-child(1) { animation-delay: -0.32s; }
-.typing-dot:nth-child(2) { animation-delay: -0.16s; }
+.typing-dot {
+  animation: bounce 1.4s infinite ease-in-out both;
+}
+.typing-dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+.typing-dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
 
-.chat-scroll::-webkit-scrollbar { width: 0; height: 0; }
-.chat-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+.chat-scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+.chat-scroll {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
 
 body {
   background-color: #050505;
@@ -85,7 +125,7 @@ body {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.15);
+  background: rgba(255, 255, 255, 0.15);
   transition: all 0.3s;
 }
 .step-dot.active {
@@ -109,19 +149,25 @@ body {
   border-color: #a855f7;
   background: rgba(168, 85, 247, 0.1);
 }
-    </style>
+
+</style>
   </head>
   <body class="relative">
     <!-- Фоновые градиентные пятна -->
     <div class="fixed inset-0 overflow-hidden pointer-events-none -z-10">
-      <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-purple-600 rounded-full mix-blend-screen filter blur-[128px] opacity-[0.15] animate-blob"></div>
-      <div class="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-cyan-600 rounded-full mix-blend-screen filter blur-[128px] opacity-[0.15] animate-blob animation-delay-2000"></div>
+      <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-purple-600 rounded-full mix-blend-screen filter blur-[128px] opacity-[0.15] animate-blob">
+      </div>
+      <div class="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-cyan-600 rounded-full mix-blend-screen filter blur-[128px] opacity-[0.15] animate-blob animation-delay-2000">
+      </div>
     </div>
 
     <!-- ============================================ -->
     <!-- ЭКРАН 1: СБОР EMAIL -->
     <!-- ============================================ -->
-    <div id="screenEmail" class="funnel-screen active flex-col items-center justify-center px-4 min-h-screen">
+    <div
+      id="screenEmail"
+      class="funnel-screen active flex-col items-center justify-center px-4 min-h-screen"
+    >
       <div class="max-w-md w-full text-center">
         <div class="step-indicator justify-center mb-8">
           <div class="step-dot active"></div>
@@ -136,11 +182,13 @@ body {
         </div>
 
         <h1 class="text-3xl md:text-4xl font-black mb-4 leading-tight">
-          ПОСТРОЙ СВОЮ <span class="gradient-text">ИИ-СИСТЕМУ</span><br>ЗА 5 МИНУТ
+          ПОСТРОЙ СВОЮ <span class="gradient-text">ИИ-СИСТЕМУ</span><br>ЗА 5
+          МИНУТ
         </h1>
 
         <p class="text-gray-400 text-sm mb-8 leading-relaxed">
-          NeuroGen AI проведёт тебя через весь процесс — от регистрации до запуска. Просто следуй шагам.
+          NeuroGen AI проведёт тебя через весь процесс — от регистрации до
+          запуска. Просто следуй шагам.
         </p>
 
         <form id="emailForm" class="space-y-4">
@@ -172,7 +220,10 @@ body {
     <!-- ============================================ -->
     <!-- ЭКРАН 2: ВЫБОР КАНАЛОВ -->
     <!-- ============================================ -->
-    <div id="screenChannels" class="funnel-screen flex-col items-center px-4 py-8 min-h-screen">
+    <div
+      id="screenChannels"
+      class="funnel-screen flex-col items-center px-4 py-8 min-h-screen"
+    >
       <div class="max-w-md w-full">
         <div class="step-indicator justify-center mb-8">
           <div class="step-dot done"></div>
@@ -187,13 +238,18 @@ body {
             ГДЕ БУДЕШЬ <span class="gradient-text">ЗАПУСКАТЬ?</span>
           </h2>
           <p class="text-gray-400 text-sm">
-            Выбери каналы, через которые твоя система будет ловить клиентов. Можно несколько.
+            Выбери каналы, через которые твоя система будет ловить клиентов.
+            Можно несколько.
           </p>
         </div>
 
         <div class="space-y-3" id="channelList">
           <!-- Telegram -->
-          <div class="channel-card glass-panel rounded-xl p-4 flex items-center gap-4" data-channel="telegram" onclick="toggleChannel(this)">
+          <div
+            class="channel-card glass-panel rounded-xl p-4 flex items-center gap-4"
+            data-channel="telegram"
+            onclick="toggleChannel(this)"
+          >
             <div class="text-3xl">✈️</div>
             <div class="flex-1">
               <div class="font-bold text-white">Telegram</div>
@@ -203,31 +259,49 @@ body {
           </div>
 
           <!-- VK -->
-          <div class="channel-card glass-panel rounded-xl p-4 flex items-center gap-4" data-channel="vk" onclick="toggleChannel(this)">
+          <div
+            class="channel-card glass-panel rounded-xl p-4 flex items-center gap-4"
+            data-channel="vk"
+            onclick="toggleChannel(this)"
+          >
             <div class="text-3xl">💬</div>
             <div class="flex-1">
               <div class="font-bold text-white">ВКонтакте</div>
-              <div class="text-xs text-gray-400">80M+ аудитория в РФ, не заблокирован</div>
+              <div class="text-xs text-gray-400">
+                80M+ аудитория в РФ, не заблокирован
+              </div>
             </div>
             <div class="check-icon text-xl text-gray-600">○</div>
           </div>
 
           <!-- Web -->
-          <div class="channel-card glass-panel rounded-xl p-4 flex items-center gap-4" data-channel="web" onclick="toggleChannel(this)">
+          <div
+            class="channel-card glass-panel rounded-xl p-4 flex items-center gap-4"
+            data-channel="web"
+            onclick="toggleChannel(this)"
+          >
             <div class="text-3xl">🌐</div>
             <div class="flex-1">
               <div class="font-bold text-white">Чат на сайте</div>
-              <div class="text-xs text-gray-400">Виджет AI-консультанта на твоём сайте</div>
+              <div class="text-xs text-gray-400">
+                Виджет AI-консультанта на твоём сайте
+              </div>
             </div>
             <div class="check-icon text-xl text-gray-600">○</div>
           </div>
 
           <!-- Email -->
-          <div class="channel-card glass-panel rounded-xl p-4 flex items-center gap-4" data-channel="email" onclick="toggleChannel(this)">
+          <div
+            class="channel-card glass-panel rounded-xl p-4 flex items-center gap-4"
+            data-channel="email"
+            onclick="toggleChannel(this)"
+          >
             <div class="text-3xl">📧</div>
             <div class="flex-1">
               <div class="font-bold text-white">Email-рассылка</div>
-              <div class="text-xs text-gray-400">Автоматические дожимы и напоминания</div>
+              <div class="text-xs text-gray-400">
+                Автоматические дожимы и напоминания
+              </div>
             </div>
             <div class="check-icon text-xl text-gray-600">○</div>
           </div>
@@ -247,7 +321,10 @@ body {
     <!-- ============================================ -->
     <!-- ЭКРАН 3: НАСТРОЙКА (динамический) -->
     <!-- ============================================ -->
-    <div id="screenSetup" class="funnel-screen flex-col items-center px-4 py-8 min-h-screen">
+    <div
+      id="screenSetup"
+      class="funnel-screen flex-col items-center px-4 py-8 min-h-screen"
+    >
       <div class="max-w-md w-full">
         <div class="step-indicator justify-center mb-8">
           <div class="step-dot done"></div>
@@ -274,11 +351,15 @@ body {
       <!-- HEADER -->
       <header class="flex items-center justify-between px-5 py-3 border-b border-white/5 bg-[#050505]/60 backdrop-blur-md shrink-0">
         <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-full bg-gradient-to-br from-cyan-500 to-purple-600 flex items-center justify-center text-sm font-bold shadow-lg shadow-purple-500/20">N</div>
+          <div class="w-9 h-9 rounded-full bg-gradient-to-br from-cyan-500 to-purple-600 flex items-center justify-center text-sm font-bold shadow-lg shadow-purple-500/20">
+            N
+          </div>
           <div>
             <div class="text-sm font-bold tracking-wide">NeuroGen AI</div>
             <div class="flex items-center gap-1.5 text-[11px] text-gray-400">
-              <span class="inline-block w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+              <span
+                class="inline-block w-2 h-2 rounded-full bg-green-400 animate-pulse"
+              ></span>
               Шаг <span id="trainingStep">1</span> из 3
             </div>
           </div>
@@ -293,7 +374,10 @@ body {
       </header>
 
       <!-- TRAINING CONTENT -->
-      <div id="trainingContent" class="flex-1 overflow-y-auto chat-scroll px-4 py-6">
+      <div
+        id="trainingContent"
+        class="flex-1 overflow-y-auto chat-scroll px-4 py-6"
+      >
         <!-- Генерируется динамически -->
       </div>
 
@@ -312,7 +396,15 @@ body {
               id="sendBtn"
               class="absolute right-2 bottom-2 w-9 h-9 rounded-xl bg-gradient-to-r from-cyan-500 to-purple-500 flex items-center justify-center hover:opacity-90 active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
             >
-              <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <svg
+                class="w-4 h-4 text-white"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
                 <line x1="22" y1="2" x2="11" y2="13"></line>
                 <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
               </svg>
@@ -328,7 +420,10 @@ body {
     <!-- ============================================ -->
     <!-- ЭКРАН 5: ОФФЕР (PRO) -->
     <!-- ============================================ -->
-    <div id="screenOffer" class="funnel-screen flex-col items-center justify-center px-4 min-h-screen">
+    <div
+      id="screenOffer"
+      class="funnel-screen flex-col items-center justify-center px-4 min-h-screen"
+    >
       <div class="max-w-md w-full text-center">
         <div class="step-indicator justify-center mb-8">
           <div class="step-dot done"></div>
@@ -347,21 +442,29 @@ body {
         </h1>
 
         <p class="text-gray-400 text-sm mb-8 leading-relaxed">
-          Ты прошёл обучение и настроил свою ИИ-систему. Теперь активируй PRO-статус, чтобы открыть полный доступ.
+          Ты прошёл обучение и настроил свою ИИ-систему. Теперь активируй
+          PRO-статус, чтобы открыть полный доступ.
         </p>
 
         <div class="glass-panel rounded-2xl p-6 mb-6 text-left space-y-4">
           <div class="flex justify-between items-center">
             <span class="text-sm text-gray-400">Твои каналы:</span>
-            <span id="offerChannels" class="text-sm font-bold text-white"></span>
+            <span
+              id="offerChannels"
+              class="text-sm font-bold text-white"
+            ></span>
           </div>
           <div class="flex justify-between items-center">
             <span class="text-sm text-gray-400">Реферальная ссылка:</span>
-            <span id="offerRefLink" class="text-xs text-cyan-400 break-all"></span>
+            <span
+              id="offerRefLink"
+              class="text-xs text-cyan-400 break-all"
+            ></span>
           </div>
           <div class="flex justify-between items-center">
             <span class="text-sm text-gray-400">NeuroCoins:</span>
-            <span id="offerNeuroCoins" class="text-sm font-bold text-yellow-400">0</span>
+            <span id="offerNeuroCoins" class="text-sm font-bold text-yellow-400"
+            >0</span>
           </div>
         </div>
 
@@ -382,115 +485,132 @@ body {
 
     <script>
     (function() {
-      "use strict";
+  "use strict";
 
-      // === КОНФИГУРАЦИЯ ===
-      const API_URL = "https://d5dsbah1d4ju0glmp9d0.3zvepvee.apigw.yandexcloud.net/?action=web-chat";
-      const DEFAULT_BOT = "sethubble_biz_bot";
+  // === КОНФИГУРАЦИЯ ===
+  const API_URL =
+    "https://d5dsbah1d4ju0glmp9d0.3zvepvee.apigw.yandexcloud.net/?action=web-chat";
+  const DEFAULT_BOT = "sethubble_biz_bot";
+  const DEFAULT_PARTNER = "p_qdr";
 
-      // === СОСТОЯНИЕ ===
-      let referrer = "";
-      let userEmail = "";
-      let selectedChannels = new Set();
-      let setupStep = 0;
-      let setupQueue = [];
-      let chatHistory = [];
-      let isWaiting = false;
-      let trainingStep = 1;
-      let neuroCoins = 0;
+  // === СОСТОЯНИЕ ===
+  let referrer = "";
+  let userEmail = "";
+  let selectedChannels = new Set();
+  let setupStep = 0;
+  let setupQueue = [];
+  let chatHistory = [];
+  let isWaiting = false;
+  let trainingStep = 1;
+  let neuroCoins = 0;
 
-      // === 1. ПЕРЕХВАТ РЕФЕРАЛА ===
-      function captureReferral() {
-        const params = new URLSearchParams(window.location.search);
-        const ref = params.get("ref");
-        if (ref) {
-          referrer = ref;
-          try { localStorage.setItem("neurogen_ref", ref); } catch (e) {}
-        } else {
-          try { referrer = localStorage.getItem("neurogen_ref") || ""; } catch (e) {}
-        }
-        if (!referrer) {
-          try { referrer = localStorage.getItem("neurogen_partner_bot") || DEFAULT_BOT; } catch (e) {}
-        }
-      }
+  // === 1. ПЕРЕХВАТ РЕФЕРАЛА (v5.0 — partner_id) ===
+  function captureReferral() {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("ref");
+    if (ref) {
+      // v5.0: ref — это partner_id (p_xxx)
+      referrer = ref;
+      try {
+        localStorage.setItem("neurogen_partner_id", ref);
+      } catch (e) {}
+    } else {
+      try {
+        referrer = localStorage.getItem("neurogen_partner_id") || "";
+      } catch (e) {}
+    }
+    if (!referrer) {
+      referrer = DEFAULT_PARTNER;
+    }
+  }
 
-      // === 2. НАВИГАЦИЯ ПО ЭКРАНАМ ===
-      function showScreen(screenId) {
-        document.querySelectorAll('.funnel-screen').forEach(s => s.classList.remove('active'));
-        const screen = document.getElementById(screenId);
-        if (screen) screen.classList.add('active');
-      }
+  // === 2. НАВИГАЦИЯ ПО ЭКРАНАМ ===
+  function showScreen(screenId) {
+    document.querySelectorAll(".funnel-screen").forEach(s =>
+      s.classList.remove("active")
+    );
+    const screen = document.getElementById(screenId);
+    if (screen) screen.classList.add("active");
+  }
 
-      // === 3. ЭКРАН EMAIL ===
-      const emailForm = document.getElementById("emailForm");
-      const emailInput = document.getElementById("funnelEmail");
-      const emailError = document.getElementById("emailError");
-      const emailBtn = document.getElementById("funnelEmailBtn");
+  // === 3. ЭКРАН EMAIL ===
+  const emailForm = document.getElementById("emailForm");
+  const emailInput = document.getElementById("funnelEmail");
+  const emailError = document.getElementById("emailError");
+  const emailBtn = document.getElementById("funnelEmailBtn");
 
-      emailForm.addEventListener("submit", async function(e) {
-        e.preventDefault();
-        const email = emailInput.value.trim();
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  emailForm.addEventListener("submit", async function(e) {
+    e.preventDefault();
+    const email = emailInput.value.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-        if (!emailRegex.test(email)) {
-          emailError.classList.remove("hidden");
-          return;
-        }
-        emailError.classList.add("hidden");
-        emailBtn.disabled = true;
-        emailBtn.innerHTML = '<span class="animate-pulse">ОТПРАВКА...</span>';
+    if (!emailRegex.test(email)) {
+      emailError.classList.remove("hidden");
+      return;
+    }
+    emailError.classList.add("hidden");
+    emailBtn.disabled = true;
+    emailBtn.innerHTML = "<span class=\"animate-pulse\">ОТПРАВКА...</span>";
 
-        // Сохраняем email
-        userEmail = email;
-        try {
-          await fetch(API_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ isEmail: true, email: email, referrer: referrer }),
-          });
-        } catch (err) { console.log("Email saved locally"); }
-
-        // Переход к выбору каналов
-        setTimeout(() => showScreen("screenChannels"), 500);
+    // Сохраняем email (v5.0: partner_id)
+    userEmail = email;
+    try {
+      await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          isEmail: true,
+          email: email,
+          partner_id: referrer,
+          referrer: referrer, // backward compat
+        }),
       });
+    } catch (err) {
+      console.log("Email saved locally");
+    }
 
-      // === 4. ЭКРАН КАНАЛОВ ===
-      function toggleChannel(el) {
-        const channel = el.dataset.channel;
-        if (selectedChannels.has(channel)) {
-          selectedChannels.delete(channel);
-          el.classList.remove("selected");
-          el.querySelector(".check-icon").textContent = "○";
-          el.querySelector(".check-icon").classList.remove("text-green-400");
-          el.querySelector(".check-icon").classList.add("text-gray-600");
-        } else {
-          selectedChannels.add(channel);
-          el.classList.add("selected");
-          el.querySelector(".check-icon").textContent = "✓";
-          el.querySelector(".check-icon").classList.remove("text-gray-600");
-          el.querySelector(".check-icon").classList.add("text-green-400");
-        }
-        document.getElementById("btnToSetup").disabled = selectedChannels.size === 0;
-      }
+    // Переход к выбору каналов
+    setTimeout(() => showScreen("screenChannels"), 500);
+  });
 
-      function goToSetup() {
-        if (selectedChannels.size === 0) return;
+  // === 4. ЭКРАН КАНАЛОВ ===
+  function toggleChannel(el) {
+    const channel = el.dataset.channel;
+    if (selectedChannels.has(channel)) {
+      selectedChannels.delete(channel);
+      el.classList.remove("selected");
+      el.querySelector(".check-icon").textContent = "○";
+      el.querySelector(".check-icon").classList.remove("text-green-400");
+      el.querySelector(".check-icon").classList.add("text-gray-600");
+    } else {
+      selectedChannels.add(channel);
+      el.classList.add("selected");
+      el.querySelector(".check-icon").textContent = "✓";
+      el.querySelector(".check-icon").classList.remove("text-gray-600");
+      el.querySelector(".check-icon").classList.add("text-green-400");
+    }
+    document.getElementById("btnToSetup").disabled =
+      selectedChannels.size === 0;
+  }
 
-        // Формируем очередь настройки
-        setupQueue = Array.from(selectedChannels);
-        setupStep = 0;
-        renderSetupStep();
-        showScreen("screenSetup");
-      }
+  function goToSetup() {
+    if (selectedChannels.size === 0) return;
 
-      // === 5. ЭКРАН НАСТРОЙКИ ===
-      const setupContent = document.getElementById("setupContent");
-      const setupActions = document.getElementById("setupActions");
+    // Формируем очередь настройки
+    setupQueue = Array.from(selectedChannels);
+    setupStep = 0;
+    renderSetupStep();
+    showScreen("screenSetup");
+  }
 
-      const setupSteps = {
-        telegram: {
-          title: "✈️ НАСТРОЙКА TELEGRAM",
-          body: `
+  // === 5. ЭКРАН НАСТРОЙКИ ===
+  const setupContent = document.getElementById("setupContent");
+  const setupActions = document.getElementById("setupActions");
+
+  const setupSteps = {
+    telegram: {
+      title: "✈️ НАСТРОЙКА TELEGRAM",
+      body: `
             <p class="text-gray-400 text-sm mb-4">Для работы Telegram-бота тебе нужно:</p>
             <ol class="text-left text-sm text-gray-300 space-y-3">
               <li class="flex gap-2"><span class="text-cyan-400 font-bold">1.</span> Напиши <a href="https://t.me/BotFather" target="_blank" class="text-cyan-400 underline">@BotFather</a> в Telegram</li>
@@ -500,12 +620,12 @@ body {
               <li class="flex gap-2"><span class="text-cyan-400 font-bold">5.</span> Зарегистрируйся на <a href="https://sethubble.com/ru/" target="_blank" class="text-cyan-400 underline">sethubble.com</a> и получи свой ID</li>
             </ol>
           `,
-          button: "✅ ГОТОВО, СЛЕДУЮЩИЙ ШАГ",
-          link: "https://t.me/BotFather"
-        },
-        vk: {
-          title: "💬 НАСТРОЙКА VK",
-          body: `
+      button: "✅ ГОТОВО, СЛЕДУЮЩИЙ ШАГ",
+      link: "https://t.me/BotFather",
+    },
+    vk: {
+      title: "💬 НАСТРОЙКА VK",
+      body: `
             <p class="text-gray-400 text-sm mb-4">Для работы VK-бота тебе нужно:</p>
             <ol class="text-left text-sm text-gray-300 space-y-3">
               <li class="flex gap-2"><span class="text-indigo-400 font-bold">1.</span> Создай сообщество VK или используй существующее</li>
@@ -516,25 +636,25 @@ body {
               <li class="flex gap-2"><span class="text-indigo-400 font-bold">5.</span> Запомни ID сообщества (число)</li>
             </ol>
           `,
-          button: "✅ ГОТОВО, СЛЕДУЮЩИЙ ШАГ",
-          link: "https://vk.com"
-        },
-        web: {
-          title: "🌐 ПОДКЛЮЧЕНИЕ ЧАТА НА САЙТЕ",
-          body: `
+      button: "✅ ГОТОВО, СЛЕДУЮЩИЙ ШАГ",
+      link: "https://vk.com",
+    },
+    web: {
+      title: "🌐 ПОДКЛЮЧЕНИЕ ЧАТА НА САЙТЕ",
+      body: `
             <p class="text-gray-400 text-sm mb-4">Чтобы AI-консультант появился на твоём сайте:</p>
             <div class="bg-white/10 rounded-lg p-3 text-left mb-4">
               <p class="text-xs text-gray-400 mb-2">Скопируй этот код:</p>
-              <code class="text-[11px] text-cyan-300 break-all">&lt;script src="https://sethubble.ru/js/widget.js" data-bot="${referrer}"&gt;&lt;/script&gt;</code>
+              <code class="text-[11px] text-cyan-300 break-all">&lt;script src="https://sethubble.ru/js/widget.js" data-partner="${referrer}"&gt;&lt;/script&gt;</code>
             </div>
             <p class="text-sm text-gray-300">Вставь его перед закрывающим тегом <code class="bg-white/10 px-1.5 py-0.5 rounded text-xs">&lt;/body&gt;</code> на своём сайте.</p>
           `,
-          button: "✅ ГОТОВО, СЛЕДУЮЩИЙ ШАГ",
-          link: null
-        },
-        email: {
-          title: "📧 EMAIL-РАССЫЛКА",
-          body: `
+      button: "✅ ГОТОВО, СЛЕДУЮЩИЙ ШАГ",
+      link: null,
+    },
+    email: {
+      title: "📧 EMAIL-РАССЫЛКА",
+      body: `
             <p class="text-gray-400 text-sm mb-4">Email <b>${userEmail}</b> уже привязан к твоему аккаунту.</p>
             <p class="text-sm text-gray-300 mb-4">Ты будешь получать:</p>
             <ul class="text-left text-sm text-gray-300 space-y-2">
@@ -543,304 +663,352 @@ body {
               <li>✅ Уведомления о новых лидах</li>
             </ul>
           `,
-          button: "✅ ГОТОВО, СЛЕДУЮЩИЙ ШАГ",
-          link: null
-        }
-      };
+      button: "✅ ГОТОВО, СЛЕДУЮЩИЙ ШАГ",
+      link: null,
+    },
+  };
 
-      function renderSetupStep() {
-        if (setupStep >= setupQueue.length) {
-          // Все каналы настроены — переход к обучению
-          trainingStep = 1;
-          showWelcomeMessage();
-          showScreen("screenTraining");
-          return;
-        }
+  function renderSetupStep() {
+    if (setupStep >= setupQueue.length) {
+      // Все каналы настроены — переход к обучению
+      trainingStep = 1;
+      showWelcomeMessage();
+      showScreen("screenTraining");
+      return;
+    }
 
-        const channel = setupQueue[setupStep];
-        const step = setupSteps[channel];
-        const progress = `Шаг ${setupStep + 1} из ${setupQueue.length}`;
+    const channel = setupQueue[setupStep];
+    const step = setupSteps[channel];
+    const progress = `Шаг ${setupStep + 1} из ${setupQueue.length}`;
 
-        setupContent.innerHTML = `
+    setupContent.innerHTML = `
           <p class="text-[10px] text-gray-500 uppercase tracking-wider mb-3">${progress}</p>
           <h2 class="text-xl font-black mb-4">${step.title}</h2>
           ${step.body}
         `;
 
-        let btnHTML = `<button onclick="nextSetupStep()" class="w-full bg-gradient-to-r from-cyan-500 to-purple-500 text-white font-bold py-4 rounded-xl hover:opacity-90 transition-opacity text-base">${step.button}</button>`;
-        if (step.link) {
-          btnHTML += `<a href="${step.link}" target="_blank" rel="noopener noreferrer" class="w-full inline-flex items-center justify-center glass-panel text-white font-bold py-3 rounded-xl hover:bg-white/10 transition-all text-sm mt-2">Открыть инструкцию →</a>`;
-        }
-        setupActions.innerHTML = btnHTML;
-      }
+    let btnHTML =
+      `<button onclick="nextSetupStep()" class="w-full bg-gradient-to-r from-cyan-500 to-purple-500 text-white font-bold py-4 rounded-xl hover:opacity-90 transition-opacity text-base">${step.button}</button>`;
+    if (step.link) {
+      btnHTML +=
+        `<a href="${step.link}" target="_blank" rel="noopener noreferrer" class="w-full inline-flex items-center justify-center glass-panel text-white font-bold py-3 rounded-xl hover:bg-white/10 transition-all text-sm mt-2">Открыть инструкцию →</a>`;
+    }
+    setupActions.innerHTML = btnHTML;
+  }
 
-      function nextSetupStep() {
-        neuroCoins += 10; // Начисляем за каждый пройденный шаг
-        setupStep++;
-        renderSetupStep();
-      }
+  function nextSetupStep() {
+    neuroCoins += 10; // Начисляем за каждый пройденный шаг
+    setupStep++;
+    renderSetupStep();
+  }
 
-      // === 6. ЭКРАН ОБУЧЕНИЯ ===
-      function showWelcomeMessage() {
-        const chatArea = document.getElementById("trainingContent");
-        chatArea.innerHTML = "";
+  // === 6. ЭКРАН ОБУЧЕНИЯ ===
+  function showWelcomeMessage() {
+    const chatArea = document.getElementById("trainingContent");
+    chatArea.innerHTML = "";
 
-        const welcomeText = `Привет! 🎉 Ты успешно настроил свою ИИ-систему.<br><br>
+    const welcomeText = `Привет! 🎉 Ты успешно настроил свою ИИ-систему.<br><br>
           Выбрано каналов: <b>${selectedChannels.size}</b><br>
           NeuroCoins заработано: <b>${neuroCoins}</b><br><br>
           Я — твой ИИ-консультант. Спрашивай что угодно про SetHubble, бизнес-стратегии и воронки. А пока — давай пройдём 3 шага обучения:`;
 
-        addMessage(welcomeText, false, true);
+    addMessage(welcomeText, false, true);
 
-        // Кнопки обучения
+    // Кнопки обучения
+    setTimeout(() => {
+      showTrainingButtons();
+    }, 600);
+  }
+
+  function showTrainingButtons() {
+    const chatArea = document.getElementById("trainingContent");
+    const wrapper = document.createElement("div");
+    wrapper.className = "flex w-full justify-start msg-animate";
+    wrapper.id = "trainingBtns";
+
+    const container = document.createElement("div");
+    container.className =
+      "bg-gray-800/80 rounded-2xl rounded-bl-md px-4 py-3 space-y-2";
+
+    const steps = [
+      { label: "📖 Шаг 1: Стратегия заработка", action: "trainingStep1" },
+      { label: "💻 Шаг 2: Онлайн-бизнес", action: "trainingStep2" },
+      { label: "🏬 Шаг 3: Офлайн-бизнес", action: "trainingStep3" },
+    ];
+
+    steps.forEach((s, i) => {
+      const btn = document.createElement("button");
+      btn.className =
+        "w-full text-left px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-sm text-white transition-all";
+      btn.textContent = s.label;
+      btn.onclick = () => handleTrainingStep(i + 1);
+      container.appendChild(btn);
+    });
+
+    wrapper.appendChild(container);
+    chatArea.appendChild(wrapper);
+    scrollToBottom();
+  }
+
+  function handleTrainingStep(step) {
+    const content = {
+      1: {
+        text:
+          `📖 <b>ШАГ 1: СТРАТЕГИЯ ЗАРАБОТКА</b><br><br>SetHubble — это не MLM и не affiliate-маркетинг. Это гибридная IT-платформа:<br>• ИИ-боты продают за тебя 24/7<br>• До 10 уровней в глубину<br>• Комиссия до 50%<br>• Пассивный доход в USDT<br><br>🪙 +20 NeuroCoins!`,
+        coins: 20,
+      },
+      2: {
+        text:
+          `💻 <b>ШАГ 2: ОНЛАЙН-БИЗНЕС</b><br><br>Для блогеров и инфобизнесменов:<br>• Монетизируй даже тех, кто сказал «НЕТ»<br>• Один пост → 20,000 регистраций<br>• Все они — в твоей структуре навсегда<br><br>🪙 +20 NeuroCoins!`,
+        coins: 20,
+      },
+      3: {
+        text:
+          `🏬 <b>ШАГ 3: ОФЛАЙН-БИЗНЕС</b><br><br>Технология «Троянский конь»:<br>• QR-код на кассе → клиент сканирует → становится твоим агентом<br>• O2O-генератор: офлайн → онлайн<br>• Бизнес строит тебе сеть своими руками<br><br>🪙 +20 NeuroCoins!`,
+        coins: 20,
+      },
+    };
+
+    const stepData = content[step];
+    neuroCoins += stepData.coins;
+
+    addMessage(stepData.text, false, true);
+
+    // После 3-го шага — показываем оффер
+    if (step === 3) {
+      setTimeout(() => {
+        addMessage(
+          `🎉 <b>Поздравляю! Ты прошёл обучение!</b><br><br>NeuroCoins: <b>${neuroCoins}</b><br>${
+            neuroCoins >= 100
+              ? "✅ У тебя достаточно NeuroCoins для скидки 50% на PRO!"
+              : "🔒 Ещё немного до скидки — нужно 100 NeuroCoins"
+          }<br><br>Готов активировать свою систему?`,
+          false,
+          true,
+        );
+
         setTimeout(() => {
-          showTrainingButtons();
-        }, 600);
-      }
+          const wrapper = document.createElement("div");
+          wrapper.className = "flex w-full justify-start msg-animate";
 
-      function showTrainingButtons() {
-        const chatArea = document.getElementById("trainingContent");
-        const wrapper = document.createElement("div");
-        wrapper.className = "flex w-full justify-start msg-animate";
-        wrapper.id = "trainingBtns";
+          const container = document.createElement("div");
+          container.className =
+            "bg-gray-800/80 rounded-2xl rounded-bl-md px-4 py-3 space-y-2";
 
-        const container = document.createElement("div");
-        container.className = "bg-gray-800/80 rounded-2xl rounded-bl-md px-4 py-3 space-y-2";
-
-        const steps = [
-          { label: "📖 Шаг 1: Стратегия заработка", action: "trainingStep1" },
-          { label: "💻 Шаг 2: Онлайн-бизнес", action: "trainingStep2" },
-          { label: "🏬 Шаг 3: Офлайн-бизнес", action: "trainingStep3" },
-        ];
-
-        steps.forEach((s, i) => {
-          const btn = document.createElement("button");
-          btn.className = "w-full text-left px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-sm text-white transition-all";
-          btn.textContent = s.label;
-          btn.onclick = () => handleTrainingStep(i + 1);
-          container.appendChild(btn);
-        });
-
-        wrapper.appendChild(container);
-        chatArea.appendChild(wrapper);
-        scrollToBottom();
-      }
-
-      function handleTrainingStep(step) {
-        const content = {
-          1: {
-            text: `📖 <b>ШАГ 1: СТРАТЕГИЯ ЗАРАБОТКА</b><br><br>SetHubble — это не MLM и не affiliate-маркетинг. Это гибридная IT-платформа:<br>• ИИ-боты продают за тебя 24/7<br>• До 10 уровней в глубину<br>• Комиссия до 50%<br>• Пассивный доход в USDT<br><br>🪙 +20 NeuroCoins!`,
-            coins: 20
-          },
-          2: {
-            text: `💻 <b>ШАГ 2: ОНЛАЙН-БИЗНЕС</b><br><br>Для блогеров и инфобизнесменов:<br>• Монетизируй даже тех, кто сказал «НЕТ»<br>• Один пост → 20,000 регистраций<br>• Все они — в твоей структуре навсегда<br><br>🪙 +20 NeuroCoins!`,
-            coins: 20
-          },
-          3: {
-            text: `🏬 <b>ШАГ 3: ОФЛАЙН-БИЗНЕС</b><br><br>Технология «Троянский конь»:<br>• QR-код на кассе → клиент сканирует → становится твоим агентом<br>• O2O-генератор: офлайн → онлайн<br>• Бизнес строит тебе сеть своими руками<br><br>🪙 +20 NeuroCoins!`,
-            coins: 20
-          }
-        };
-
-        const stepData = content[step];
-        neuroCoins += stepData.coins;
-
-        addMessage(stepData.text, false, true);
-
-        // После 3-го шага — показываем оффер
-        if (step === 3) {
-          setTimeout(() => {
-            addMessage(`🎉 <b>Поздравляю! Ты прошёл обучение!</b><br><br>NeuroCoins: <b>${neuroCoins}</b><br>${neuroCoins >= 100 ? '✅ У тебя достаточно NeuroCoins для скидки 50% на PRO!' : '🔒 Ещё немного до скидки — нужно 100 NeuroCoins'}<br><br>Готов активировать свою систему?`, false, true);
-
-            setTimeout(() => {
-              const wrapper = document.createElement("div");
-              wrapper.className = "flex w-full justify-start msg-animate";
-
-              const container = document.createElement("div");
-              container.className = "bg-gray-800/80 rounded-2xl rounded-bl-md px-4 py-3 space-y-2";
-
-              const offerBtn = document.createElement("a");
-              offerBtn.href = "#";
-              offerBtn.className = "w-full inline-flex items-center justify-center px-6 py-3 rounded-xl bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-sm font-bold hover:opacity-90 active:scale-95 transition-all";
-              offerBtn.textContent = "💎 АКТИВИРОВАТЬ PRO";
-              offerBtn.onclick = (e) => { e.preventDefault(); showOffer(); };
-              container.appendChild(offerBtn);
-
-              const chatBtn = document.createElement("button");
-              chatBtn.className = "w-full text-left px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-sm text-white transition-all";
-              chatBtn.textContent = "💬 Задать вопрос NeuroGen";
-              chatBtn.onclick = () => {
-                wrapper.remove();
-                messageInput.focus();
-              };
-              container.appendChild(chatBtn);
-
-              wrapper.appendChild(container);
-              document.getElementById("trainingContent").appendChild(wrapper);
-              scrollToBottom();
-            }, 600);
-          }, 600);
-        }
-      }
-
-      function showOffer() {
-        const channelsStr = Array.from(selectedChannels).map(ch => {
-          const names = { telegram: "✈️ TG", vk: "💬 VK", web: "🌐 Web", email: "📧 Email" };
-          return names[ch] || ch;
-        }).join(", ");
-
-        document.getElementById("offerChannels").textContent = channelsStr;
-        document.getElementById("offerRefLink").textContent = `https://t.me/${referrer}`;
-        document.getElementById("offerNeuroCoins").textContent = neuroCoins;
-
-        showScreen("screenOffer");
-      }
-
-      // === 7. AI-ЧАТ (встроен в обучение) ===
-      function createMessageBubble(text, isUser, isHTML) {
-        const wrapper = document.createElement("div");
-        wrapper.className = "flex w-full msg-animate";
-        wrapper.classList.add(isUser ? "justify-end" : "justify-start");
-
-        const bubble = document.createElement("div");
-        bubble.className = "max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-3 text-sm leading-relaxed break-words";
-
-        if (isUser) {
-          bubble.classList.add("bg-gradient-to-r", "from-cyan-500", "to-purple-500", "text-white", "rounded-br-md");
-          bubble.textContent = text;
-        } else {
-          bubble.classList.add("bg-gray-800/80", "text-gray-100", "rounded-bl-md");
-          if (isHTML) { bubble.innerHTML = text; } else { bubble.textContent = text; }
-        }
-
-        wrapper.appendChild(bubble);
-        return wrapper;
-      }
-
-      function addMessage(text, isUser, isHTML) {
-        const chatArea = document.getElementById("trainingContent");
-        if (!chatArea) return;
-        const el = createMessageBubble(text, isUser, isHTML);
-        chatArea.appendChild(el);
-        scrollToBottom();
-      }
-
-      function showTyping() {
-        const chatArea = document.getElementById("trainingContent");
-        if (!chatArea || document.getElementById("typingIndicator")) return;
-
-        const wrapper = document.createElement("div");
-        wrapper.className = "flex w-full justify-start msg-animate";
-        wrapper.id = "typingIndicator";
-
-        const bubble = document.createElement("div");
-        bubble.className = "bg-gray-800/80 rounded-2xl rounded-bl-md px-5 py-4 flex items-center gap-1.5";
-        for (let i = 0; i < 3; i++) {
-          const dot = document.createElement("span");
-          dot.className = "typing-dot w-2 h-2 bg-gray-400 rounded-full inline-block";
-          bubble.appendChild(dot);
-        }
-
-        wrapper.appendChild(bubble);
-        chatArea.appendChild(wrapper);
-        scrollToBottom();
-      }
-
-      function removeTyping() {
-        const el = document.getElementById("typingIndicator");
-        if (el) el.remove();
-      }
-
-      function scrollToBottom() {
-        const chatArea = document.getElementById("trainingContent");
-        if (chatArea) requestAnimationFrame(() => { chatArea.scrollTop = chatArea.scrollHeight; });
-      }
-
-      async function sendToAPI(userMessage) {
-        try {
-          const response = await fetch(API_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              message: userMessage,
-              referrer: referrer,
-              history: chatHistory.slice(-20),
-              sessionId: `web_funnel_${Date.now()}`,
-            }),
-          });
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          const data = await response.json();
-          return data.answer || data.message || "Извини, не удалось получить ответ.";
-        } catch (error) {
-          console.error("API Error:", error);
-          return "⚠️ Сервер временно занят. Попробуй через пару секунд!";
-        }
-      }
-
-      // === 8. ОБРАБОТКА ЧАТА ===
-      const chatFormEl = document.getElementById("chatForm");
-      const messageInput = document.getElementById("messageInput");
-      const sendBtn = document.getElementById("sendBtn");
-
-      if (chatFormEl) {
-        chatFormEl.addEventListener("submit", async function(e) {
-          e.preventDefault();
-          const text = messageInput.value.trim();
-          if (!text || isWaiting) return;
-
-          isWaiting = true;
-          sendBtn.disabled = true;
-          messageInput.disabled = true;
-
-          addMessage(text, true);
-          chatHistory.push({ role: "user", content: text });
-
-          // Email interceptor
-          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-          if (emailRegex.test(text)) {
-            userEmail = text;
-            addMessage(`✅ Email <b>${text}</b> сохранён! Теперь ты будешь получать уведомления.`, false, true);
-            isWaiting = false;
-            sendBtn.disabled = false;
-            messageInput.disabled = false;
-            messageInput.value = "";
-            return;
-          }
-
-          showTyping();
-          const reply = await sendToAPI(text);
-          removeTyping();
-          addMessage(reply, false, true);
-          chatHistory.push({ role: "assistant", content: reply });
-
-          isWaiting = false;
-          sendBtn.disabled = false;
-          messageInput.disabled = false;
-          messageInput.value = "";
-          messageInput.focus();
-          autoResizeInput();
-        });
-      }
-
-      function autoResizeInput() {
-        if (!messageInput) return;
-        messageInput.style.height = "auto";
-        messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + "px";
-      }
-
-      if (messageInput) {
-        messageInput.addEventListener("input", autoResizeInput);
-        messageInput.addEventListener("keydown", function(e) {
-          if (e.key === "Enter" && !e.shiftKey) {
+          const offerBtn = document.createElement("a");
+          offerBtn.href = "#";
+          offerBtn.className =
+            "w-full inline-flex items-center justify-center px-6 py-3 rounded-xl bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-sm font-bold hover:opacity-90 active:scale-95 transition-all";
+          offerBtn.textContent = "💎 АКТИВИРОВАТЬ PRO";
+          offerBtn.onclick = (e) => {
             e.preventDefault();
-            chatFormEl.dispatchEvent(new Event("submit"));
-          }
-        });
+            showOffer();
+          };
+          container.appendChild(offerBtn);
+
+          const chatBtn = document.createElement("button");
+          chatBtn.className =
+            "w-full text-left px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-sm text-white transition-all";
+          chatBtn.textContent = "💬 Задать вопрос NeuroGen";
+          chatBtn.onclick = () => {
+            wrapper.remove();
+            messageInput.focus();
+          };
+          container.appendChild(chatBtn);
+
+          wrapper.appendChild(container);
+          document.getElementById("trainingContent").appendChild(wrapper);
+          scrollToBottom();
+        }, 600);
+      }, 600);
+    }
+  }
+
+  function showOffer() {
+    const channelsStr = Array.from(selectedChannels).map(ch => {
+      const names = {
+        telegram: "✈️ TG",
+        vk: "💬 VK",
+        web: "🌐 Web",
+        email: "📧 Email",
+      };
+      return names[ch] || ch;
+    }).join(", ");
+
+    document.getElementById("offerChannels").textContent = channelsStr;
+    // v5.0: partner_id — это ref, ссылка на регистрацию
+    document.getElementById("offerRefLink").textContent =
+      `https://sethubble.com/ru/${referrer}`;
+    document.getElementById("offerNeuroCoins").textContent = neuroCoins;
+
+    showScreen("screenOffer");
+  }
+
+  // === 7. AI-ЧАТ (встроен в обучение) ===
+  function createMessageBubble(text, isUser, isHTML) {
+    const wrapper = document.createElement("div");
+    wrapper.className = "flex w-full msg-animate";
+    wrapper.classList.add(isUser ? "justify-end" : "justify-start");
+
+    const bubble = document.createElement("div");
+    bubble.className =
+      "max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-3 text-sm leading-relaxed break-words";
+
+    if (isUser) {
+      bubble.classList.add(
+        "bg-gradient-to-r",
+        "from-cyan-500",
+        "to-purple-500",
+        "text-white",
+        "rounded-br-md",
+      );
+      bubble.textContent = text;
+    } else {
+      bubble.classList.add("bg-gray-800/80", "text-gray-100", "rounded-bl-md");
+      if (isHTML) bubble.innerHTML = text;
+      else bubble.textContent = text;
+    }
+
+    wrapper.appendChild(bubble);
+    return wrapper;
+  }
+
+  function addMessage(text, isUser, isHTML) {
+    const chatArea = document.getElementById("trainingContent");
+    if (!chatArea) return;
+    const el = createMessageBubble(text, isUser, isHTML);
+    chatArea.appendChild(el);
+    scrollToBottom();
+  }
+
+  function showTyping() {
+    const chatArea = document.getElementById("trainingContent");
+    if (!chatArea || document.getElementById("typingIndicator")) return;
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "flex w-full justify-start msg-animate";
+    wrapper.id = "typingIndicator";
+
+    const bubble = document.createElement("div");
+    bubble.className =
+      "bg-gray-800/80 rounded-2xl rounded-bl-md px-5 py-4 flex items-center gap-1.5";
+    for (let i = 0; i < 3; i++) {
+      const dot = document.createElement("span");
+      dot.className =
+        "typing-dot w-2 h-2 bg-gray-400 rounded-full inline-block";
+      bubble.appendChild(dot);
+    }
+
+    wrapper.appendChild(bubble);
+    chatArea.appendChild(wrapper);
+    scrollToBottom();
+  }
+
+  function removeTyping() {
+    const el = document.getElementById("typingIndicator");
+    if (el) el.remove();
+  }
+
+  function scrollToBottom() {
+    const chatArea = document.getElementById("trainingContent");
+    if (chatArea) {
+      requestAnimationFrame(() => {
+        chatArea.scrollTop = chatArea.scrollHeight;
+      });
+    }
+  }
+
+  async function sendToAPI(userMessage) {
+    try {
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: userMessage,
+          partner_id: referrer, // v5.0
+          referrer: referrer, // backward compat
+          history: chatHistory.slice(-20),
+          sessionId: `web_funnel_${Date.now()}`,
+        }),
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      return data.answer || data.message
+        || "Извини, не удалось получить ответ.";
+    } catch (error) {
+      console.error("API Error:", error);
+      return "⚠️ Сервер временно занят. Попробуй через пару секунд!";
+    }
+  }
+
+  // === 8. ОБРАБОТКА ЧАТА ===
+  const chatFormEl = document.getElementById("chatForm");
+  const messageInput = document.getElementById("messageInput");
+  const sendBtn = document.getElementById("sendBtn");
+
+  if (chatFormEl) {
+    chatFormEl.addEventListener("submit", async function(e) {
+      e.preventDefault();
+      const text = messageInput.value.trim();
+      if (!text || isWaiting) return;
+
+      isWaiting = true;
+      sendBtn.disabled = true;
+      messageInput.disabled = true;
+
+      addMessage(text, true);
+      chatHistory.push({ role: "user", content: text });
+
+      // Email interceptor
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (emailRegex.test(text)) {
+        userEmail = text;
+        addMessage(
+          `✅ Email <b>${text}</b> сохранён! Теперь ты будешь получать уведомления.`,
+          false,
+          true,
+        );
+        isWaiting = false;
+        sendBtn.disabled = false;
+        messageInput.disabled = false;
+        messageInput.value = "";
+        return;
       }
 
-      // === ИНИЦИАЛИЗАЦИЯ ===
-      captureReferral();
-    })();
+      showTyping();
+      const reply = await sendToAPI(text);
+      removeTyping();
+      addMessage(reply, false, true);
+      chatHistory.push({ role: "assistant", content: reply });
+
+      isWaiting = false;
+      sendBtn.disabled = false;
+      messageInput.disabled = false;
+      messageInput.value = "";
+      messageInput.focus();
+      autoResizeInput();
+    });
+  }
+
+  function autoResizeInput() {
+    if (!messageInput) return;
+    messageInput.style.height = "auto";
+    messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + "px";
+  }
+
+  if (messageInput) {
+    messageInput.addEventListener("input", autoResizeInput);
+    messageInput.addEventListener("keydown", function(e) {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        chatFormEl.dispatchEvent(new Event("submit"));
+      }
+    });
+  }
+
+  // === ИНИЦИАЛИЗАЦИЯ ===
+  captureReferral();
+})();
     </script>
   </body>
 </html>
