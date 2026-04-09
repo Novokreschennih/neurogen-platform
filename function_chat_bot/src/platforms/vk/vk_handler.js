@@ -74,11 +74,6 @@ export async function handleVkWebhook(event, context) {
         return { statusCode: 403, headers: { "Content-Type": "text/plain" }, body: "Forbidden" };
       }
 
-
-      if (process.env.VK_SECRET_KEY && payload.secret !== process.env.VK_SECRET_KEY) {
-        return { statusCode: 403, headers: { "Content-Type": "text/plain" }, body: "Forbidden" };
-      }
-
       // === MESSAGE_EVENT (callback кнопка нажата) ===
       if (payload.type === "message_event") {
         const eventPayload = payload.object?.payload;
@@ -531,7 +526,7 @@ export async function handleVkWebhook(event, context) {
                 case "CHANNEL_SKIPPED":
                   return await renderStep(vkCtx, "CHANNEL_SKIPPED", vkToken);
                 case "CHANNEL_SETUP_COMPLETE":
-                  channelManager.configureChannel(vkUser, "vk");
+                  channelManager.configureChannel(vkUser, "vk", { enabled: true, configured: true, configured_at: Date.now() });
                   await ydb.saveUser(vkUser);
                   return await renderStep(vkCtx, "CHANNEL_SETUP_COMPLETE", vkToken);
                 case "VK_HELP":

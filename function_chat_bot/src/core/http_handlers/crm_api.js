@@ -118,16 +118,17 @@ export async function handleCrmApi(event, context) {
     }
 
     if (Object.keys(filters).length > 0 || filters.channel) {
+      // Загружаем всех пользователей бота + пользователей из других каналов
       const allUsers = await ydb.getBotUsers(botToken, 10000, 0);
-      // Для не-Telegram пользователей загружаем напрямую
-      if (filters.channel && filters.channel !== "telegram") {
-        const staleAll = await ydb.getStaleUsers(99999, 10000, 0); // Все пользователи
-        const existingIds = new Set(allUsers.map(u => u.user_id));
-        for (const u of staleAll) {
-          if (!existingIds.has(u.user_id)) {
-            allUsers.push(u);
-            existingIds.add(u.user_id);
-          }
+
+      // Для мультиканальности загружаем всех неактивных пользователей (включая VK, web, email)
+      // и фильтруем по bot_token или channel
+      const allInactive = await ydb.getStaleUsers(99999, 10000, 0);
+      const existingIds = new Set(allUsers.map(u => u.user_id));
+      for (const u of allInactive) {
+        if (!existingIds.has(u.user_id)) {
+          allUsers.push(u);
+          existingIds.add(u.user_id);
         }
       }
 
@@ -246,7 +247,8 @@ export async function handleCrmApi(event, context) {
           });
           const resp = await fetch("https://api.vk.com/method/messages.send", {
             method: "POST",
-            body: params,
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: params.toString(),
           });
           const vkData = await resp.json();
           if (vkData.response) totalSent++;
@@ -291,8 +293,16 @@ export async function handleCrmApi(event, context) {
 
   // === EXPORT CSV ===
   if (action === "export_csv") {
-    const allIds = await ydb.getBotUsers(botToken);
-    const allUsers = await Promise.all(allIds.map((id) => ydb.getUser(id)));
+    const allUsers = await ydb.getBotUsers(botToken, 10000, 0);
+
+    // Также добавляем пользователей из других каналов (VK, web, email)
+    const allInactive = await ydb.getStaleUsers(99999, 10000, 0);
+    const existingIds = new Set(allUsers.map(u => u.user_id));
+    for (const u of allInactive) {
+      if (!existingIds.has(u.user_id)) {
+        allUsers.push(u);
+      }
+    }
 
     const csvRows = [
       ["user_id", "first_name", "state", "is_pro", "primary_channel", "email", "last_seen"],

@@ -11,7 +11,8 @@
       "WebFetch(yandex.cloud)",
       "Bash(mkdir *)",
       "Bash(ls *)",
-      "Bash(git *)"
+      "Bash(git *)",
+      "Bash(node *)"
     ]
   },
   "$version": 3

@@ -582,13 +582,14 @@ async function sendVkMessage(userId, text, keyboard) {
         sent: false,
         error: data.error.error_msg,
         errorCode: data.error.error_code,
+        channel: "vk",
       };
     }
 
-    return { sent: true, error: null, errorCode: null };
+    return { sent: true, error: null, errorCode: null, channel: "vk" };
   } catch (e) {
     log.error(`[VK SEND] Network error`, { userId, error: e.message });
-    return { sent: false, error: e.message, errorCode: null };
+    return { sent: false, error: e.message, errorCode: null, channel: "vk" };
   }
 }
 
@@ -686,7 +687,7 @@ const sendStepViaTelegram = async (token, userId, stepKey, user, messageText, li
         text: messageText,
         parse_mode: "HTML",
         protect_content: true,
-        reply_markup: keyboard.inline_keyboard
+        reply_markup: keyboard?.inline_keyboard
           ? JSON.stringify({ inline_keyboard: keyboard.inline_keyboard })
           : undefined,
       };
@@ -810,195 +811,6 @@ const createBotContext = (event) => {
   }
   if (!token) token = "";
   return { token, bot: new Telegraf(token), isMainBot: token === MAIN_TOKEN };
-};
-
-const getKeyboard = (step, links, user, info) => {
-  if (!step || !step.buttons) return null;
-  const btns =
-    typeof step.buttons === "function"
-      ? step.buttons(links, user, info)
-      : step.buttons;
-
-  // Отладка
-  log.info(`[getKeyboard]`, {
-    hasButtons: !!btns,
-    btnsCount: Array.isArray(btns) ? btns.length : "not-array",
-    firstRow: btns?.[0]?.length,
-    firstButton: btns?.[0]?.[0],
-  });
-
-  // Фильтрация кнопок: каждая кнопка должна иметь callback_data, url или web_app
-  const filteredBtns = btns
-    .map((row) => row.filter((b) => b.callback_data || b.url || b.web_app))
-    .filter((row) => row.length > 0); // Убираем пустые ряды
-
-  if (filteredBtns.length === 0) {
-    log.warn(`[getKeyboard] No valid buttons!`, { stepKey: step });
-    return null;
-  }
-
-  return Markup.inlineKeyboard(
-    filteredBtns.map((r) =>
-      r.map((b) =>
-        b.url
-          ? Markup.button.url(b.text, b.url)
-          : b.web_app
-            ? Markup.button.webApp(b.text, b.web_app.url)
-            : Markup.button.callback(b.text, b.callback_data),
-      ),
-    ),
-  );
-};
-
-const renderStep = async (ctx, stepKey, token, isAuto = false) => {
-  const user = ctx.dbUser;
-  const step = scenario.steps[stepKey];
-
-  // Логирование для отладки
-  log.info(`[renderStep]`, { stepKey, userId: user?.user_id, isAuto });
-
-  if (!step) {
-    log.error(`[renderStep] Step not found!`, { stepKey });
-    return;
-  }
-
-  // Перехват в регистрацию, если нет данных
-  if (stepKey.startsWith("Training_") && !user.sh_ref_tail) {
-    return renderStep(ctx, "Pre_Training_Logic", token, isAuto);
-  }
-
-  user.state = stepKey;
-  if (step.tag && !user.session.tags.includes(step.tag)) {
-    user.session.tags.push(step.tag);
-  }
-
-  const info = await (token === MAIN_TOKEN
-    ? Promise.resolve({
-        sh_user_id: process.env.MY_SH_USER_ID || "1123",
-        sh_ref_tail: process.env.MY_PARTNER_ID || "p_qdr",
-        tripwire_link: "",
-        bot_username: "sethubble_biz_bot",
-      })
-    : ydb.getBotInfo(token));
-
-  // === ИСПРАВЛЕННАЯ ГЕНЕРАЦИЯ ССЫЛОК ===
-  const links = scenario.getLinks(
-    info?.sh_ref_tail || user.partner_id || "p_qdr", // Берем хвост владельца бота, а не того, кто его пригласил
-    info?.tripwire_link,
-    info?.sh_user_id,
-    user.bought_tripwire,
-  );
-
-  const messageText =
-    typeof step.text === "function" ? step.text(links, user, info) : step.text;
-  const keyboard = getKeyboard(step, links, user, info);
-
-  // Логирование перед отправкой
-  log.info(`[renderStep] Preparing message`, {
-    stepKey,
-    textLength: messageText?.length,
-    hasKeyboard: !!keyboard,
-  });
-
-  try {
-    // При нажатии на кнопку - добавляем отметку "✅ Выбрано" к старому сообщению (ТОЛЬКО ДЛЯ TELEGRAM)
-    if (ctx.callbackQuery && !isAuto && !ctx.isVk) {
-      const oldKb = ctx.callbackQuery.message.reply_markup?.inline_keyboard;
-      let clicked = "Выбрано";
-      if (oldKb) {
-        oldKb.forEach((r) =>
-          r.forEach((b) => {
-            if (b.callback_data === ctx.callbackQuery.data) clicked = b.text;
-          }),
-        );
-      }
-
-      const txt = `${ctx.callbackQuery.message.text || ctx.callbackQuery.message.caption || ""}\n\n—\n✅ <b>${clicked}</b>`;
-
-      // === ИСПРАВЛЕНИЕ: УМНАЯ ФИЛЬТРАЦИЯ КНОПОК ===
-      // Оставляем только те ряды кнопок, в которых есть ссылки (url).
-      // Все кнопки-действия (callback_data) будут удалены, чтобы не засорять чат.
-      let newKb = [];
-      if (oldKb) {
-        newKb = oldKb.filter((row) => row.some((btn) => btn.url));
-      }
-
-      const editOpts = {
-        parse_mode: "HTML",
-        reply_markup: { inline_keyboard: newKb },
-      };
-
-      if (ctx.callbackQuery.message.caption) {
-        await ctx
-          .editMessageCaption(txt, editOpts)
-          .catch((e) => log.warn(`[EDIT MSG WARNING]`, { error: e.message }));
-      } else {
-        await ctx
-          .editMessageText(txt, editOpts)
-          .catch((e) => log.warn(`[EDIT MSG WARNING]`, { error: e.message }));
-      }
-    }
-
-    const opts = {
-      caption: messageText,
-      parse_mode: "HTML",
-      protect_content: true, // ЗАЩИТА КОНТЕНТА
-      ...keyboard,
-    };
-
-    // === БЕЗОПАСНАЯ ОТПРАВКА ФОТО ===
-    // Если картинка не загрузится — отправим текст без неё
-    if (step.image) {
-      try {
-        await ctx.replyWithPhoto(step.image, opts);
-        log.info(`[renderStep] Photo sent`, {
-          stepKey,
-          userId: user.user_id,
-          image: step.image,
-        });
-      } catch (photoError) {
-        log.warn(`[PHOTO ERROR] Failed to send image, sending text only`, {
-          stepKey,
-          userId: user.user_id,
-          image: step.image,
-          error: photoError.message,
-        });
-        // Фолбэк: отправляем текст без картинки
-        await ctx.reply(messageText, opts);
-      }
-    } else {
-      await ctx.reply(messageText, opts);
-    }
-
-    log.info(`[renderStep] Message sent`, { stepKey, userId: user.user_id });
-
-    // Авто-переход (Delay)
-    if (step.delay && step.next_step) {
-      try {
-        await ctx.telegram.sendChatAction(ctx.from.id, "typing");
-      } catch (e) {
-        // Игнорируем ошибки typing action (бот может быть заблокирован)
-        log.debug(`[TYPING ACTION] Failed to send typing`, {
-          userId: user.user_id,
-          error: e.message,
-        });
-      }
-      await new Promise((r) => setTimeout(r, step.delay * 1000));
-      return renderStep(ctx, step.next_step, token, true);
-    }
-  } catch (e) {
-    log.error(`[RENDER ERROR]`, e, { stepKey, userId: user.user_id });
-    // Фолбэк без удаления кнопок
-    const opts = { parse_mode: "HTML", protect_content: true, ...keyboard };
-    await ctx
-      .reply(messageText, opts)
-      .catch((err) => log.error(`[FALLBACK ERROR]`, err));
-  }
-
-  // Если мы ушли с шага напоминания, сбрасываем saved_state для возврата в поток
-  if (!stepKey.startsWith("REMINDER_") && user.saved_state === stepKey) {
-    // Ничего не делаем, всё ок
-  }
 };
 
 const dbInitPromise = ydb.init();

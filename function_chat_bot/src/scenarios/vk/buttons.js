@@ -619,6 +619,22 @@ export const vkButtons = {
         return r;
       },
 
+  // === CHANNEL_SETUP_VK_SUCCESS ===
+  CHANNEL_SETUP_VK_SUCCESS: (links, user) => {
+        const r = [];
+        r.push([{ text: "🌐 ПОДКЛЮЧИТЬ ЕЩЁ КАНАЛЫ", callback: "MULTI_CHANNEL_SELECT" }]);
+        r.push([{ text: "🚀 ПРОДОЛЖИТЬ ОБУЧЕНИЕ", callback: "Training_Main" }]);
+        return r;
+      },
+
+  // === CHANNEL_SETUP_EMAIL_SUCCESS ===
+  CHANNEL_SETUP_EMAIL_SUCCESS: (links, user) => {
+        const r = [];
+        r.push([{ text: "🌐 ПОДКЛЮЧИТЬ ЕЩЁ КАНАЛЫ", callback: "MULTI_CHANNEL_SELECT" }]);
+        r.push([{ text: "🚀 ПРОДОЛЖИТЬ ОБУЧЕНИЕ", callback: "Training_Main" }]);
+        return r;
+      },
+
   // === TOOLS_MENU ===
   TOOLS_MENU: (links, user) => {
         const isPro = user.bought_tripwire;

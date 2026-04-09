@@ -87,6 +87,7 @@ export async function handleWebChat(event, context) {
     let webUser = await context.ydb?.getUser(webUserId);
     const isNewUser = !webUser;
 
+    // Создаём нового пользователя, если не найден
     if (!webUser && context.ydb) {
       webUser = {
         user_id: webUserId,
@@ -96,9 +97,7 @@ export async function handleWebChat(event, context) {
         session: {
           source: "web",
           session_id: webUserId,
-          channels: {
-            web: { enabled: true, configured: true, session_id: webUserId },
-          },
+          channels: { web: { enabled: true, configured: true, session_id: webUserId } },
           channel_states: { web: "START" },
           last_activity: Date.now(),
           tags: [],
@@ -117,6 +116,26 @@ export async function handleWebChat(event, context) {
       };
       await context.ydb.saveUser(webUser);
       log.info(`[WEB CHAT] New web user created`, { userId: webUserId, referrer });
+    }
+
+    // Фолбэк если ydb недоступен — AI чат работает без сохранения
+    if (!webUser) {
+      webUser = {
+        user_id: webUserId,
+        partner_id: referrer,
+        state: "START",
+        bought_tripwire: false,
+        session: { source: "web", session_id: webUserId, last_activity: Date.now(), tags: [], dialog_history: [], xp: 0 },
+        last_seen: Date.now(),
+        bot_token: "",
+        tariff: "",
+        sh_user_id: "",
+        sh_ref_tail: "",
+        purchases: [],
+        first_name: "Web User",
+        reminders_count: 0,
+        last_reminder_time: 0,
+      };
     }
 
     // Обновляем активность
