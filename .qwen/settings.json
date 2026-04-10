@@ -16,7 +16,9 @@
       "Bash(npm run *)",
       "Bash(npm audit)",
       "Bash(npm install *)",
-      "Bash(zip *)"
+      "Bash(zip *)",
+      "Bash(unzip *)",
+      "Bash(echo *)"
     ]
   },
   "$version": 3
