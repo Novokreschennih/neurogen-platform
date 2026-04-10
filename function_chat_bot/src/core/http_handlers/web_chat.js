@@ -169,11 +169,13 @@ export async function handleWebChat(event, context) {
       const email = emailMatch[0];
       webUser.session.email = email;
 
-      // Сохраняем и в YDB как email-пользователя
+      // v5.0: MERGE — ищем существующую email-запись
       if (context.ydb) {
         const emailUserId = `email:${email}`;
         let existingEmail = await context.ydb.getUser(emailUserId);
+
         if (!existingEmail) {
+          // Email-записи нет — создаём новую
           const emailUser = {
             user_id: emailUserId,
             partner_id: partnerId,
@@ -206,8 +208,42 @@ export async function handleWebChat(event, context) {
           };
           await context.ydb.saveUser(emailUser);
         } else {
+          // v5.0: Email-запись уже есть — MERGE с текущей web-сессией
           existingEmail.session.web_session_id = webUserId;
+
+          // Если у email-записи есть merged_to — значит она уже связана с Telegram/VK
+          if (existingEmail.session.merged_to) {
+            log.info("[WEB] Email already merged", {
+              email,
+              mergedTo: existingEmail.session.merged_to,
+              webSessionId: webUserId,
+            });
+          }
+
+          // Добавляем web-канал к email-записи
+          existingEmail.session.channels = existingEmail.session.channels || {};
+          existingEmail.session.channels.web = {
+            enabled: true,
+            configured: true,
+            session_id: webUserId,
+            linked_at: Date.now(),
+          };
+          existingEmail.session.channel_states =
+            existingEmail.session.channel_states || {};
+          existingEmail.session.channel_states.web = "START";
+
           await context.ydb.saveUser(existingEmail);
+
+          // Обновляем web-пользователя: связываем с email-записью
+          webUser.session.email_record_id = emailUserId;
+          webUser.session.channels = webUser.session.channels || {};
+          webUser.session.channels.email = {
+            enabled: true,
+            configured: true,
+            subscribed: true,
+          };
+          webUser.session.channel_states = webUser.session.channel_states || {};
+          webUser.session.channel_states.email = "START";
         }
       }
 

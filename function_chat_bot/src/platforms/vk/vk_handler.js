@@ -1090,8 +1090,13 @@ export async function handleVkWebhook(event, context) {
                   {},
                 );
               }
+
+              // v5.0: Ищем email-запись для merge
+              const emailUserId = `email:${txt}`;
+              const emailRecord = await ydb.getUser(emailUserId);
+
               vkUser.session.email = txt;
-              vkUser.session.email_verified = true; // TODO: send verification code
+              vkUser.session.email_verified = true;
               channelManager.enableChannel(vkUser, "email");
               channelManager.configureChannel(vkUser, "email", {
                 subscribed: true,
@@ -1102,6 +1107,19 @@ export async function handleVkWebhook(event, context) {
                 "CHANNEL_SETUP_EMAIL_SUCCESS",
               );
               await ydb.saveUser(vkUser);
+
+              // v5.0: MERGE — если нашли email-запись
+              if (emailRecord) {
+                emailRecord.session = emailRecord.session || {};
+                emailRecord.session.merged_to = vkUser.user_id;
+                emailRecord.session.merged_at = Date.now();
+                await ydb.saveUser(emailRecord);
+                log.info("[VK] Merged email record", {
+                  email: txt,
+                  vkUserId: vkUser.user_id,
+                  emailRecordId: emailRecord.user_id,
+                });
+              }
 
               // Отправляем приветственное письмо
               if (sendEmail) {
