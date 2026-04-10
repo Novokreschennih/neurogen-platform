@@ -95,11 +95,16 @@ export async function handleVkWebhook(event, context) {
       // === MESSAGE_EVENT (callback кнопка нажата) ===
       if (payload.type === "message_event") {
         const rawPayload = payload.object?.payload;
-        const userId = payload.user_id;
-        const eventId = payload.event_id;
+        // VK шлёт user_id на разных уровнях — пробуем оба
+        const userId =
+          payload.user_id || payload.object?.user_id || payload.group_id;
+        const eventId = payload.event_id || payload.object?.event_id;
 
         log.info(`[VK] message_event received`, {
-          userId,
+          payloadUserId: payload.user_id,
+          objectUserId: payload.object?.user_id,
+          groupId: payload.group_id,
+          resolvedUserId: userId,
           eventId,
           objectType: typeof payload.object,
           objectKeys: payload.object ? Object.keys(payload.object) : null,
@@ -109,7 +114,6 @@ export async function handleVkWebhook(event, context) {
               ? rawPayload.substring(0, 200)
               : JSON.stringify(rawPayload).substring(0, 200)
             : null,
-          fullObject: JSON.stringify(payload.object).substring(0, 300),
         });
 
         // VK может прислать payload как строку ИЛИ как объект
@@ -129,12 +133,17 @@ export async function handleVkWebhook(event, context) {
         }
 
         const callbackData = parsed?.callback_data;
-        log.info(`[VK] message_event parsed`, { userId, callbackData });
+        log.info(`[VK] message_event parsed`, {
+          userId,
+          callbackData,
+          eventId,
+        });
 
         if (!callbackData || !userId) {
           log.warn(`[VK] message_event missing data`, {
             hasCallbackData: !!callbackData,
             hasUserId: !!userId,
+            payloadKeys: Object.keys(payload),
           });
           return { statusCode: 200, body: "ok" };
         }
