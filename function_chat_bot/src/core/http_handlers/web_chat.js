@@ -22,6 +22,17 @@ export async function handleWebChat(event, context) {
 
     // Обработка лидов (сбор email)
     if (payload.isEmail) {
+      // v5.0: DEBUG — логируем входящий запрос
+      log.info(`[WEB LEAD] Received payload`, {
+        hasPartnerId: !!payload.partner_id,
+        partnerId: payload.partner_id,
+        hasReferrer: !!payload.referrer,
+        referrer: payload.referrer,
+        hasEmail: !!payload.email,
+        email: payload.email,
+        hasYdb: !!context.ydb,
+      });
+
       // v5.0: Валидируем partner_id — защита от инъекций
       const partnerId =
         validatePartnerId(payload.partner_id) ||
@@ -43,8 +54,18 @@ export async function handleWebChat(event, context) {
 
       // Сохраняем email-пользователя в YDB
       if (context.ydb) {
+        log.info(`[WEB LEAD] YDB available, attempting save`, {
+          email,
+          partnerId,
+        });
+
         const emailUserId = `email:${email}`;
         let emailUser = await context.ydb.getUser(emailUserId);
+        log.info(`[WEB LEAD] getUser result`, {
+          emailUserId,
+          found: !!emailUser,
+        });
+
         if (!emailUser) {
           emailUser = {
             user_id: emailUserId,
@@ -73,12 +94,22 @@ export async function handleWebChat(event, context) {
             reminders_count: 0,
             last_reminder_time: 0,
           };
+          log.info(`[WEB LEAD] Calling saveUser`, { emailUserId });
           await context.ydb.saveUser(emailUser);
           log.info(`[WEB LEAD] Saved email user to YDB`, {
             userId: emailUserId,
             partnerId,
           });
+        } else {
+          log.info(`[WEB LEAD] Email user already exists`, { emailUserId });
         }
+      } else {
+        // ⚠️ КРИТИЧЕСКИЙ ЛОГ — YDB не передан!
+        log.error(`[WEB LEAD] YDB NOT AVAILABLE — email will NOT be saved!`, {
+          email,
+          hasYdb: !!context.ydb,
+          contextKeys: Object.keys(context),
+        });
       }
 
       return {
