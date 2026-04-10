@@ -91,8 +91,11 @@ export function setupTelegramHandlers(bot, context) {
       firstButton: btns?.[0]?.[0],
     });
 
+    // v5.0: Поддержка VK callback (callback вместо callback_data)
     const filteredBtns = btns
-      .map((row) => row.filter((b) => b.callback_data || b.url || b.web_app))
+      .map((row) =>
+        row.filter((b) => b.callback_data || b.callback || b.url || b.web_app),
+      )
       .filter((row) => row.length > 0);
 
     if (filteredBtns.length === 0) {
@@ -102,13 +105,16 @@ export function setupTelegramHandlers(bot, context) {
 
     return Markup.inlineKeyboard(
       filteredBtns.map((r) =>
-        r.map((b) =>
-          b.url
-            ? Markup.button.url(b.text, b.url)
-            : b.web_app
-              ? Markup.button.webApp(b.text, b.web_app.url)
-              : Markup.button.callback(b.text, b.callback_data),
-        ),
+        r
+          .map((b) => {
+            // v5.0: Поддержка VK callback наряду с Telegram callback_data
+            const cbData = b.callback_data || b.callback;
+            if (b.url) return Markup.button.url(b.text, b.url);
+            if (b.web_app) return Markup.button.webApp(b.text, b.web_app.url);
+            if (cbData) return Markup.button.callback(b.text, cbData);
+            return null;
+          })
+          .filter(Boolean),
       ),
     );
   };

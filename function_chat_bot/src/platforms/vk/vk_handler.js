@@ -97,25 +97,52 @@ export async function handleVkWebhook(event, context) {
         const userId = payload.user_id;
         const eventId = payload.event_id;
 
+        log.info(`[VK] message_event received`, {
+          userId,
+          eventId,
+          hasPayload: !!eventPayload,
+          payloadPreview: eventPayload ? eventPayload.substring(0, 100) : null,
+        });
+
         if (!eventPayload || !userId) {
+          log.warn(`[VK] message_event missing data`, {
+            hasPayload: !!eventPayload,
+            hasUserId: !!userId,
+          });
           return { statusCode: 200, body: "ok" };
         }
 
         try {
           const parsed = JSON.parse(eventPayload);
           const callbackData = parsed.callback_data;
-          log.info(`[VK] message_event`, { userId, callbackData });
+          log.info(`[VK] message_event parsed`, { userId, callbackData });
 
           // Отвечаем VK что событие обработано (убирает кнопку)
-          await fetch(
+          const snackbarResp = await fetch(
             `https://api.vk.com/method/messages.sendMessageEventAnswer?access_token=${process.env.VK_GROUP_TOKEN}&v=5.199&event_id=${eventId}&user_id=${userId}&event_data=${encodeURIComponent(JSON.stringify({ event_type: "show_snackbar", text: "✅" }))}`,
             { method: "POST" },
           );
+          const snackbarData = await snackbarResp.json();
+          log.info(`[VK] sendMessageEventAnswer response`, {
+            ok: snackbarData.response === 1,
+            error: snackbarData.error || null,
+          });
 
           if (callbackData) {
-            const vkUser = await ydb.getUser(`vk:${userId}`);
-            if (!vkUser || !vkUser.user_id)
+            const vkUserId = `vk:${userId}`;
+            log.info(`[VK] Fetching user`, { vkUserId });
+            const vkUser = await ydb.getUser(vkUserId);
+            log.info(`[VK] getUser result`, {
+              found: !!vkUser,
+              userId: vkUser?.user_id,
+              state: vkUser?.state,
+            });
+            if (!vkUser || !vkUser.user_id) {
+              log.warn(`[VK] User not found after button press`, {
+                vkUserId,
+              });
               return { statusCode: 200, body: "ok" };
+            }
 
             const vkCtx = {
               isVk: true,
@@ -144,6 +171,7 @@ export async function handleVkWebhook(event, context) {
                     (row) =>
                       row
                         .map((btn) => {
+                          const cbData = btn.callback_data || btn.callback;
                           if (btn.url)
                             return {
                               action: {
@@ -152,12 +180,12 @@ export async function handleVkWebhook(event, context) {
                                 label: btn.text.substring(0, 40),
                               },
                             };
-                          else if (btn.callback_data)
+                          else if (cbData)
                             return {
                               action: {
                                 type: "callback",
                                 payload: JSON.stringify({
-                                  callback_data: btn.callback_data,
+                                  callback_data: cbData,
                                 }),
                                 label: btn.text.substring(0, 40),
                               },
@@ -322,6 +350,11 @@ export async function handleVkWebhook(event, context) {
               );
 
             if (scenarioVK.steps[callbackData]) {
+              log.info(`[VK] renderStep via scenarioVK.steps`, {
+                callbackData,
+                userState: vkUser.state,
+                userId: vkUser.user_id,
+              });
               const navSteps = [
                 "START",
                 "RESUME_GATE",
@@ -333,11 +366,21 @@ export async function handleVkWebhook(event, context) {
                 vkUser.saved_state = vkUser.state;
               vkUser.session.last_vk_step = callbackData;
               await ydb.saveUser(vkUser);
-              return await renderStep(vkCtx, callbackData, vkToken);
+              log.info(`[VK] Calling renderStep`, { step: callbackData });
+              try {
+                return await renderStep(vkCtx, callbackData, vkToken);
+              } catch (renderErr) {
+                log.error(`[VK] renderStep FAILED`, renderErr);
+                // Fallback: просто отправляем текст
+                await vkCtx.reply(
+                  `⚡ Ошибка при обработке шага "${callbackData}". Попробуй ещё раз или напиши /menu`,
+                );
+              }
             }
           }
         } catch (e) {
           log.error(`[VK EVENT ERROR]`, e);
+          log.error(`[VK EVENT ERROR STACK]`, e.stack);
         }
 
         return {
@@ -462,33 +505,36 @@ export async function handleVkWebhook(event, context) {
             !tgOpts.reply_markup.inline_keyboard
           )
             return null;
-          const vkButtons = tgOpts.reply_markup.inline_keyboard.map((row) => {
-            return row
-              .map((btn) => {
-                if (btn.url)
-                  return {
-                    action: {
-                      type: "open_link",
-                      link: btn.url,
-                      label: btn.text.substring(0, 40),
-                    },
-                  };
-                else if (btn.callback_data)
-                  return {
-                    action: {
-                      type: "callback",
-                      payload: JSON.stringify({
-                        callback_data: btn.callback_data,
-                      }),
-                      label: btn.text.substring(0, 40),
-                    },
-                    color: "positive",
-                  };
-                return null;
-              })
-              .filter(Boolean);
-          });
-          return JSON.stringify({ inline: true, buttons: vkButtons });
+          const vkButtonsArr = tgOpts.reply_markup.inline_keyboard.map(
+            (row) => {
+              return row
+                .map((btn) => {
+                  const cbData = btn.callback_data || btn.callback;
+                  if (btn.url)
+                    return {
+                      action: {
+                        type: "open_link",
+                        link: btn.url,
+                        label: btn.text.substring(0, 40),
+                      },
+                    };
+                  else if (cbData)
+                    return {
+                      action: {
+                        type: "callback",
+                        payload: JSON.stringify({
+                          callback_data: cbData,
+                        }),
+                        label: btn.text.substring(0, 40),
+                      },
+                      color: "positive",
+                    };
+                  return null;
+                })
+                .filter(Boolean);
+            },
+          );
+          return JSON.stringify({ inline: true, buttons: vkButtonsArr });
         };
 
         const vkCtx = {
