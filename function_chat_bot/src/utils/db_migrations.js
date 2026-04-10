@@ -46,7 +46,8 @@ export async function runMigrations(driver) {
       log.info(`[MIGRATION] Applying: ${migration.name}`);
       try {
         await tableClient.withSession(async (session) => {
-          await session.executeQuery(migration.alter);
+          // ALTER TABLE — это DDL, нужен executeSchemeQuery, а не executeQuery
+          await session.executeSchemeQuery(migration.alter);
         });
         applied.push(migration.name);
         log.info(`[MIGRATION] Applied: ${migration.name}`);
