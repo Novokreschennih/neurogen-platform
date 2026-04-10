@@ -633,7 +633,7 @@ body {
             </div>
             <h3 class="text-2xl font-bold text-white mb-2">Отлично!</h3>
             <p class="text-sm text-gray-400">
-              Где тебе удобнее запустить свою ИИ-систему и пройти настройку?
+              Где тебе удобнее пройти настройку?
             </p>
           </div>
 
@@ -865,16 +865,39 @@ body {
 
   // 1. Telegram — deep link с partner_id в start payload
   btnTelegram.addEventListener("click", () => {
+    // Сохраняем email для бота
+    const email = emailInput.value.trim();
+    if (email) {
+      try {
+        localStorage.setItem("neurogen_email", email);
+        localStorage.setItem("neurogen_email_submitted", "true");
+      } catch (e) {}
+    }
     window.location.href = `https://t.me/${refBot}?start=${partnerId}`;
   });
 
   // 2. VK — сообщество SetHubble с partner_id
   btnVK.addEventListener("click", () => {
+    const email = emailInput.value.trim();
+    if (email) {
+      try {
+        localStorage.setItem("neurogen_email", email);
+        localStorage.setItem("neurogen_email_submitted", "true");
+      } catch (e) {}
+    }
     window.location.href = `${VK_COMMUNITY_URL}?ref=${partnerId}`;
   });
 
   // 3. Web-чат — partner_id как параметр
   btnWeb.addEventListener("click", () => {
+    // Сохраняем email чтобы /ai/ не спрашивал повторно
+    const email = emailInput.value.trim();
+    if (email) {
+      try {
+        localStorage.setItem("neurogen_email", email);
+        localStorage.setItem("neurogen_email_submitted", "true");
+      } catch (e) {}
+    }
     window.location.href = `${WEB_CHAT_URL}?ref=${partnerId}`;
   });
 

@@ -703,6 +703,29 @@ body {
   }
 
   // === 6. ЭКРАН ОБУЧЕНИЯ ===
+
+  /**
+   * v5.0: Для пользователей, пришедших с /join/
+   * Пропускаем welcome-сообщение с выбором шагов обучения — сразу чат
+   */
+  function startTraining() {
+    const chatArea = document.getElementById("trainingContent");
+    if (!chatArea) return;
+    chatArea.innerHTML = "";
+
+    const welcomeText = `Привет! 🎉<br><br>
+          Ты уже в системе. Я — твой ИИ-консультант SetHubble.<br>
+          Спрашивай что угодно про бизнес-стратегии, воронки, партнёрскую программу.<br><br>
+          Или нажми <b>«Обучение»</b> ниже, чтобы пройти 3 шага и заработать NeuroCoins:`;
+
+    addMessage(welcomeText, false, true);
+
+    // Показываем кнопку обучения и чат-ввод
+    setTimeout(() => {
+      showTrainingButtons();
+    }, 600);
+  }
+
   function showWelcomeMessage() {
     const chatArea = document.getElementById("trainingContent");
     chatArea.innerHTML = "";
@@ -1008,6 +1031,35 @@ body {
 
   // === ИНИЦИАЛИЗАЦИЯ ===
   captureReferral();
+
+  // v5.0: Если пользователь уже ввёл email на /join/ — пропускаем
+  // экраны email и каналов, сразу показываем обучение/чат
+  (function checkExistingUser() {
+    try {
+      const emailSubmitted = localStorage.getItem("neurogen_email_submitted");
+      const existingEmail = localStorage.getItem("neurogen_email");
+
+      if (emailSubmitted === "true" && existingEmail) {
+        // Email уже сохранён с /join/ → пропускаем ввод
+        userEmail = existingEmail;
+
+        // Пропускаем экраны email и каналов → сразу к обучению
+        const emailScreen = document.getElementById("screenEmail");
+        const channelsScreen = document.getElementById("screenChannels");
+        if (emailScreen) emailScreen.classList.remove("active");
+        if (channelsScreen) channelsScreen.classList.remove("active");
+
+        // Запускаем обучение/чат
+        startTraining();
+        console.log("[AI] Returning user, skipping to training", {
+          email: userEmail,
+          ref: referrer,
+        });
+      }
+    } catch (e) {
+      console.warn("[AI] checkExistingUser error", e);
+    }
+  })();
 })();
     </script>
   </body>
