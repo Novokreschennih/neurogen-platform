@@ -139,7 +139,8 @@ export async function handleVkWebhook(event, context) {
           return { statusCode: 200, body: "ok" };
         }
 
-          // Отвечаем VK что событие обработано (убирает кнопку)
+        // Отвечаем VK что событие обработано (убирает кнопку)
+        try {
           const snackbarResp = await fetch(
             `https://api.vk.com/method/messages.sendMessageEventAnswer?access_token=${process.env.VK_GROUP_TOKEN}&v=5.199&event_id=${eventId}&user_id=${userId}&event_data=${encodeURIComponent(JSON.stringify({ event_type: "show_snackbar", text: "✅" }))}`,
             { method: "POST" },
@@ -149,267 +150,250 @@ export async function handleVkWebhook(event, context) {
             ok: snackbarData.response === 1,
             error: snackbarData.error || null,
           });
-
-          if (callbackData) {
-            const vkUserId = `vk:${userId}`;
-            log.info(`[VK] Fetching user`, { vkUserId });
-            const vkUser = await ydb.getUser(vkUserId);
-            log.info(`[VK] getUser result`, {
-              found: !!vkUser,
-              userId: vkUser?.user_id,
-              state: vkUser?.state,
-            });
-            if (!vkUser || !vkUser.user_id) {
-              log.warn(`[VK] User not found after button press`, {
-                vkUserId,
-              });
-              return { statusCode: 200, body: "ok" };
-            }
-
-            const vkCtx = {
-              isVk: true,
-              from: { id: userId },
-              message: { text: "" },
-              dbUser: vkUser,
-              callbackQuery: {
-                data: callbackData,
-                message: { text: "", caption: "", reply_markup: null },
-              },
-              telegram: { sendChatAction: async () => {} },
-              reply: async (replyText, opts = {}) => {
-                const msg = (replyText || "").replace(/<[^>]*>?/gm, "");
-                const params = new URLSearchParams();
-                params.append("access_token", process.env.VK_GROUP_TOKEN);
-                params.append("v", "5.199");
-                params.append("user_id", String(userId));
-                params.append(
-                  "random_id",
-                  String(Math.floor(Math.random() * 2147483647)),
-                );
-                params.append("message", msg);
-                const translateKb = (tgOpts) => {
-                  if (!tgOpts?.reply_markup?.inline_keyboard) return null;
-                  const vkBtns = tgOpts.reply_markup.inline_keyboard.map(
-                    (row) =>
-                      row
-                        .map((btn) => {
-                          const cbData = btn.callback_data || btn.callback;
-                          if (btn.url)
-                            return {
-                              action: {
-                                type: "open_link",
-                                link: btn.url,
-                                label: btn.text.substring(0, 40),
-                              },
-                            };
-                          else if (cbData)
-                            return {
-                              action: {
-                                type: "callback",
-                                payload: JSON.stringify({
-                                  callback_data: cbData,
-                                }),
-                                label: btn.text.substring(0, 40),
-                              },
-                              color: "positive",
-                            };
-                          return null;
-                        })
-                        .filter(Boolean),
-                  );
-                  return JSON.stringify({ inline: true, buttons: vkBtns });
-                };
-                const kb = translateKb(opts);
-                if (kb) params.append("keyboard", kb);
-                await fetch("https://api.vk.com/method/messages.send", {
-                  method: "POST",
-                  body: params,
-                });
-              },
-              replyWithPhoto: async (photoUrl, opts = {}) => {
-                const cap = (opts.caption || "").replace(/<[^>]*>?/gm, "");
-                await vkCtx.reply(`${cap}\n\n${photoUrl}`, opts);
-              },
-              editMessageText: async () => {},
-              editMessageCaption: async () => {},
-              answerCbQuery: async () => {},
-            };
-
-            const vkToken = "VK_CENTRAL_GROUP";
-
-            // Выполняем callback
-            if (callbackData === "CLICK_REG_ID") {
-              if (vkUser.sh_user_id && vkUser.sh_ref_tail)
-                return await renderStep(vkCtx, "REGISTRATION_EXIST", vkToken);
-              vkUser.state = "WAIT_REG_ID";
-              await ydb.saveUser(vkUser);
-              return await vkCtx.reply(
-                "✍️ Введи ТВОЙ цифровой ID\n\nПришли мне номер, который ты получил в личном кабинете SetHubble после регистрации (например: 1234).",
-                {},
-              );
-            }
-            if (callbackData === "FORCE_REG_UPDATE") {
-              vkUser.state = "WAIT_REG_ID";
-              await ydb.saveUser(vkUser);
-              return await vkCtx.reply(
-                "✍️ Обновление данных\n\nХорошо, введи новый цифровой ID:",
-                {},
-              );
-            }
-            if (callbackData === "SETUP_BOT_START") {
-              vkUser.state = "WAIT_BOT_TOKEN";
-              if (vkUser.bot_token) vkUser.session.is_changing_token = true;
-              await ydb.saveUser(vkUser);
-              return await vkCtx.reply(
-                "🚀 НАСТРОЙКА БОТА-КЛОНА\n\nПришли мне API TOKEN твоего бота из @BotFather.",
-                {},
-              );
-            }
-            if (callbackData === "CONFIRM_UPGRADE") {
-              if (!vkUser.session.tags.includes("seen_plans"))
-                vkUser.session.tags.push("seen_plans");
-              await ydb.saveUser(vkUser);
-              return await renderStep(vkCtx, "UPGRADE_CONFIRMED", vkToken);
-            }
-            if (callbackData === "RESTART_FUNNEL") {
-              vkUser.saved_state = "";
-              vkUser.state = "START";
-              vkUser.reminders_count = 0;
-              vkUser.last_reminder_time = 0;
-              vkUser.session = {
-                tags: vkUser.session?.tags || [],
-                last_activity: Date.now(),
-              };
-              await ydb.saveUser(vkUser);
-              return await renderStep(vkCtx, "START", vkToken);
-            }
-            if (callbackData === "MAIN_MENU") {
-              vkUser.reminders_count = 0;
-              vkUser.last_reminder_time = 0;
-              return await renderStep(vkCtx, "MAIN_MENU", vkToken);
-            }
-            if (callbackData === "RESUME_LAST") {
-              return await renderStep(
-                vkCtx,
-                vkUser.saved_state || "START",
-                vkToken,
-              );
-            }
-            if (callbackData === "LOCKED_NEED_ID")
-              return await renderStep(vkCtx, "LOCKED_TRAINING_INFO", vkToken);
-            if (callbackData === "LOCKED_NEED_PRO")
-              return await renderStep(vkCtx, "LOCKED_CRM_INFO", vkToken);
-            if (callbackData === "LOCKED_NEED_TRAINING")
-              return await renderStep(
-                vkCtx,
-                "LOCKED_PRO_TRAINING_INFO",
-                vkToken,
-              );
-            if (callbackData === "LOCKED_NEED_PLANS")
-              return await renderStep(vkCtx, "LOCKED_PLANS_INFO", vkToken);
-            if (callbackData === "CHANGE_BOT_TOKEN") {
-              vkUser.state = "WAIT_BOT_TOKEN";
-              vkUser.session.old_bot_token = vkUser.bot_token;
-              vkUser.saved_state = "";
-              vkUser.session.is_changing_token = true;
-              await ydb.saveUser(vkUser);
-              return await vkCtx.reply(
-                "🔄 ИЗМЕНЕНИЕ ТОКЕНА БОТА\n\nПришли мне НОВЫЙ API TOKEN из @BotFather.",
-                {},
-              );
-            }
-            if (callbackData === "CONTINUE_WITH_CURRENT_BOT") {
-              vkUser.state = "Module_3_Offline";
-              await ydb.saveUser(vkUser);
-              return await renderStep(vkCtx, "Module_3_Offline", vkToken);
-            }
-            if (callbackData === "CREATE_NEW_BOT") {
-              vkUser.state = "WAIT_BOT_TOKEN";
-              vkUser.saved_state = "";
-              await ydb.saveUser(vkUser);
-              return await vkCtx.reply(
-                "🔄 СОЗДАНИЕ НОВОГО БОТА\n\nПришли мне API TOKEN нового бота из @BotFather.",
-                {},
-              );
-            }
-            if (callbackData === "THEORY_COURSE_COMPLETE") {
-              if (!vkUser.session.theory_complete) {
-                vkUser.session.theory_complete = true;
-                vkUser.session.xp = (vkUser.session.xp || 0) + 10;
-                await ydb.saveUser(vkUser);
-              }
-              return await renderStep(vkCtx, "Theory_Reward_Spoilers", vkToken);
-            }
-            if (callbackData === "USE_EXISTING_DATA") {
-              vkUser.session.tmp_shui = vkUser.sh_user_id;
-              vkUser.session.tmp_shrt = vkUser.sh_ref_tail;
-              vkUser.state = "WAIT_PARTNER_REG";
-              await ydb.saveUser(vkUser);
-              return await vkCtx.reply(
-                `✅ ДАННЫЕ ПОДТВЕРЖДЕНЫ\n\n🎯 Перейди по ссылке для регистрации и напиши "готов"`,
-                {},
-              );
-            }
-            if (callbackData === "ENTER_NEW_DATA") {
-              vkUser.state = "WAIT_SH_ID_P";
-              await ydb.saveUser(vkUser);
-              return await vkCtx.reply(
-                "✏️ Пришли НОВЫЙ цифровой ID для этого бота:",
-                {},
-              );
-            }
-            if (callbackData === "EDIT_PROFILE")
-              return await renderStep(vkCtx, "EDIT_PROFILE", vkToken);
-            if (callbackData === "GO_TO_MODULE_2")
-              return await renderStep(vkCtx, "Module_2_Online", vkToken);
-            if (callbackData === "GO_TO_MODULE_3")
-              return await renderStep(vkCtx, "Module_3_Offline", vkToken);
-            if (callbackData === "GO_TO_FINAL")
-              return await renderStep(
-                vkCtx,
-                "Lesson_Final_Comparison",
-                vkToken,
-              );
-
-            if (scenarioVK.steps[callbackData]) {
-              log.info(`[VK] renderStep via scenarioVK.steps`, {
-                callbackData,
-                userState: vkUser.state,
-                userId: vkUser.user_id,
-              });
-              const navSteps = [
-                "START",
-                "RESUME_GATE",
-                "MAIN_MENU",
-                "Pre_Training_Logic",
-                "EDIT_PROFILE",
-              ];
-              if (!navSteps.includes(vkUser.state))
-                vkUser.saved_state = vkUser.state;
-              vkUser.session.last_vk_step = callbackData;
-              await ydb.saveUser(vkUser);
-              log.info(`[VK] Calling renderStep`, { step: callbackData });
-              try {
-                return await renderStep(vkCtx, callbackData, vkToken);
-              } catch (renderErr) {
-                log.error(`[VK] renderStep FAILED`, renderErr);
-                // Fallback: просто отправляем текст
-                await vkCtx.reply(
-                  `⚡ Ошибка при обработке шага "${callbackData}". Попробуй ещё раз или напиши /menu`,
-                );
-              }
-            }
-          }
-        } catch (e) {
-          log.error(`[VK EVENT ERROR]`, e);
-          log.error(`[VK EVENT ERROR STACK]`, e.stack);
+        } catch (snackErr) {
+          log.warn(`[VK] sendMessageEventAnswer failed`, snackErr.message);
         }
 
-        return {
-          statusCode: 200,
-          headers: { "Content-Type": "text/plain" },
-          body: "ok",
+        const vkUserId = `vk:${userId}`;
+        log.info(`[VK] Fetching user`, { vkUserId });
+        const vkUser = await ydb.getUser(vkUserId);
+        log.info(`[VK] getUser result`, {
+          found: !!vkUser,
+          userId: vkUser?.user_id,
+          state: vkUser?.state,
+        });
+        if (!vkUser || !vkUser.user_id) {
+          log.warn(`[VK] User not found after button press`, {
+            vkUserId,
+          });
+          return { statusCode: 200, body: "ok" };
+        }
+
+        const vkCtx = {
+          isVk: true,
+          from: { id: userId },
+          message: { text: "" },
+          dbUser: vkUser,
+          callbackQuery: {
+            data: callbackData,
+            message: { text: "", caption: "", reply_markup: null },
+          },
+          telegram: { sendChatAction: async () => {} },
+          reply: async (replyText, opts = {}) => {
+            const msg = (replyText || "").replace(/<[^>]*>?/gm, "");
+            const params = new URLSearchParams();
+            params.append("access_token", process.env.VK_GROUP_TOKEN);
+            params.append("v", "5.199");
+            params.append("user_id", String(userId));
+            params.append(
+              "random_id",
+              String(Math.floor(Math.random() * 2147483647)),
+            );
+            params.append("message", msg);
+            const translateKb = (tgOpts) => {
+              if (!tgOpts?.reply_markup?.inline_keyboard) return null;
+              const vkBtns = tgOpts.reply_markup.inline_keyboard.map((row) =>
+                row
+                  .map((btn) => {
+                    const cbData = btn.callback_data || btn.callback;
+                    if (btn.url)
+                      return {
+                        action: {
+                          type: "open_link",
+                          link: btn.url,
+                          label: btn.text.substring(0, 40),
+                        },
+                      };
+                    else if (cbData)
+                      return {
+                        action: {
+                          type: "callback",
+                          payload: JSON.stringify({
+                            callback_data: cbData,
+                          }),
+                          label: btn.text.substring(0, 40),
+                        },
+                        color: "positive",
+                      };
+                    return null;
+                  })
+                  .filter(Boolean),
+              );
+              return JSON.stringify({ inline: true, buttons: vkBtns });
+            };
+            const kb = translateKb(opts);
+            if (kb) params.append("keyboard", kb);
+            await fetch("https://api.vk.com/method/messages.send", {
+              method: "POST",
+              body: params,
+            });
+          },
+          replyWithPhoto: async (photoUrl, opts = {}) => {
+            const cap = (opts.caption || "").replace(/<[^>]*>?/gm, "");
+            await vkCtx.reply(`${cap}\n\n${photoUrl}`, opts);
+          },
+          editMessageText: async () => {},
+          editMessageCaption: async () => {},
+          answerCbQuery: async () => {},
         };
+
+        const vkToken = "VK_CENTRAL_GROUP";
+
+        // Выполняем callback
+        if (callbackData === "CLICK_REG_ID") {
+          if (vkUser.sh_user_id && vkUser.sh_ref_tail)
+            return await renderStep(vkCtx, "REGISTRATION_EXIST", vkToken);
+          vkUser.state = "WAIT_REG_ID";
+          await ydb.saveUser(vkUser);
+          return await vkCtx.reply(
+            "✍️ Введи ТВОЙ цифровой ID\n\nПришли мне номер, который ты получил в личном кабинете SetHubble после регистрации (например: 1234).",
+            {},
+          );
+        }
+        if (callbackData === "FORCE_REG_UPDATE") {
+          vkUser.state = "WAIT_REG_ID";
+          await ydb.saveUser(vkUser);
+          return await vkCtx.reply(
+            "✍️ Обновление данных\n\nХорошо, введи новый цифровой ID:",
+            {},
+          );
+        }
+        if (callbackData === "SETUP_BOT_START") {
+          vkUser.state = "WAIT_BOT_TOKEN";
+          if (vkUser.bot_token) vkUser.session.is_changing_token = true;
+          await ydb.saveUser(vkUser);
+          return await vkCtx.reply(
+            "🚀 НАСТРОЙКА БОТА-КЛОНА\n\nПришли мне API TOKEN твоего бота из @BotFather.",
+            {},
+          );
+        }
+        if (callbackData === "CONFIRM_UPGRADE") {
+          if (!vkUser.session.tags.includes("seen_plans"))
+            vkUser.session.tags.push("seen_plans");
+          await ydb.saveUser(vkUser);
+          return await renderStep(vkCtx, "UPGRADE_CONFIRMED", vkToken);
+        }
+        if (callbackData === "RESTART_FUNNEL") {
+          vkUser.saved_state = "";
+          vkUser.state = "START";
+          vkUser.reminders_count = 0;
+          vkUser.last_reminder_time = 0;
+          vkUser.session = {
+            tags: vkUser.session?.tags || [],
+            last_activity: Date.now(),
+          };
+          await ydb.saveUser(vkUser);
+          return await renderStep(vkCtx, "START", vkToken);
+        }
+        if (callbackData === "MAIN_MENU") {
+          vkUser.reminders_count = 0;
+          vkUser.last_reminder_time = 0;
+          return await renderStep(vkCtx, "MAIN_MENU", vkToken);
+        }
+        if (callbackData === "RESUME_LAST") {
+          return await renderStep(
+            vkCtx,
+            vkUser.saved_state || "START",
+            vkToken,
+          );
+        }
+        if (callbackData === "LOCKED_NEED_ID")
+          return await renderStep(vkCtx, "LOCKED_TRAINING_INFO", vkToken);
+        if (callbackData === "LOCKED_NEED_PRO")
+          return await renderStep(vkCtx, "LOCKED_CRM_INFO", vkToken);
+        if (callbackData === "LOCKED_NEED_TRAINING")
+          return await renderStep(vkCtx, "LOCKED_PRO_TRAINING_INFO", vkToken);
+        if (callbackData === "LOCKED_NEED_PLANS")
+          return await renderStep(vkCtx, "LOCKED_PLANS_INFO", vkToken);
+        if (callbackData === "CHANGE_BOT_TOKEN") {
+          vkUser.state = "WAIT_BOT_TOKEN";
+          vkUser.session.old_bot_token = vkUser.bot_token;
+          vkUser.saved_state = "";
+          vkUser.session.is_changing_token = true;
+          await ydb.saveUser(vkUser);
+          return await vkCtx.reply(
+            "🔄 ИЗМЕНЕНИЕ ТОКЕНА БОТА\n\nПришли мне НОВЫЙ API TOKEN из @BotFather.",
+            {},
+          );
+        }
+        if (callbackData === "CONTINUE_WITH_CURRENT_BOT") {
+          vkUser.state = "Module_3_Offline";
+          await ydb.saveUser(vkUser);
+          return await renderStep(vkCtx, "Module_3_Offline", vkToken);
+        }
+        if (callbackData === "CREATE_NEW_BOT") {
+          vkUser.state = "WAIT_BOT_TOKEN";
+          vkUser.saved_state = "";
+          await ydb.saveUser(vkUser);
+          return await vkCtx.reply(
+            "🔄 СОЗДАНИЕ НОВОГО БОТА\n\nПришли мне API TOKEN нового бота из @BotFather.",
+            {},
+          );
+        }
+        if (callbackData === "THEORY_COURSE_COMPLETE") {
+          if (!vkUser.session.theory_complete) {
+            vkUser.session.theory_complete = true;
+            vkUser.session.xp = (vkUser.session.xp || 0) + 10;
+            await ydb.saveUser(vkUser);
+          }
+          return await renderStep(vkCtx, "Theory_Reward_Spoilers", vkToken);
+        }
+        if (callbackData === "USE_EXISTING_DATA") {
+          vkUser.session.tmp_shui = vkUser.sh_user_id;
+          vkUser.session.tmp_shrt = vkUser.sh_ref_tail;
+          vkUser.state = "WAIT_PARTNER_REG";
+          await ydb.saveUser(vkUser);
+          return await vkCtx.reply(
+            `✅ ДАННЫЕ ПОДТВЕРЖДЕНЫ\n\n🎯 Перейди по ссылке для регистрации и напиши "готов"`,
+            {},
+          );
+        }
+        if (callbackData === "ENTER_NEW_DATA") {
+          vkUser.state = "WAIT_SH_ID_P";
+          await ydb.saveUser(vkUser);
+          return await vkCtx.reply(
+            "✏️ Пришли НОВЫЙ цифровой ID для этого бота:",
+            {},
+          );
+        }
+        if (callbackData === "EDIT_PROFILE")
+          return await renderStep(vkCtx, "EDIT_PROFILE", vkToken);
+        if (callbackData === "GO_TO_MODULE_2")
+          return await renderStep(vkCtx, "Module_2_Online", vkToken);
+        if (callbackData === "GO_TO_MODULE_3")
+          return await renderStep(vkCtx, "Module_3_Offline", vkToken);
+        if (callbackData === "GO_TO_FINAL")
+          return await renderStep(vkCtx, "Lesson_Final_Comparison", vkToken);
+
+        if (scenarioVK.steps[callbackData]) {
+          log.info(`[VK] renderStep via scenarioVK.steps`, {
+            callbackData,
+            userState: vkUser.state,
+            userId: vkUser.user_id,
+          });
+          const navSteps = [
+            "START",
+            "RESUME_GATE",
+            "MAIN_MENU",
+            "Pre_Training_Logic",
+            "EDIT_PROFILE",
+          ];
+          if (!navSteps.includes(vkUser.state))
+            vkUser.saved_state = vkUser.state;
+          vkUser.session.last_vk_step = callbackData;
+          await ydb.saveUser(vkUser);
+          log.info(`[VK] Calling renderStep`, { step: callbackData });
+          try {
+            return await renderStep(vkCtx, callbackData, vkToken);
+          } catch (renderErr) {
+            log.error(`[VK] renderStep FAILED`, renderErr);
+            await vkCtx.reply(
+              `⚡ Ошибка при обработке шага "${callbackData}". Попробуй ещё раз или напиши /menu`,
+            );
+          }
+        }
+
+        return { statusCode: 200, body: "ok" };
       }
 
       if (payload.type === "message_new") {
