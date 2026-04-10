@@ -1,6 +1,7 @@
 import pkg from "ydb-sdk";
 import crypto from "crypto";
 import { log } from "./src/utils/logger.js";
+import { runMigrations } from "./src/utils/db_migrations.js";
 
 const { Driver, getCredentialsFromEnv, TypedValues } = pkg;
 
@@ -25,6 +26,9 @@ export async function init() {
       await driver.ready(3000);
       driverInitialized = true;
       log.info("YDB Driver initialized successfully");
+
+      // v5.0: Автоматические миграции
+      await runMigrations(driver);
     } catch (e) {
       log.error("Failed to initialize YDB Driver", e);
       throw e; // Критическая ошибка, без БД работать нельзя

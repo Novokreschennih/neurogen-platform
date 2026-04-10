@@ -10,7 +10,7 @@ import aiEngine, {
 } from "./ai_engine.js";
 
 // === УТИЛИТЫ ===
-import { log } from "./src/utils/logger.js";
+import { log, setTraceId } from "./src/utils/logger.js";
 import { withRetry, parseSendResult } from "./src/utils/retry.js";
 import { createUpdateCache } from "./src/utils/ttl_cache.js";
 import {
@@ -919,6 +919,13 @@ export const handler = async (event) => {
   // === ИСПРАВЛЕНИЕ: Ждем подключения к БД ДО любых действий! ===
   await dbInitPromise;
 
+  // v5.0: Инициализация trace_id для каждого запроса
+  const traceId =
+    event.headers?.["x-request-id"] ||
+    event.headers?.["x-amzn-requestid"] ||
+    crypto.randomUUID().slice(0, 16);
+  setTraceId(traceId);
+
   // === ЛОГИРОВАНИЕ ВХОДЯЩЕГО СОБЫТИЯ ===
   const timerData =
     typeof event.details?.payload === "string"
@@ -949,6 +956,23 @@ export const handler = async (event) => {
       : event.details || {};
   const paramsEarly = event.queryStringParameters || timerDataEarly || event;
   const action = paramsEarly.action;
+
+  // === HEALTH CHECK (v5.0) ===
+  if (action === "health" || action === "ping") {
+    const ydbOk = driverInitialized ? "ok" : "initializing";
+    return {
+      statusCode: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        status: "ok",
+        ydb: ydbOk,
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
+        version: "5.0",
+        timestamp: Date.now(),
+      }),
+    };
+  }
 
   // === WEB-CHAT (делегировано в модуль) ===
   const webChatResponse = await handleWebChat(event, {
