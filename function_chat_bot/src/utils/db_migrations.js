@@ -5,7 +5,7 @@
  * Безопасно: можно запускать многократно.
  */
 
-import { log } from "./utils/logger.js";
+import { log } from "./logger.js";
 
 const MIGRATIONS = [
   {
@@ -65,9 +65,12 @@ export async function runMigrations(driver) {
   }
 
   if (applied.length > 0) {
-    log.info(`[MIGRATION] All migrations complete. Applied: ${applied.length}`, {
-      migrations: applied,
-    });
+    log.info(
+      `[MIGRATION] All migrations complete. Applied: ${applied.length}`,
+      {
+        migrations: applied,
+      },
+    );
   } else {
     log.info(`[MIGRATION] No pending migrations`);
   }
