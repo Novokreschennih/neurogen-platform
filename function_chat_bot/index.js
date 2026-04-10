@@ -13,12 +13,19 @@ import aiEngine, {
 import { log } from "./src/utils/logger.js";
 import { withRetry, parseSendResult } from "./src/utils/retry.js";
 import { createUpdateCache } from "./src/utils/ttl_cache.js";
-import { getJwtSecret, generateToken, verifyToken } from "./src/utils/jwt_utils.js";
+import {
+  getJwtSecret,
+  generateToken,
+  verifyToken,
+} from "./src/utils/jwt_utils.js";
 import { generatePin, generateNeuroPin } from "./src/utils/pin.js";
 
 // === КАНАЛЫ И EMAIL ===
 import channelManager from "./src/core/channels/channel_manager.js";
-import { sendEmail, templates as emailTemplates } from "./src/core/email/email_service.js";
+import {
+  sendEmail,
+  templates as emailTemplates,
+} from "./src/core/email/email_service.js";
 
 // === ПЛАТФОРМЫ ===
 import { setupTelegramHandlers } from "./src/platforms/telegram/telegram_setup.js";
@@ -75,7 +82,8 @@ const CRON_MAX_USERS_PER_RUN =
 const updateCache = createUpdateCache({
   max: parseInt(process.env.MAX_STORED_UPDATES) || 1000,
   ttlMs: parseInt(process.env.UPDATE_TTL_MS) || 5 * 60 * 1000,
-  cleanupIntervalMs: parseInt(process.env.UPDATE_CLEANUP_INTERVAL_MS) || 60 * 1000,
+  cleanupIntervalMs:
+    parseInt(process.env.UPDATE_CLEANUP_INTERVAL_MS) || 60 * 1000,
 });
 
 // Обратная совместимость — aliases для старого кода
@@ -613,10 +621,16 @@ const sendStepToUser = async (
 ) => {
   const step = scenario.steps[stepKey];
   if (!step)
-    return { sent: false, error: "Step not found", errorCode: null, channel: "unknown" };
+    return {
+      sent: false,
+      error: "Step not found",
+      errorCode: null,
+      channel: "unknown",
+    };
 
   // Determine which channel to use
-  const channel = forceChannel || channelManager.getPrimaryChannel(user) || "telegram";
+  const channel =
+    forceChannel || channelManager.getPrimaryChannel(user) || "telegram";
 
   const info = await (token === MAIN_TOKEN
     ? Promise.resolve({
@@ -639,7 +653,16 @@ const sendStepToUser = async (
 
   // === TELEGRAM ===
   if (channel === "telegram") {
-    return await sendStepViaTelegram(token, userId, stepKey, user, messageText, links, info, maxRetries);
+    return await sendStepViaTelegram(
+      token,
+      userId,
+      stepKey,
+      user,
+      messageText,
+      links,
+      info,
+      maxRetries,
+    );
   }
 
   // === VK ===
@@ -653,7 +676,12 @@ const sendStepToUser = async (
   if (channel === "email") {
     const email = user.session?.email;
     if (!email) {
-      return { sent: false, error: "No email set", errorCode: null, channel: "email" };
+      return {
+        sent: false,
+        error: "No email set",
+        errorCode: null,
+        channel: "email",
+      };
     }
     const tpl = emailTemplates.reminder(user, stepKey);
     const result = await sendEmail({ to: email, ...tpl });
@@ -666,13 +694,27 @@ const sendStepToUser = async (
   }
 
   // === WEB (no direct push — skip) ===
-  return { sent: false, error: "Web channel has no push notifications", errorCode: null, channel: "web" };
+  return {
+    sent: false,
+    error: "Web channel has no push notifications",
+    errorCode: null,
+    channel: "web",
+  };
 };
 
 /**
  * Telegram-specific step sender (extracted from original sendStepToUser)
  */
-const sendStepViaTelegram = async (token, userId, stepKey, user, messageText, links, info, maxRetries) => {
+const sendStepViaTelegram = async (
+  token,
+  userId,
+  stepKey,
+  user,
+  messageText,
+  links,
+  info,
+  maxRetries,
+) => {
   const step = scenario.steps[stepKey];
   const keyboard = getKeyboard(step, links, user, info);
   const tokenToUse = token || MAIN_TOKEN;
@@ -730,7 +772,12 @@ const sendStepViaTelegram = async (token, userId, stepKey, user, messageText, li
             errorCode,
             errorMsg,
           });
-          return { sent: false, error: errorMsg, errorCode: 403, channel: "telegram" };
+          return {
+            sent: false,
+            error: errorMsg,
+            errorCode: 403,
+            channel: "telegram",
+          };
         }
 
         // Другие ошибки
@@ -756,14 +803,24 @@ const sendStepViaTelegram = async (token, userId, stepKey, user, messageText, li
         errorMsg,
         attempt: attempt + 1,
       });
-      return { sent: false, error: `Network error: ${errorMsg}`, errorCode, channel: "telegram" };
+      return {
+        sent: false,
+        error: `Network error: ${errorMsg}`,
+        errorCode,
+        channel: "telegram",
+      };
     }
   }
 
   // Все попытки исчерпаны
   const errorCode = lastError?.code || null;
   const errorMsg = lastError?.message || "Unknown error";
-  return { sent: false, error: `Max retries exceeded: ${errorMsg}`, errorCode, channel: "telegram" };
+  return {
+    sent: false,
+    error: `Max retries exceeded: ${errorMsg}`,
+    errorCode,
+    channel: "telegram",
+  };
 };
 
 /**
@@ -783,7 +840,9 @@ function getVkKeyboard(step, links, user, info) {
         .map((b) => ({
           action: {
             type: b.callback_data ? "callback" : "open_link",
-            payload: b.callback_data ? JSON.stringify({ button: b.callback_data }) : undefined,
+            payload: b.callback_data
+              ? JSON.stringify({ button: b.callback_data })
+              : undefined,
             link: b.url ? { url: b.url } : undefined,
             label: b.text.substring(0, 40),
           },
@@ -851,23 +910,37 @@ export const handler = async (event) => {
   const action = paramsEarly.action;
 
   // === WEB-CHAT (делегировано в модуль) ===
-  const webChatResponse = await handleWebChat(event, { action, log, corsHeaders });
+  const webChatResponse = await handleWebChat(event, {
+    action,
+    ydb,
+    log,
+    corsHeaders,
+  });
   if (webChatResponse) return webChatResponse;
   // === КОНЕЦ WEB-CHAT ===
 
   // === CRM API (делегировано в модуль) ===
   const crmApiResponse = await handleCrmApi(event, {
-    action, ydb, log, corsHeaders, authorizeCrmRequest, BROADCAST_RATE_LIMIT,
+    action,
+    ydb,
+    log,
+    corsHeaders,
+    authorizeCrmRequest,
+    BROADCAST_RATE_LIMIT,
   });
   if (crmApiResponse) return crmApiResponse;
   // === КОНЕЦ CRM API ===
 
   // === ПРОДОЛЖЕНИЕ ОСНОВНОЙ ЛОГИКИ ===
 
-
   // === APP AUTH (validate-app-token + validate-pin, делегировано в модуль) ===
   const appAuthResponse = await handleAppAuth(event, {
-    action, ydb, log, verifyToken, generateToken, corsHeaders,
+    action,
+    ydb,
+    log,
+    verifyToken,
+    generateToken,
+    corsHeaders,
   });
   if (appAuthResponse) return appAuthResponse;
   // === КОНЕЦ APP AUTH ===
@@ -906,69 +979,96 @@ export const handler = async (event) => {
     });
 
     // --- TELEGRAM HANDLERS (делегировано в модуль) ---
-    const { renderStep, getKeyboard, isMainBot: tgIsMainBot, token: tgToken, handleAppsCommand } =
-      setupTelegramHandlers(bot, {
-        ydb,
-        scenario,
-        log,
-        MAIN_TOKEN,
-        processedUpdates,
-        updateCache,
-        corsHeaders,
-        aiEngine,
-        addToDialogHistory,
-        cleanupDialogHistory,
-        getOrCreatePin,
-        generateToken,
-        verifyToken,
-        getJwtSecret,
-        notifyBotOwner,
-        setupMainBotMenu,
-        DOZHIM_MAP,
-        REMIND_MAP,
-        PRODUCT_ID_FREE,
-        PRODUCT_ID_PRO,
-        PRODUCT_ID_PRO_40,
-        REMINDER_INTERVALS,
-        CRON_STALE_HOURS,
-        CRON_USER_PAUSE_MS,
-        CRON_BROADCAST_PAUSE_SEC,
-        CRON_MAX_USERS_PER_RUN,
-        MAX_RETRIES,
-        MAX_RETRY_DELAY_SEC,
-        AI_PRO_LIMIT,
-        AI_FREE_LIMIT,
-        askNeuroGenAI,
-        event,
-      });
+    const {
+      renderStep,
+      getKeyboard,
+      isMainBot: tgIsMainBot,
+      token: tgToken,
+      handleAppsCommand,
+    } = setupTelegramHandlers(bot, {
+      ydb,
+      scenario,
+      log,
+      MAIN_TOKEN,
+      processedUpdates,
+      updateCache,
+      corsHeaders,
+      aiEngine,
+      addToDialogHistory,
+      cleanupDialogHistory,
+      getOrCreatePin,
+      generateToken,
+      verifyToken,
+      getJwtSecret,
+      notifyBotOwner,
+      setupMainBotMenu,
+      DOZHIM_MAP,
+      REMIND_MAP,
+      PRODUCT_ID_FREE,
+      PRODUCT_ID_PRO,
+      PRODUCT_ID_PRO_40,
+      REMINDER_INTERVALS,
+      CRON_STALE_HOURS,
+      CRON_USER_PAUSE_MS,
+      CRON_BROADCAST_PAUSE_SEC,
+      CRON_MAX_USERS_PER_RUN,
+      MAX_RETRIES,
+      MAX_RETRY_DELAY_SEC,
+      AI_PRO_LIMIT,
+      AI_FREE_LIMIT,
+      askNeuroGenAI,
+      event,
+    });
     // --- КОНЕЦ TELEGRAM HANDLERS ---
 
     // --- PAYMENT ACTION (делегировано в модуль) ---
     const paymentResponse = await handlePaymentWebhook(event, {
-      params, headers, response, ydb, log, bot, sendStepToUser,
-      notifyBotOwner, generatePin, MAIN_TOKEN, PRODUCT_ID_PRO, PRODUCT_ID_PRO_40,
+      params,
+      headers,
+      response,
+      ydb,
+      log,
+      bot,
+      sendStepToUser,
+      notifyBotOwner,
+      generatePin,
+      MAIN_TOKEN,
+      PRODUCT_ID_PRO,
+      PRODUCT_ID_PRO_40,
       querystring,
     });
     if (paymentResponse) return paymentResponse;
     // --- КОНЕЦ PAYMENT ACTION ---
 
-
-
     // --- CRON ACTION (делегировано в модуль) ---
     const cronResponse = await handleCronJobs(event, {
-      params, response, ydb, log, sendStepToUser,
-      DOZHIM_MAP, REMIND_MAP,
-      REMINDER_INTERVALS, DOZHIM_DELAY_HOURS,
-      CRON_STALE_HOURS, CRON_BATCH_SIZE, CRON_USER_PAUSE_MS,
-      CRON_MAX_USERS_PER_RUN, MAX_RETRIES,
+      params,
+      response,
+      ydb,
+      log,
+      sendStepToUser,
+      DOZHIM_MAP,
+      REMIND_MAP,
+      REMINDER_INTERVALS,
+      DOZHIM_DELAY_HOURS,
+      CRON_STALE_HOURS,
+      CRON_BATCH_SIZE,
+      CRON_USER_PAUSE_MS,
+      CRON_MAX_USERS_PER_RUN,
+      MAX_RETRIES,
     });
     if (cronResponse) return cronResponse;
     // --- КОНЕЦ CRON ACTION ---
 
-
     // --- API: GET PARTNER LINK (делегировано в модуль) ---
     const partnerResponse = await handlePartnerApi(event, {
-      params, headers, response, ydb, log, MAIN_TOKEN, getHeader,
+      params,
+      headers,
+      response,
+      ydb,
+      log,
+      MAIN_TOKEN,
+      getHeader,
     });
     if (partnerResponse) return partnerResponse;
     // --- КОНЕЦ PARTNER API ---
