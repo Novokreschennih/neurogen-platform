@@ -734,12 +734,15 @@ body {
   let refBot = null;
 
   // === ИНИЦИАЛИЗАЦИЯ РЕФЕРАЛА (МУЛЬТИКАНАЛ v5.0) ===
-  // ?page= теперь кодирует partner_id (не bot_username)
+  // ?page= может быть hex-encoded partner_id ИЛИ уже сам partner_id
   const urlParams = new URLSearchParams(window.location.search);
   let encodedId = urlParams.get("page");
 
   const fromHex = (hex) => {
     try {
+      // Проверяем что строка содержит только hex-символы
+      if (!/^[0-9a-fA-F]+$/.test(hex)) return null;
+      if (hex.length % 2 !== 0) return null;
       let str = "";
       for (let i = 0; i < hex.length; i += 2) {
         str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
@@ -751,9 +754,15 @@ body {
   };
 
   if (encodedId) {
+    // Сначала пробуем декодировать как hex
     const decoded = fromHex(encodedId);
-    if (decoded) {
+    if (decoded && decoded.length > 1) {
       partnerId = decoded.trim();
+    } else {
+      // Уже partner_id (не hex) — используем как есть
+      partnerId = encodedId.trim();
+    }
+    if (partnerId) {
       localStorage.setItem("neurogen_partner_id", partnerId);
     }
   }
@@ -764,8 +773,11 @@ body {
       || DEFAULT_PARTNER_ID;
   }
 
-  // Сохраняем bot_username для Telegram (из настроек или дефолт)
-  refBot = localStorage.getItem("neurogen_partner_bot") || DEFAULT_BOT;
+  // Очищаем старый bot_username из localStorage (используем DEFAULT_BOT)
+  const storedBot = localStorage.getItem("neurogen_partner_bot");
+  refBot = (storedBot && storedBot !== "sethubble_bot")
+    ? storedBot
+    : DEFAULT_BOT;
 
   // Обновляем плашку партнера
   const badge = document.getElementById("partner-badge");
