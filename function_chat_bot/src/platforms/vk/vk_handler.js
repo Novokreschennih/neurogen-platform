@@ -33,7 +33,8 @@ export async function handleVkWebhook(event, context) {
   const isVkRequest =
     event.body &&
     (event.body.includes('"type":"confirmation"') ||
-      event.body.includes('"type":"message_new"'));
+      event.body.includes('"type":"message_new"') ||
+      event.body.includes('"type":"message_event"'));
 
   if (action === "vk-webhook" || isVkRequest) {
     log.info(`[VK WEBHOOK] Request received`);
