@@ -7,23 +7,26 @@
 
 import { log } from "./logger.js";
 import pkg from "ydb-sdk";
-const { TxControl } = pkg;
+const { TypedValues, AlterTableDescription } = pkg;
 
 const MIGRATIONS = [
   {
     name: "v4.3.1_add_pin_code",
-    check: "SELECT pin_code FROM users LIMIT 1;",
-    alter: "ALTER TABLE users ADD COLUMN pin_code Utf8;",
+    table: "users",
+    column: "pin_code",
+    type: TypedValues.utf8(""),
   },
   {
     name: "v4.3.2_add_session_version",
-    check: "SELECT session_version FROM users LIMIT 1;",
-    alter: "ALTER TABLE users ADD COLUMN session_version Uint64;",
+    table: "users",
+    column: "session_version",
+    type: TypedValues.uint64("0"),
   },
   {
     name: "v5.0_add_vk_group_id",
-    check: "SELECT vk_group_id FROM bots LIMIT 1;",
-    alter: "ALTER TABLE bots ADD COLUMN vk_group_id Utf8;",
+    table: "bots",
+    column: "vk_group_id",
+    type: TypedValues.utf8(""),
   },
 ];
 
@@ -37,27 +40,32 @@ export async function runMigrations(driver) {
 
   for (const migration of MIGRATIONS) {
     try {
-      // Проверяем существует ли колонка
+      // Проверяем существует ли колонка через describeTable
       await tableClient.withSession(async (session) => {
-        await session.executeQuery(migration.check);
+        const result = await session.describeTable(migration.table);
+        const columns = result.columns || [];
+        const exists = columns.some((col) => col.name === migration.column);
+        if (!exists) {
+          throw new Error(`Column ${migration.column} not found`);
+        }
       });
       // Колонка есть — миграция уже применена
       log.debug(`[MIGRATION] Skip (already applied): ${migration.name}`);
     } catch (e) {
-      // Колонки нет — применяем миграцию
+      // Колонки нет — применяем миграцию через alterTable (DDL API)
       log.info(`[MIGRATION] Applying: ${migration.name}`);
       try {
-        // DDL (ALTER TABLE) должен выполняться БЕЗ транзакции
-        // В ydb-sdk v5.x TxControl.noTx() отключает транзакцию для DDL
         await tableClient.withSession(async (session) => {
-          await session.executeQuery(migration.alter, undefined, {
-            txControl: TxControl.noTx(),
+          const desc = new AlterTableDescription();
+          desc.withAddColumn({
+            name: migration.column,
+            type: migration.type.type,
           });
+          await session.alterTable(migration.table, desc);
         });
         applied.push(migration.name);
         log.info(`[MIGRATION] Applied: ${migration.name}`);
       } catch (alterError) {
-        // Если ALTER TABLE падает с "column already exists" — считаем успехом
         const msg = alterError.message || String(alterError);
         if (
           msg.includes("already exists") ||
