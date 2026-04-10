@@ -12,9 +12,17 @@
 import TelegrafPkg from "telegraf";
 const { Telegraf } = TelegrafPkg;
 import channelManager from "../channels/channel_manager.js";
+import { escapeHtml } from "../../utils/validator.js";
 
 export async function handleCrmApi(event, context) {
-  const { action, ydb, log, corsHeaders, authorizeCrmRequest, BROADCAST_RATE_LIMIT } = context;
+  const {
+    action,
+    ydb,
+    log,
+    corsHeaders,
+    authorizeCrmRequest,
+    BROADCAST_RATE_LIMIT,
+  } = context;
 
   const crmActions = ["get_crm_data", "export_csv", "send_crm_broadcast"];
   if (!crmActions.includes(action)) return null;
@@ -65,12 +73,12 @@ export async function handleCrmApi(event, context) {
 
         return {
           user_id: u.user_id,
-          first_name: u.first_name,
+          first_name: escapeHtml(u.first_name),
           state: u.state,
           bought_tripwire: u.bought_tripwire,
           last_seen: u.last_seen,
           tags: u.session?.tags || [],
-          email: u.session?.email || "",
+          email: escapeHtml(u.session?.email || ""),
           // Мультиканальная информация
           primary_channel: primaryChannel,
           channels: channels,
@@ -124,7 +132,7 @@ export async function handleCrmApi(event, context) {
       // Для мультиканальности загружаем всех неактивных пользователей (включая VK, web, email)
       // и фильтруем по bot_token или channel
       const allInactive = await ydb.getStaleUsers(99999, 10000, 0);
-      const existingIds = new Set(allUsers.map(u => u.user_id));
+      const existingIds = new Set(allUsers.map((u) => u.user_id));
       for (const u of allInactive) {
         if (!existingIds.has(u.user_id)) {
           allUsers.push(u);
@@ -180,7 +188,8 @@ export async function handleCrmApi(event, context) {
 
           if (filters.sleeping_days) {
             const anchorTime = u.session?.last_activity || u.last_seen;
-            const inactiveDays = (Date.now() - anchorTime) / (1000 * 60 * 60 * 24);
+            const inactiveDays =
+              (Date.now() - anchorTime) / (1000 * 60 * 60 * 24);
             isMatch = isMatch && inactiveDays >= filters.sleeping_days;
           }
 
@@ -199,14 +208,14 @@ export async function handleCrmApi(event, context) {
 
     // === Мультиканальная рассылка ===
     const allUsersForBroadcast = await ydb.getBotUsers(botToken, 10000, 0);
-    const userMap = new Map(allUsersForBroadcast.map(u => [u.user_id, u]));
+    const userMap = new Map(allUsersForBroadcast.map((u) => [u.user_id, u]));
 
     const tgUserIds = [];
     const vkUserIds = [];
     const emailUsers = [];
 
     for (const uid of targetUserIds) {
-      const u = userMap.get(uid) || await ydb.getUser(uid);
+      const u = userMap.get(uid) || (await ydb.getUser(uid));
       if (!u) continue;
 
       const ch = channelManager.getPrimaryChannel(u);
@@ -215,7 +224,8 @@ export async function handleCrmApi(event, context) {
       else if (ch === "email") emailUsers.push(u);
     }
 
-    let totalSent = 0, totalFailed = 0;
+    let totalSent = 0,
+      totalFailed = 0;
     const results = {};
 
     // Telegram рассылка
@@ -225,7 +235,10 @@ export async function handleCrmApi(event, context) {
         broadcastBot,
         tgUserIds,
         message,
-        { parse_mode: "HTML", ...(data.reply_markup ? { reply_markup: data.reply_markup } : {}) },
+        {
+          parse_mode: "HTML",
+          ...(data.reply_markup ? { reply_markup: data.reply_markup } : {}),
+        },
         BROADCAST_RATE_LIMIT,
       );
       totalSent += tgResults.sent;
@@ -264,15 +277,17 @@ export async function handleCrmApi(event, context) {
     if (emailUsers.length > 0) {
       const { sendEmailBatch } = await import("../email/email_service.js");
       const emails = emailUsers
-        .filter(u => u.session?.email)
-        .map(u => ({
+        .filter((u) => u.session?.email)
+        .map((u) => ({
           to: u.session.email,
           subject: message.substring(0, 80),
           text: message.replace(/<[^>]*>/g, ""),
           html: message,
         }));
       if (emails.length > 0) {
-        const emailResults = await sendEmailBatch(emails, { pauseBetweenMs: 200 });
+        const emailResults = await sendEmailBatch(emails, {
+          pauseBetweenMs: 200,
+        });
         totalSent += emailResults.sent;
         totalFailed += emailResults.failed;
         results.email = emailResults;
@@ -297,7 +312,7 @@ export async function handleCrmApi(event, context) {
 
     // Также добавляем пользователей из других каналов (VK, web, email)
     const allInactive = await ydb.getStaleUsers(99999, 10000, 0);
-    const existingIds = new Set(allUsers.map(u => u.user_id));
+    const existingIds = new Set(allUsers.map((u) => u.user_id));
     for (const u of allInactive) {
       if (!existingIds.has(u.user_id)) {
         allUsers.push(u);
@@ -305,12 +320,21 @@ export async function handleCrmApi(event, context) {
     }
 
     const csvRows = [
-      ["user_id", "first_name", "state", "is_pro", "primary_channel", "email", "last_seen"],
+      [
+        "user_id",
+        "first_name",
+        "state",
+        "is_pro",
+        "primary_channel",
+        "email",
+        "last_seen",
+      ],
     ];
     allUsers
       .filter((u) => u !== null)
       .forEach((u) => {
-        const primaryChannel = channelManager.getPrimaryChannel(u) || "telegram";
+        const primaryChannel =
+          channelManager.getPrimaryChannel(u) || "telegram";
         csvRows.push([
           u.user_id,
           u.first_name || "",

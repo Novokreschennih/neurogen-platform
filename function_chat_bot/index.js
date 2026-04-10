@@ -95,6 +95,47 @@ const processedUpdates = {
 const startUpdateCleanup = () => updateCache.startCleanup();
 const cleanupProcessedUpdates = () => updateCache.cleanup();
 
+// === v5.0: RATE LIMITING для HTTP endpoint (защита от спама) ===
+const RATE_LIMIT_MAX = parseInt(process.env.RATE_LIMIT_MAX) || 60; // запросов
+const RATE_LIMIT_WINDOW_MS =
+  parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 60_000; // 1 минута
+const rateLimitMap = new Map(); // { ip: { count, resetTime } }
+
+function checkRateLimit(ip) {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+
+  if (!entry || now > entry.resetTime) {
+    // Первое обращение или окно истекло
+    rateLimitMap.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW_MS });
+    return { allowed: true, remaining: RATE_LIMIT_MAX - 1 };
+  }
+
+  if (entry.count >= RATE_LIMIT_MAX) {
+    return {
+      allowed: false,
+      remaining: 0,
+      retryAfter: Math.ceil((entry.resetTime - now) / 1000),
+    };
+  }
+
+  entry.count++;
+  return { allowed: true, remaining: RATE_LIMIT_MAX - entry.count };
+}
+
+// Очистка устаревших записей каждые 5 минут
+setInterval(
+  () => {
+    const now = Date.now();
+    for (const [ip, entry] of rateLimitMap.entries()) {
+      if (now > entry.resetTime + 60_000) {
+        rateLimitMap.delete(ip);
+      }
+    }
+  },
+  5 * 60 * 1000,
+);
+
 // === ФЛАГ ДЛЯ УСТАНОВКИ МЕНЮ ПРИ ХОЛОДНОМ СТАРТЕ ===
 let isMainBotMenuSet = false;
 

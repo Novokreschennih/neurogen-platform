@@ -27,6 +27,7 @@
 import TelegrafPkg from "telegraf";
 const { Telegraf, Markup } = TelegrafPkg;
 import { registerTelegramActions } from "./telegram_actions.js";
+import { validateStartPayload } from "../../utils/validator.js";
 
 /**
  * Setup all Telegram handlers for a bot instance
@@ -320,24 +321,18 @@ export function setupTelegramHandlers(bot, context) {
       if (ctx.message?.text?.startsWith("/start ")) {
         const rawRef = ctx.message.text.split(" ")[1];
         if (rawRef && isMainBot) {
-          // v5.0: Формат может быть "partnerId" или "partnerId|encodedEmail"
-          const parts = rawRef.split("|");
-          pid = parts[0];
-
-          // Декодируем email если передан
-          if (parts[1]) {
-            try {
-              const encoded = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-              // Добавляем padding для base64
-              const padded =
-                encoded + "=".repeat((4 - (encoded.length % 4)) % 4);
-              emailFromJoin = Buffer.from(padded, "base64").toString("utf8");
-            } catch (e) {
-              console.warn("[TG] Failed to decode email from start payload", e);
-            }
+          // v5.0: Валидируем start payload — защита от инъекций
+          const parsed = validateStartPayload(rawRef);
+          if (parsed) {
+            pid = parsed.partnerId;
+            emailFromJoin = parsed.email || null;
+            await ydb.recordLinkClick(pid, userId, token);
+          } else {
+            log.warn("[TG] Invalid start payload", {
+              raw: rawRef.substring(0, 50),
+            });
+            // Фолбэк на дефолтный partner_id
           }
-
-          await ydb.recordLinkClick(pid, userId, token);
         }
       }
 

@@ -7,6 +7,7 @@
  */
 
 import crypto from "crypto";
+import { validateEmail, validatePartnerId } from "../../utils/validator.js";
 
 export async function handleWebChat(event, context) {
   const { action, log, corsHeaders } = context;
@@ -21,13 +22,28 @@ export async function handleWebChat(event, context) {
 
     // Обработка лидов (сбор email)
     if (payload.isEmail) {
-      // v5.0: partner_id приоритетнее referrer (оба поддерживаются)
-      const partnerId = payload.partner_id || payload.referrer || "p_qdr";
-      log.info(`[WEB LEAD] ${payload.email}`, { partnerId });
+      // v5.0: Валидируем partner_id — защита от инъекций
+      const partnerId =
+        validatePartnerId(payload.partner_id) ||
+        validatePartnerId(payload.referrer) ||
+        "p_qdr";
+
+      // Валидируем email
+      const email = validateEmail(payload.email);
+      if (!email) {
+        log.warn("[WEB LEAD] Invalid email", { email: payload.email });
+        return {
+          statusCode: 400,
+          headers: corsHeaders,
+          body: JSON.stringify({ error: "Invalid email" }),
+        };
+      }
+
+      log.info(`[WEB LEAD] ${email}`, { partnerId });
 
       // Сохраняем email-пользователя в YDB
       if (context.ydb) {
-        const emailUserId = `email:${payload.email}`;
+        const emailUserId = `email:${email}`;
         let emailUser = await context.ydb.getUser(emailUserId);
         if (!emailUser) {
           emailUser = {
