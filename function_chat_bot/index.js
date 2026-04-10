@@ -942,11 +942,28 @@ export const handler = async (event) => {
     "Access-Control-Allow-Headers":
       "Content-Type, x-telegram-initdata, x-payment-key, x-crm-key",
     "Access-Control-Allow-Methods": "OPTIONS,POST,GET",
+    "X-API-Version": "v1", // v5.0: Версия API в заголовке
   };
 
   // 1. ОБРАБОТКА PREFLIGHT ЗАПРОСОВ (OPTIONS)
   if (event.httpMethod === "OPTIONS") {
     return { statusCode: 200, headers: corsHeaders, body: "" };
+  }
+
+  // v5.0: API Versioning — поддержка префикса /api/v1/
+  // Если запрос начинается с /api/v1/ — обрабатываем как v1
+  // Если запрос без префикса — обратная совместимость (v0)
+  const apiVersion = (() => {
+    const path = event.path || "";
+    if (path.startsWith("/api/v1/")) return "v1";
+    if (path.startsWith("/api/")) return "legacy";
+    return "v0"; // Telegram webhook, timer, и т.д.
+  })();
+
+  // v1-specific headers или валидация
+  if (apiVersion === "v1") {
+    // В будущем: проверка API ключей, rate limiting, и т.д.
+    log.debug("[API v1] Request received", { path: event.path });
   }
 
   // 2. ИЗВЛЕЧЕНИЕ ACTION РАНЬШЕ (для API handlers)
@@ -1166,21 +1183,62 @@ export const handler = async (event) => {
         updateId: body.update_id,
         type: body.callback_query ? "callback" : "message",
       });
-      await bot.handleUpdate(body);
-      // Возвращаем ответ ПОСЛЕ обработки - Telegram получит подтверждение
-      return response(200, "ok");
+
+      // v5.0: Webhook retry — если YDB недоступен, повторяем с backoff
+      const { retryWebhook } = await import("./src/utils/webhook_retry.js");
+      const retryResult = await retryWebhook(
+        async () => {
+          await bot.handleUpdate(body);
+          return { success: true };
+        },
+        {
+          delays: [5_000, 30_000], // 5s, 30s (5min слишком долго для serverless)
+          context: "TG_WEBHOOK",
+        },
+      );
+
+      if (retryResult.success) {
+        return response(200, "ok");
+      } else {
+        // Все retry попытки провалились — логируем и возвращаем 500
+        // Telegram продолжит ретраить ~15min
+        log.error("[WEBHOOK] All retries failed", {
+          updateId: body.update_id,
+          error: retryResult.error,
+          attempts: retryResult.attempts,
+        });
+        return { statusCode: 500, headers: corsHeaders, body: "retry" };
+      }
     }
 
     // Для не-webhook запросов (CORS preflight, CRM API и т.д.)
     return response(200, "ok");
   } catch (err) {
-    console.error(">>> ERROR:", err);
-    // ВАЖНО: Возвращаем 200, даже если упала ошибка.
-    // Это остановит бесконечные повторы от Телеграма.
-    return {
-      statusCode: 200,
-      headers: corsHeaders,
-      body: JSON.stringify({ error: "Internal Server Error handled" }),
-    };
+    // v5.0: Определяем тип ошибки для правильного ответа
+    const errorMsg = err.message || String(err);
+    const isTransient =
+      errorMsg.includes("YDB") ||
+      errorMsg.includes("timeout") ||
+      errorMsg.includes("ECONNREFUSED") ||
+      errorMsg.includes("ENOTFOUND") ||
+      errorMsg.includes("Unavailable");
+
+    if (isTransient) {
+      // Временная ошибка — возвращаем 500, Telegram ретраит
+      log.error("[HANDLER] Transient error (will retry)", {
+        error: errorMsg,
+      });
+      return { statusCode: 500, headers: corsHeaders, body: "retry" };
+    } else {
+      // Постоянная ошибка — логируем и возвращаем 200, чтобы остановить ретраи
+      log.error("[HANDLER] Permanent error (stopping retries)", {
+        error: errorMsg,
+      });
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: "Internal Server Error handled" }),
+      };
+    }
   }
 };
