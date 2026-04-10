@@ -92,8 +92,28 @@ function mapUser(row) {
   };
 }
 
+/**
+ * Валидация user_id: поддержка стандартных префиксов v5.0
+ * Допустимые: числовой ID, vk:xxx, email:xxx, web:xxx
+ */
+function isValidUserId(userId) {
+  if (!userId || typeof userId !== "string" || userId.trim().length === 0)
+    return false;
+  // Числовой Telegram/VK ID
+  if (/^\d{3,20}$/.test(userId)) return true;
+  // Специальные префиксы мультиканальности v5.0
+  if (/^vk:[a-zA-Z0-9_.-]{1,50}$/.test(userId)) return true;
+  if (/^email:[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(userId))
+    return true;
+  if (/^web:[a-f0-9-]{20,50}$/.test(userId)) return true; // UUID формат
+  return false;
+}
+
 export async function getUser(userId) {
-  if (!userId || String(userId).includes(":")) return null;
+  if (!isValidUserId(userId)) {
+    log.warn(`[YDB] Invalid user_id format`, { userId });
+    return null;
+  }
 
   try {
     return await driver.tableClient.withSession(async (session) => {
@@ -106,17 +126,22 @@ export async function getUser(userId) {
     });
   } catch (e) {
     log.error(`Failed to get user`, e, { userId });
-    return null; // Возвращаем null, чтобы бот считал это "новым входом", а не падал
+    return null;
   }
 }
 
 /**
  * Сохранить пользователя (Надежный UPSERT без блокировок)
  * Исправление v4.3.3: Убираем Race Condition с YDB
+ * Исправление v5.0: Поддержка мультиканальных user_id (email:, vk:, web:)
  */
 export async function saveUser(user) {
-  if (!user.user_id || String(user.user_id).includes(":"))
+  if (!user.user_id || !isValidUserId(String(user.user_id))) {
+    log.warn(`[YDB] Cannot save user: invalid user_id`, {
+      userId: user.user_id,
+    });
     return { success: false };
+  }
 
   try {
     return await driver.tableClient.withSession(async (session) => {
