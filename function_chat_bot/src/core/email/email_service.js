@@ -1,23 +1,125 @@
 /**
- * Email Service — Yandex Cloud Postbox Integration (API v2)
+ * Email Service — Yandex Cloud Postbox Integration (API v2 + AWS SigV4)
  *
  * Sends transactional and marketing emails via Postbox HTTP API.
- * Authentication: API key with role `postbox.messageCreator`.
+ * Uses AWS SigV4 authentication (compatible with AWS SES v2).
+ *
+ * Authentication options (in priority order):
+ *   1. IAM-token — for Cloud Functions / Serverless Containers (no keys needed)
+ *   2. Static Access Key — for external apps (KEY_ID + SECRET_KEY)
  *
  * Environment variables required:
- *   YANDEX_CLOUD_API_KEY   — YC API key
- *   YANDEX_CLOUD_FOLDER_ID — YC folder ID containing Postbox
- *   POSTBOX_FROM_EMAIL     — Verified sender email (e.g., noreply@yourdomain.com)
- *   POSTBOX_FROM_NAME      — Sender display name (default: "NeuroGen")
+ *   YANDEX_CLOUD_FOLDER_ID         — YC folder ID containing Postbox
+ *   POSTBOX_FROM_EMAIL             — Verified sender email (e.g., noreply@yourdomain.com)
+ *   POSTBOX_FROM_NAME              — Sender display name (default: "NeuroGen")
  *
- * API v2 docs: https://yandex.cloud/ru/docs/postbox/api-ref/email/outbound-emails/create
+ * Optional (for external apps, not needed in Cloud Functions):
+ *   YANDEX_CLOUD_ACCESS_KEY_ID     — Static access key ID
+ *   YANDEX_CLOUD_SECRET_KEY        — Static access key secret
+ *
+ * API docs: https://yandex.cloud/ru/docs/postbox/api-ref/email/outbound-emails/create
  */
+
+import crypto from "crypto";
 
 const POSTBOX_ENDPOINT =
   "https://postbox.cloud.yandex.net/v2/email/outbound-emails";
+const REGION = "ru-central1";
+const SERVICE = "ses";
 
 /**
- * Send a single email via Yandex Cloud Postbox (API v2)
+ * Get IAM token from metadata service (Cloud Functions)
+ * Returns null if not running in YC infrastructure
+ */
+async function getIamToken() {
+  try {
+    const resp = await fetch(
+      "http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token",
+      {
+        headers: { "Metadata-Flavor": "Google" },
+        signal: AbortSignal.timeout(3000),
+      },
+    );
+    if (resp.ok) {
+      const data = await resp.json();
+      return data.access_token;
+    }
+  } catch {
+    // Not running in YC infrastructure
+  }
+  return null;
+}
+
+/**
+ * Sign request with AWS SigV4
+ */
+function signRequest(method, url, body, accessKeyId, secretKey) {
+  const now = new Date();
+  const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, "");
+  const dateStamp = amzDate.slice(0, 8);
+
+  const urlObj = new URL(url);
+  const canonicalUri = urlObj.pathname;
+  const canonicalQuerystring = "";
+  const payloadHash = crypto.createHash("sha256").update(body).digest("hex");
+
+  const headers = {
+    "content-type": "application/json",
+    host: urlObj.host,
+    "x-amz-date": amzDate,
+  };
+
+  const signedHeaders = Object.keys(headers).sort().join(";");
+  const canonicalHeaders = Object.entries(headers)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([k, v]) => `${k}:${v}\n`)
+    .join("");
+
+  const canonicalRequest = [
+    method.toUpperCase(),
+    canonicalUri,
+    canonicalQuerystring,
+    canonicalHeaders,
+    signedHeaders,
+    payloadHash,
+  ].join("\n");
+
+  const algorithm = "AWS4-HMAC-SHA256";
+  const credentialScope = `${dateStamp}/${REGION}/${SERVICE}/aws4_request`;
+  const stringToSign = [
+    algorithm,
+    amzDate,
+    credentialScope,
+    crypto.createHash("sha256").update(canonicalRequest).digest("hex"),
+  ].join("\n");
+
+  function hmacSha256(key, data) {
+    return crypto.createHmac("sha256", key).update(data).digest();
+  }
+
+  const kDate = hmacSha256(`AWS4${secretKey}`, dateStamp);
+  const kRegion = hmacSha256(kDate, REGION);
+  const kService = hmacSha256(kRegion, SERVICE);
+  const kSigning = hmacSha256(kService, "aws4_request");
+  const signature = hmacSha256(kSigning, stringToSign).toString("hex");
+
+  const authorizationHeader = [
+    `${algorithm} Credential=${accessKeyId}/${credentialScope}`,
+    `SignedHeaders=${signedHeaders}`,
+    `Signature=${signature}`,
+  ].join(", ");
+
+  return {
+    headers: {
+      "Content-Type": "application/json",
+      "X-Amz-Date": amzDate,
+      Authorization: authorizationHeader,
+    },
+  };
+}
+
+/**
+ * Send a single email via Yandex Cloud Postbox (API v2 + AWS SigV4)
  * @param {object} params
  * @param {string} params.to — Recipient email
  * @param {string} params.subject — Email subject
@@ -35,22 +137,19 @@ export async function sendEmail({
   fromEmail,
   fromName,
 }) {
-  const apiKey = process.env.YANDEX_CLOUD_API_KEY;
   const folderId = process.env.YANDEX_CLOUD_FOLDER_ID;
   const defaultFromEmail = process.env.POSTBOX_FROM_EMAIL;
   const defaultFromName = process.env.POSTBOX_FROM_NAME || "NeuroGen";
+  const accessKeyId = process.env.YANDEX_CLOUD_ACCESS_KEY_ID;
+  const secretKey = process.env.YANDEX_CLOUD_SECRET_KEY;
 
-  if (!apiKey || !folderId || !defaultFromEmail) {
+  if (!folderId || !defaultFromEmail) {
     console.error("[POSTBOX] Missing required env vars", {
-      hasApiKey: !!apiKey,
       hasFolderId: !!folderId,
       hasFromEmail: !!defaultFromEmail,
     });
     return { success: false, error: "Postbox not configured" };
   }
-
-  // v2: ISO 8601 дата для X-Amz-Date
-  const amzDate = new Date().toISOString().replace(/[:-]|\.\d{3}/g, "");
 
   // v2: новый формат тела запроса
   const payload = {
@@ -82,18 +181,50 @@ export async function sendEmail({
     },
   };
 
+  const body = JSON.stringify(payload);
+  let authHeaders = {};
+
+  // Определяем метод аутентификации
+  if (accessKeyId && secretKey) {
+    // Вариант 1: Static Access Key + AWS SigV4
+    const signed = signRequest(
+      "POST",
+      POSTBOX_ENDPOINT,
+      body,
+      accessKeyId,
+      secretKey,
+    );
+    authHeaders = signed.headers;
+    console.info("[POSTBOX] Using SigV4 auth", {
+      accessKeyId: accessKeyId.slice(0, 8) + "...",
+    });
+  } else {
+    // Вариант 2: IAM-токен (Cloud Functions)
+    const iamToken = await getIamToken();
+    if (iamToken) {
+      authHeaders = {
+        "Content-Type": "application/json",
+        "X-YaCloud-SubjectToken": iamToken,
+      };
+      console.info("[POSTBOX] Using IAM token auth");
+    } else {
+      console.error("[POSTBOX] No auth method available");
+      return {
+        success: false,
+        error:
+          "Set YANDEX_CLOUD_ACCESS_KEY_ID + YANDEX_CLOUD_SECRET_KEY or run in Cloud Functions",
+      };
+    }
+  }
+
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     const response = await fetch(POSTBOX_ENDPOINT, {
       method: "POST",
-      headers: {
-        Authorization: `Api-Key ${apiKey}`,
-        "Content-Type": "application/json",
-        "X-Amz-Date": amzDate,
-      },
-      body: JSON.stringify(payload),
+      headers: authHeaders,
+      body,
       signal: controller.signal,
     });
 
