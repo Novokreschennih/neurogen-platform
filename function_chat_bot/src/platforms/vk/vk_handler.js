@@ -102,7 +102,9 @@ export async function handleVkWebhook(event, context) {
           userId,
           eventId,
           hasPayload: !!eventPayload,
-          payloadPreview: eventPayload ? eventPayload.substring(0, 100) : null,
+          payloadPreview: eventPayload
+            ? String(eventPayload).substring(0, 100)
+            : null,
         });
 
         if (!eventPayload || !userId) {
