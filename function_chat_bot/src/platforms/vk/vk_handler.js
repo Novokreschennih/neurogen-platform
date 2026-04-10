@@ -94,31 +94,50 @@ export async function handleVkWebhook(event, context) {
 
       // === MESSAGE_EVENT (callback кнопка нажата) ===
       if (payload.type === "message_event") {
-        const eventPayload = payload.object?.payload;
+        const rawPayload = payload.object?.payload;
         const userId = payload.user_id;
         const eventId = payload.event_id;
 
         log.info(`[VK] message_event received`, {
           userId,
           eventId,
-          hasPayload: !!eventPayload,
-          payloadPreview: eventPayload
-            ? String(eventPayload).substring(0, 100)
+          objectType: typeof payload.object,
+          objectKeys: payload.object ? Object.keys(payload.object) : null,
+          rawPayloadType: typeof rawPayload,
+          rawPayloadPreview: rawPayload
+            ? typeof rawPayload === "string"
+              ? rawPayload.substring(0, 200)
+              : JSON.stringify(rawPayload).substring(0, 200)
             : null,
+          fullObject: JSON.stringify(payload.object).substring(0, 300),
         });
 
-        if (!eventPayload || !userId) {
-          log.warn(`[VK] message_event missing data`, {
-            hasPayload: !!eventPayload,
-            hasUserId: !!userId,
+        // VK может прислать payload как строку ИЛИ как объект
+        let parsed;
+        try {
+          if (typeof rawPayload === "string") {
+            parsed = JSON.parse(rawPayload);
+          } else if (typeof rawPayload === "object") {
+            parsed = rawPayload;
+          }
+        } catch (e) {
+          log.warn(`[VK] Failed to parse payload`, {
+            rawPayload: String(rawPayload),
+            error: e.message,
           });
           return { statusCode: 200, body: "ok" };
         }
 
-        try {
-          const parsed = JSON.parse(eventPayload);
-          const callbackData = parsed.callback_data;
-          log.info(`[VK] message_event parsed`, { userId, callbackData });
+        const callbackData = parsed?.callback_data;
+        log.info(`[VK] message_event parsed`, { userId, callbackData });
+
+        if (!callbackData || !userId) {
+          log.warn(`[VK] message_event missing data`, {
+            hasCallbackData: !!callbackData,
+            hasUserId: !!userId,
+          });
+          return { statusCode: 200, body: "ok" };
+        }
 
           // Отвечаем VK что событие обработано (убирает кнопку)
           const snackbarResp = await fetch(
