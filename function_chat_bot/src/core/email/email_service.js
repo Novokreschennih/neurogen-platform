@@ -27,10 +27,16 @@ const POSTBOX_ENDPOINT =
 const REGION = "ru-central1";
 const SERVICE = "ses";
 
-/**
- * Get IAM token from metadata service (Cloud Functions)
- * Returns null if not running in YC infrastructure
- */
+// === КОНФИГУРАЦИЯ КАНАЛОВ ===
+const DEFAULT_BOT = "sethubble_biz_bot";
+const VK_COMMUNITY_URL =
+  process.env.VK_COMMUNITY_URL || "https://vk.com/sethubble";
+const WEB_BASE_URL = "https://sethubble.ru/ai/";
+
+// ============================================================
+// AWS SigV4 + IAM Token helpers
+// ============================================================
+
 async function getIamToken() {
   try {
     const resp = await fetch(
@@ -50,9 +56,6 @@ async function getIamToken() {
   return null;
 }
 
-/**
- * Sign request with AWS SigV4
- */
 function signRequest(method, url, body, accessKeyId, secretKey) {
   const now = new Date();
   const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, "");
@@ -118,17 +121,10 @@ function signRequest(method, url, body, accessKeyId, secretKey) {
   };
 }
 
-/**
- * Send a single email via Yandex Cloud Postbox (API v2 + AWS SigV4)
- * @param {object} params
- * @param {string} params.to — Recipient email
- * @param {string} params.subject — Email subject
- * @param {string} params.text — Plain text body
- * @param {string} [params.html] — HTML body (optional, falls back to text)
- * @param {string} [params.fromEmail] — Override sender email
- * @param {string} [params.fromName] — Override sender name
- * @returns {Promise<object>} Postbox API response
- */
+// ============================================================
+// sendEmail
+// ============================================================
+
 export async function sendEmail({
   to,
   subject,
@@ -151,7 +147,6 @@ export async function sendEmail({
     return { success: false, error: "Postbox not configured" };
   }
 
-  // v2: новый формат тела запроса
   const payload = {
     FromEmailAddress: fromEmail || defaultFromEmail,
     Destination: {
@@ -184,9 +179,7 @@ export async function sendEmail({
   const body = JSON.stringify(payload);
   let authHeaders = {};
 
-  // Определяем метод аутентификации
   if (accessKeyId && secretKey) {
-    // Вариант 1: Static Access Key + AWS SigV4
     const signed = signRequest(
       "POST",
       POSTBOX_ENDPOINT,
@@ -199,7 +192,6 @@ export async function sendEmail({
       accessKeyId: accessKeyId.slice(0, 8) + "...",
     });
   } else {
-    // Вариант 2: IAM-токен (Cloud Functions)
     const iamToken = await getIamToken();
     if (iamToken) {
       authHeaders = {
@@ -258,17 +250,10 @@ export async function sendEmail({
   }
 }
 
-/**
- * Send emails in batch with rate limiting
- * Respects Postbox TPS limits via configurable rate
- *
- * @param {Array<object>} emails — Array of { to, subject, text, html }
- * @param {object} options
- * @param {number} [options.tps=5] — Max emails per second (Postbox TPS limit)
- * @param {number} [options.pauseBetweenMs=200] — Pause between emails in ms
- * @param {function} [options.onProgress] — Callback({ sent, failed, total })
- * @returns {Promise<object>} { sent, failed, errors: [{ email, error }] }
- */
+// ============================================================
+// sendEmailBatch
+// ============================================================
+
 export async function sendEmailBatch(
   emails,
   { tps = 5, pauseBetweenMs = 200, onProgress } = {},
@@ -289,12 +274,10 @@ export async function sendEmailBatch(
       results.errors.push({ email: email.to, error: result.error });
     }
 
-    // Progress callback
     if (onProgress) {
       onProgress({ sent: results.sent, failed: results.failed, total });
     }
 
-    // Rate limiting: pause between emails
     if (i < emails.length - 1) {
       await new Promise((resolve) => setTimeout(resolve, pauseBetweenMs));
     }
@@ -310,80 +293,242 @@ export async function sendEmailBatch(
   return results;
 }
 
+// ============================================================
+// Мультиканальные шаблоны
+// ============================================================
+
 /**
- * Email templates for common scenarios
+ * Получить ref-хвост из пользователя
  */
+function getRef(user) {
+  return user.partner_id || user.sh_ref_tail || "p_qdr";
+}
+
+/**
+ * Получить имя пользователя
+ */
+function getName(user) {
+  return user.first_name || "друг";
+}
+
+/**
+ * Генерирует ссылки на подключённые каналы
+ */
+function generateChannelLinks(user) {
+  const ref = getRef(user);
+  const channels = user?.session?.channels || {};
+  const textLinks = [];
+  const htmlLinks = [];
+
+  // Telegram
+  if (channels.telegram?.enabled) {
+    const botName = channels.telegram.bot_username || DEFAULT_BOT;
+    textLinks.push(`Telegram: https://t.me/${botName}?start=${ref}`);
+    htmlLinks.push(
+      `<a href="https://t.me/${botName}?start=${ref}">📱 Telegram-бот</a>`,
+    );
+  }
+
+  // VK
+  if (channels.vk?.enabled) {
+    textLinks.push(`VK: ${VK_COMMUNITY_URL}?ref=${ref}`);
+    htmlLinks.push(`<a href="${VK_COMMUNITY_URL}?ref=${ref}">💬 ВКонтакте</a>`);
+  }
+
+  // Web
+  if (channels.web?.enabled) {
+    textLinks.push(`Web-чат: ${WEB_BASE_URL}?ref=${ref}`);
+    htmlLinks.push(
+      `<a href="${WEB_BASE_URL}?ref=${ref}">🌐 Web-чат на сайте</a>`,
+    );
+  }
+
+  // Фолбэк: если ни один канал не подключён
+  if (textLinks.length === 0) {
+    textLinks.push(`Telegram: https://t.me/${DEFAULT_BOT}?start=${ref}`);
+    htmlLinks.push(
+      `<a href="https://t.me/${DEFAULT_BOT}?start=${ref}">📱 Telegram-бот</a>`,
+    );
+  }
+
+  return {
+    text: textLinks.join("\n"),
+    html: htmlLinks.join(" &nbsp;|&nbsp; "),
+  };
+}
+
+/**
+ * Мягкое предложение подключить неподключённые каналы (макс. 2)
+ */
+function generateChannelSuggestions(user) {
+  const ref = getRef(user);
+  const channels = user?.session?.channels || {};
+  const suggestions = [];
+
+  if (!channels.telegram?.enabled) {
+    suggestions.push({
+      emoji: "📱",
+      name: "Telegram",
+      url: `https://t.me/${DEFAULT_BOT}?start=${ref}`,
+    });
+  }
+  if (!channels.vk?.enabled) {
+    suggestions.push({
+      emoji: "💬",
+      name: "ВКонтакте",
+      url: `${VK_COMMUNITY_URL}?ref=${ref}`,
+    });
+  }
+  if (!channels.web?.enabled) {
+    suggestions.push({
+      emoji: "🌐",
+      name: "Web-чат",
+      url: `${WEB_BASE_URL}?ref=${ref}`,
+    });
+  }
+
+  // Максимум 2 предложения, аккуратно
+  const selected = suggestions.slice(0, 2);
+  if (selected.length === 0) return { text: "", html: "" };
+
+  const textLines = selected.map((s) => `${s.emoji} ${s.name}: ${s.url}`);
+  const htmlItems = selected.map(
+    (s) =>
+      `<li style="margin: 4px 0"><a href="${s.url}">${s.emoji} ${s.name}</a></li>`,
+  );
+
+  return {
+    text: `\n💡 Также можешь подключить:\n${textLines.join("\n")}`,
+    html:
+      `<p style="color: #9ca3af; font-size: 13px; margin-top: 16px">💡 Также можешь подключить:</p>` +
+      `<ul style="margin: 0; padding-left: 16px; color: #9ca3af">${htmlItems.join("")}</ul>`,
+  };
+}
+
+// ============================================================
+// Экспорт шаблонов
+// ============================================================
+
 export const templates = {
   /**
-   * Welcome email — sent when user completes registration
+   * Welcome — после ввода email на /join/
    */
   welcome(user) {
+    const name = getName(user);
+    const links = generateChannelLinks(user);
+    const suggestions = generateChannelSuggestions(user);
+
     return {
       subject: "🚀 Добро пожаловать в NeuroGen!",
       text:
-        `Привет, ${user.first_name || "друг"}!\n\n` +
-        `Вы успешно зарегистрировались в экосистеме SetHubble.\n\n` +
-        `Ваш партнёрский ID: ${user.sh_user_id || "N/A"}\n` +
-        `Реферальная ссылка: https://t.me/sethubble_biz_bot?start=${user.sh_ref_tail || "p_qdr"}\n\n` +
-        `Продолжайте обучение в боте — впереди много интересного!\n\n` +
+        `Привет, ${name}!\n\n` +
+        `Твой email подтверждён — ты в системе SetHubble.\n\n` +
+        `Твои каналы связи:\n${links.text}\n\n` +
+        `Продолжай обучение в боте — впереди много интересного!\n` +
+        `${suggestions.text}\n\n` +
         `— Команда NeuroGen`,
       html:
-        `<p>Привет, <b>${user.first_name || "друг"}</b>!</p>` +
-        `<p>Вы успешно зарегистрировались в экосистеме SetHubble.</p>` +
-        `<p>Ваш партнёрский ID: <b>${user.sh_user_id || "N/A"}</b><br>` +
-        `Реферальная ссылка: <a href="https://t.me/sethubble_biz_bot?start=${user.sh_ref_tail || "p_qdr"}">открыть бота</a></p>` +
-        `<p>Продолжайте обучение в боте — впереди много интересного!</p>` +
-        `<p><i>— Команда NeuroGen</i></p>`,
+        `<p>Привет, <b>${name}</b>!</p>` +
+        `<p>Твой email подтверждён — ты в системе SetHubble.</p>` +
+        `<p style="margin: 16px 0"><b>Твои каналы связи:</b><br>${links.html}</p>` +
+        `<p>Продолжай обучение — впереди много интересного!</p>` +
+        `${suggestions.html}` +
+        `<p style="margin-top: 20px; color: #6b7280; font-size: 13px"><i>— Команда NeuroGen</i></p>`,
     };
   },
 
   /**
-   * Reminder email — sent when user is inactive
+   * Reminder — 1-3ч неактивности
    */
   reminder(user, stepName) {
+    const name = getName(user);
+    const links = generateChannelLinks(user);
+
     return {
       subject: "⏰ Напоминание: продолжите обучение в NeuroGen",
       text:
-        `${user.first_name || "Друг"}, вы остановились на шаге "${stepName}".\n\n` +
+        `${name}, вы остановились на шаге "${stepName}".\n\n` +
         `Система ждёт вас! Продолжайте движение к своей ИИ-системе.\n\n` +
-        `Откройте бота: https://t.me/sethubble_biz_bot\n\n` +
+        `Ваши каналы:\n${links.text}\n\n` +
         `— Команда NeuroGen`,
       html:
-        `<p><b>${user.first_name || "Друг"}</b>, вы остановились на шаге <i>"${stepName}"</i>.</p>` +
+        `<p><b>${name}</b>, вы остановились на шаге <i>"${stepName}"</i>.</p>` +
         `<p>Система ждёт вас! Продолжайте движение к своей ИИ-системе.</p>` +
-        `<p><a href="https://t.me/sethubble_biz_bot">Открыть бота →</a></p>` +
-        `<p><i>— Команда NeuroGen</i></p>`,
+        `<p style="margin: 16px 0">${links.html}</p>` +
+        `<p style="color: #6b7280; font-size: 13px"><i>— Команда NeuroGen</i></p>`,
     };
   },
 
   /**
-   * Follow-up (dozhim) email — sent for inactive prospects
+   * Follow-up (dozhim) — 20h+ неактивности на этапе оплаты
    */
   followup(user, offerType) {
+    const name = getName(user);
+    const links = generateChannelLinks(user);
+    const suggestions = generateChannelSuggestions(user);
+    const isTripwire = offerType === "tripwire";
+
     return {
-      subject:
-        offerType === "tripwire"
-          ? "🔥 Специальное предложение: PRO-статус со скидкой 50%"
-          : "🚀 Масштабируйте свой бизнес с NeuroGen",
+      subject: isTripwire
+        ? "🔥 PRO-статус со скидкой 50% — осталось совсем немного"
+        : "🚀 Масштабируйте свой бизнес с NeuroGen",
       text:
-        `${user.first_name || "Друг"}, не упустите возможность!\n\n` +
-        (offerType === "tripwire"
-          ? `PRO-статус всего за $20 (вместо $40). 50% комиссия, CRM, 6 ИИ-приложений.\n\n`
-          : `Тарифы Rocket и Shuttle — неограниченный рост и бинарная система.\n\n`) +
-        `Активируйте сейчас: https://t.me/sethubble_biz_bot\n\n` +
-        `— Команда NeuroGen`,
+        `${name}, не упустите возможность!\n\n` +
+        (isTripwire
+          ? `PRO-статус всего за $20 (вместо $40).\n50% комиссия, CRM, 6 ИИ-приложений.`
+          : `Тарифы Rocket и Shuttle — неограниченный рост и бинарная система.`) +
+        `\n\nОткройте бота:\n${links.text}` +
+        `\n${suggestions.text}` +
+        `\n\n— Команда NeuroGen`,
       html:
-        `<p><b>${user.first_name || "Друг"}</b>, не упустите возможность!</p>` +
-        (offerType === "tripwire"
-          ? `<p>PRO-статус всего за <b>$20</b> (вместо $40). 50% комиссия, CRM, 6 ИИ-приложений.</p>`
+        `<p><b>${name}</b>, не упустите возможность!</p>` +
+        (isTripwire
+          ? `<p>PRO-статус всего за <b>$20</b> (вместо $40).</p><p>50% комиссия, CRM, 6 ИИ-приложений.</p>`
           : `<p>Тарифы <b>Rocket</b> и <b>Shuttle</b> — неограниченный рост и бинарная система.</p>`) +
-        `<p><a href="https://t.me/sethubble_biz_bot">Активировать →</a></p>` +
-        `<p><i>— Команда NeuroGen</i></p>`,
+        `<p style="margin: 16px 0">${links.html}</p>` +
+        `${suggestions.html}` +
+        `<p style="margin-top: 20px; color: #6b7280; font-size: 13px"><i>— Команда NeuroGen</i></p>`,
     };
   },
 
   /**
-   * Email verification — sent to verify email address
+   * Подтверждение покупки PRO
+   */
+  proPurchased(user) {
+    const name = getName(user);
+    const links = generateChannelLinks(user);
+
+    return {
+      subject: "✅ Поздравляем! PRO-статус активирован",
+      text:
+        `${name}, PRO-статус активирован!\n\n` +
+        `Что теперь доступно:\n` +
+        `• 50% комиссия с личных продаж\n` +
+        `• 5% до 5 уровней глубины\n` +
+        `• CRM-панель для управления\n` +
+        `• 6 ИИ-приложений (NeuroGen Apps)\n` +
+        `• Приоритетная поддержка\n\n` +
+        `Твои каналы:\n${links.text}\n\n` +
+        `Продолжай обучение — впереди настройка бота!\n\n` +
+        `— Команда NeuroGen`,
+      html:
+        `<p>🎉 <b>${name}</b>, PRO-статус активирован!</p>` +
+        `<p><b>Что теперь доступно:</b></p>` +
+        `<ul style="margin: 8px 0; padding-left: 20px">` +
+        `<li>50% комиссия с личных продаж</li>` +
+        `<li>5% до 5 уровней глубины</li>` +
+        `<li>CRM-панель для управления</li>` +
+        `<li>6 ИИ-приложений (NeuroGen Apps)</li>` +
+        `<li>Приоритетная поддержка</li>` +
+        `</ul>` +
+        `<p style="margin: 16px 0">${links.html}</p>` +
+        `<p>Продолжай обучение — впереди настройка бота!</p>` +
+        `<p style="color: #6b7280; font-size: 13px"><i>— Команда NeuroGen</i></p>`,
+    };
+  },
+
+  /**
+   * Email verification — код подтверждения
    */
   verifyEmail(code) {
     return {
@@ -393,29 +538,58 @@ export const templates = {
         `Введите этот код в боте или на сайте для подтверждения email.\n\n` +
         `— Команда NeuroGen`,
       html:
-        `<p>Ваш код подтверждения: <b style="font-size:24px">${code}</b></p>` +
-        `<p>Введите этот код в боте или на сайте для подтверждения email.</p>` +
-        `<p><i>— Команда NeuroGen</i></p>`,
+        `<p>Ваш код подтверждения:</p>` +
+        `<p style="font-size: 28px; font-weight: bold; letter-spacing: 4px; text-align: center; margin: 20px 0">${code}</p>` +
+        `<p>Введите этот код в боте или на сайте.</p>` +
+        `<p style="color: #6b7280; font-size: 13px"><i>— Команда NeuroGen</i></p>`,
     };
   },
 
   /**
-   * Channel setup complete — confirmation email
+   * Канал подключён — подтверждение
    */
   channelSetupComplete(user, channelName) {
+    const name = getName(user);
     const channelEmojis = { telegram: "📱", vk: "💬", web: "🌐", email: "📧" };
     const emoji = channelEmojis[channelName] || "✅";
+    const links = generateChannelLinks(user);
+    const suggestions = generateChannelSuggestions(user);
 
     return {
       subject: `${emoji} ${channelName} подключён! — NeuroGen`,
       text:
-        `${user.first_name || "Друг"}, канал "${channelName}" успешно настроен!\n\n` +
-        `Теперь вы можете получать лидов и управлять своей системой через ${channelName}.\n\n` +
-        `— Команда NeuroGen`,
+        `${name}, канал "${channelName}" успешно настроен!\n\n` +
+        `Теперь ты получаешь уведомления и управляешь системой через ${channelName}.\n\n` +
+        `Все твои каналы:\n${links.text}` +
+        `${suggestions.text}` +
+        `\n\n— Команда NeuroGen`,
       html:
         `<p>${emoji} <b>${channelName}</b> успешно подключён!</p>` +
-        `<p>Теперь вы можете получать лидов и управлять своей системой через ${channelName}.</p>` +
-        `<p><i>— Команда NeuroGen</i></p>`,
+        `<p>Теперь ты получаешь уведомления и управляешь системой через ${channelName}.</p>` +
+        `<p style="margin: 16px 0"><b>Все твои каналы:</b><br>${links.html}</p>` +
+        `${suggestions.html}` +
+        `<p style="margin-top: 20px; color: #6b7280; font-size: 13px"><i>— Команда NeuroGen</i></p>`,
+    };
+  },
+
+  /**
+   * Broadcast — массовая рассылка от админа
+   */
+  broadcast(user, message) {
+    const name = getName(user);
+    const links = generateChannelLinks(user);
+
+    return {
+      subject: "📢 Важное сообщение от команды NeuroGen",
+      text:
+        `${name},\n\n${message}\n\n` +
+        `Твои каналы:\n${links.text}\n\n` +
+        `— Команда NeuroGen`,
+      html:
+        `<p><b>${name}</b>,</p>` +
+        `<p>${message.replace(/\n/g, "<br>")}</p>` +
+        `<p style="margin: 16px 0">${links.html}</p>` +
+        `<p style="color: #6b7280; font-size: 13px"><i>— Команда NeuroGen</i></p>`,
     };
   },
 };
