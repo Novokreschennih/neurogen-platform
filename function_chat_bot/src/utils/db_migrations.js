@@ -6,6 +6,8 @@
  */
 
 import { log } from "./logger.js";
+import pkg from "ydb-sdk";
+const { TxControl } = pkg;
 
 const MIGRATIONS = [
   {
@@ -45,16 +47,23 @@ export async function runMigrations(driver) {
       // Колонки нет — применяем миграцию
       log.info(`[MIGRATION] Applying: ${migration.name}`);
       try {
+        // DDL (ALTER TABLE) должен выполняться БЕЗ транзакции
+        // В ydb-sdk v5.x TxControl.noTx() отключает транзакцию для DDL
         await tableClient.withSession(async (session) => {
-          // ALTER TABLE — это DDL, нужен executeSchemeQuery, а не executeQuery
-          await session.executeSchemeQuery(migration.alter);
+          await session.executeQuery(migration.alter, undefined, {
+            txControl: TxControl.noTx(),
+          });
         });
         applied.push(migration.name);
         log.info(`[MIGRATION] Applied: ${migration.name}`);
       } catch (alterError) {
         // Если ALTER TABLE падает с "column already exists" — считаем успехом
         const msg = alterError.message || String(alterError);
-        if (msg.includes("already exists") || msg.includes("ALREADY_EXISTS")) {
+        if (
+          msg.includes("already exists") ||
+          msg.includes("ALREADY_EXISTS") ||
+          msg.includes("ColumnAlreadyExists")
+        ) {
           log.info(`[MIGRATION] Column already exists: ${migration.name}`);
           applied.push(migration.name);
         } else {
