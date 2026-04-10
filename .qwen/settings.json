@@ -14,7 +14,9 @@
       "Bash(git *)",
       "Bash(node *)",
       "Bash(npm run *)",
-      "Bash(npm audit)"
+      "Bash(npm audit)",
+      "Bash(npm install *)",
+      "Bash(zip *)"
     ]
   },
   "$version": 3
