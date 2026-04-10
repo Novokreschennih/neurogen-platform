@@ -1,7 +1,7 @@
 /**
  * Telegram Handlers Setup
  * Регистрирует все обработчики Telegram бота (middleware, commands, actions, text, callback)
- * 
+ *
  * Зависимости (передаются через context):
  * - ydb: модуль работы с базой данных
  * - scenario: сценарий для Telegram (с callback_data кнопками)
@@ -153,7 +153,9 @@ export function setupTelegramHandlers(bot, context) {
     );
 
     const messageText =
-      typeof step.text === "function" ? step.text(links, user, info) : step.text;
+      typeof step.text === "function"
+        ? step.text(links, user, info)
+        : step.text;
     const keyboard = getKeyboard(step, links, user, info);
 
     log.info(`[renderStep] Preparing message`, {
@@ -259,8 +261,7 @@ export function setupTelegramHandlers(bot, context) {
   // MIDDLEWARE
   // ============================================================
   bot.use(async (ctx, next) => {
-    if (!ctx.from || !ctx.from.id || String(ctx.from.id).includes(":"))
-      return;
+    if (!ctx.from || !ctx.from.id || String(ctx.from.id).includes(":")) return;
 
     const updateId = ctx.update?.update_id;
     const updateType = ctx.update?.callback_query
@@ -309,6 +310,7 @@ export function setupTelegramHandlers(bot, context) {
 
     if (!ctx.dbUser) {
       let pid = process.env.MY_PARTNER_ID || "p_qdr";
+      let emailFromJoin = null;
 
       if (!isMainBot) {
         const info = await ydb.getBotInfo(token);
@@ -316,18 +318,68 @@ export function setupTelegramHandlers(bot, context) {
       }
 
       if (ctx.message?.text?.startsWith("/start ")) {
-        const ref = ctx.message.text.split(" ")[1];
-        if (ref && isMainBot) {
-          pid = ref;
-          await ydb.recordLinkClick(ref, userId, token);
+        const rawRef = ctx.message.text.split(" ")[1];
+        if (rawRef && isMainBot) {
+          // v5.0: Формат может быть "partnerId" или "partnerId|encodedEmail"
+          const parts = rawRef.split("|");
+          pid = parts[0];
+
+          // Декодируем email если передан
+          if (parts[1]) {
+            try {
+              const encoded = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+              // Добавляем padding для base64
+              const padded =
+                encoded + "=".repeat((4 - (encoded.length % 4)) % 4);
+              emailFromJoin = Buffer.from(padded, "base64").toString("utf8");
+            } catch (e) {
+              console.warn("[TG] Failed to decode email from start payload", e);
+            }
+          }
+
+          await ydb.recordLinkClick(pid, userId, token);
         }
+      }
+
+      // v5.0: Проверяем есть ли email-запись с таким же email → MERGE
+      let mergedEmailRecord = null;
+      if (emailFromJoin) {
+        const emailUserId = `email:${emailFromJoin}`;
+        mergedEmailRecord = await ydb.getUser(emailUserId);
       }
 
       ctx.dbUser = {
         user_id: userId,
         partner_id: pid,
         state: "START",
-        session: { tags: [] },
+        session: {
+          tags: [],
+          // v5.0: Если email пришёл с /join/ — сохраняем и связываем каналы
+          ...(emailFromJoin
+            ? {
+                email: emailFromJoin,
+                channels: {
+                  telegram: {
+                    enabled: true,
+                    configured: true,
+                    bot_username: ctx.me?.username,
+                    linked_at: Date.now(),
+                  },
+                },
+                channel_states: { telegram: "START" },
+              }
+            : {
+                channels: {
+                  telegram: {
+                    enabled: true,
+                    configured: true,
+                    bot_username: ctx.me?.username,
+                    linked_at: Date.now(),
+                  },
+                },
+                channel_states: { telegram: "START" },
+              }),
+        },
         bot_token: token,
         sh_user_id: "",
         sh_ref_tail: "",
@@ -339,6 +391,19 @@ export function setupTelegramHandlers(bot, context) {
         reminders_count: 0,
       };
 
+      // v5.0: Если нашли email-запись → помечаем как merged (чтобы CRON не дублировал)
+      if (mergedEmailRecord) {
+        mergedEmailRecord.session = mergedEmailRecord.session || {};
+        mergedEmailRecord.session.merged_to = userId;
+        mergedEmailRecord.session.merged_at = Date.now();
+        await ydb.saveUser(mergedEmailRecord);
+        console.info("[TG] Merged email record", {
+          email: emailFromJoin,
+          tgUserId: userId,
+          emailRecordId: mergedEmailRecord.user_id,
+        });
+      }
+
       const refParam = ctx.message?.text?.split(" ")?.[1];
       const source = refParam ? `(Реф: ${refParam})` : "(Органика)";
 
@@ -346,6 +411,9 @@ export function setupTelegramHandlers(bot, context) {
         `👥 <b>У ТЕБЯ НОВЫЙ ЛИД!</b>\n\n` +
         `👤 <b>Имя:</b> <a href="tg://user?id=${userId}">${ctx.from.first_name || "Без имени"}</a>\n` +
         `🆔 <b>ID:</b> <code>${userId}</code>\n` +
+        (emailFromJoin
+          ? `📧 <b>Email:</b> <code>${emailFromJoin}</code>\n`
+          : "") +
         `🏁 <b>Источник:</b> ${source}\n\n` +
         `<i>Пользователь запустил бота и начал путь по воронке. Можешь отслеживать его в CRM!</i>`;
 
@@ -390,8 +458,14 @@ export function setupTelegramHandlers(bot, context) {
   // РЕГИСТРИРУЕМ ACTIONS, COMMANDS, TEXT, CALLBACK
   // ============================================================
   const actionsContext = {
-    renderStep, getKeyboard,
-    ydb, scenario, log, MAIN_TOKEN, isMainBot, token,
+    renderStep,
+    getKeyboard,
+    ydb,
+    scenario,
+    log,
+    MAIN_TOKEN,
+    isMainBot,
+    token,
     AI_PRO_LIMIT: context.AI_PRO_LIMIT,
     AI_FREE_LIMIT: context.AI_FREE_LIMIT,
     askNeuroGenAI: context.askNeuroGenAI,

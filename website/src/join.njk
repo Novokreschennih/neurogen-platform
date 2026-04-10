@@ -863,7 +863,16 @@ body {
 
   // === МАРШРУТИЗАЦИЯ ПО КАНАЛАМ (v5.0) ===
 
-  // 1. Telegram — deep link с partner_id в start payload
+  // Кодирование email для передачи через URL (безопасное)
+  function encodeEmailForUrl(email) {
+    if (!email) return "";
+    return btoa(email).replace(/\+/g, "-").replace(/\//g, "_").replace(
+      /=/g,
+      "",
+    );
+  }
+
+  // 1. Telegram — deep link с partner_id + email в start payload
   btnTelegram.addEventListener("click", () => {
     // Сохраняем email для бота
     const email = emailInput.value.trim();
@@ -873,7 +882,11 @@ body {
         localStorage.setItem("neurogen_email_submitted", "true");
       } catch (e) {}
     }
-    window.location.href = `https://t.me/${refBot}?start=${partnerId}`;
+    // Передаём email через start payload: partnerId|encodedEmail
+    const startPayload = email
+      ? `${partnerId}|${encodeEmailForUrl(email)}`
+      : partnerId;
+    window.location.href = `https://t.me/${refBot}?start=${startPayload}`;
   });
 
   // 2. VK — сообщество SetHubble с partner_id

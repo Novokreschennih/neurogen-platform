@@ -55,7 +55,8 @@ export async function handleCronJobs(event, context) {
   }
 
   const shouldSendReminder = (user) => {
-    if (user.state.startsWith("REMINDER_") || !REMIND_MAP[user.state]) return false;
+    if (user.state.startsWith("REMINDER_") || !REMIND_MAP[user.state])
+      return false;
     const count = user.reminders_count || 0;
     if (count >= REMINDER_INTERVALS.length) return false;
 
@@ -77,10 +78,14 @@ export async function handleCronJobs(event, context) {
     if (!isDozhimStep && typeof rule === "string") return false;
 
     const anchorTime =
-      user.session?.last_dozhim_time || user.session?.last_activity || user.last_seen;
+      user.session?.last_dozhim_time ||
+      user.session?.last_activity ||
+      user.last_seen;
     const hoursInactive = (Date.now() - anchorTime) / (1000 * 60 * 60);
     const requiredDelay =
-      typeof rule === "object" && rule !== null ? rule.delay : DOZHIM_DELAY_HOURS;
+      typeof rule === "object" && rule !== null
+        ? rule.delay
+        : DOZHIM_DELAY_HOURS;
 
     if (hoursInactive < requiredDelay) return false;
     return true;
@@ -144,7 +149,11 @@ export async function handleCronJobs(event, context) {
     );
 
     // Если основной канал не сработал и есть email — пробуем email
-    if (!result.sent && user.session?.email && user.session?.channels?.email?.configured) {
+    if (
+      !result.sent &&
+      user.session?.email &&
+      user.session?.channels?.email?.configured
+    ) {
       log.info(`[CRON FALLBACK] Primary channel failed, trying email`, {
         userId: user.user_id,
         primaryChannel: result.channel,
@@ -154,11 +163,12 @@ export async function handleCronJobs(event, context) {
       if (isReminder) {
         result = await sendEmailReminder(user, stepKey);
       } else {
-        const offerType = stepKey.includes("Tripwire") || stepKey.includes("FollowUp_Tripwire")
-          ? "tripwire"
-          : stepKey.includes("Plan") || stepKey.includes("FollowUp_Plan")
-            ? "tariff"
-            : "tripwire";
+        const offerType =
+          stepKey.includes("Tripwire") || stepKey.includes("FollowUp_Tripwire")
+            ? "tripwire"
+            : stepKey.includes("Plan") || stepKey.includes("FollowUp_Plan")
+              ? "tariff"
+              : "tripwire";
         result = await sendEmailDozhim(user, stepKey, offerType);
       }
     }
@@ -191,7 +201,19 @@ export async function handleCronJobs(event, context) {
       }
 
       if (u.session?.is_migrating) {
-        log.debug(`[CRON] Skip user during token migration`, { userId: u.user_id });
+        log.debug(`[CRON] Skip user during token migration`, {
+          userId: u.user_id,
+        });
+        stats.skipped++;
+        continue;
+      }
+
+      // v5.0: Пропускаем merged email-записи (email уже привязан к Telegram-пользователю)
+      if (u.user_id?.startsWith("email:") && u.session?.merged_to) {
+        log.debug(`[CRON] Skip merged email record`, {
+          emailId: u.user_id,
+          mergedTo: u.session.merged_to,
+        });
         stats.skipped++;
         continue;
       }
@@ -229,7 +251,10 @@ export async function handleCronJobs(event, context) {
             u.session.is_banned = true;
             u.session.banned_at = Date.now();
             u.session.ban_reason = sendResult.error || "Bot blocked";
-            log.warn(`[CRON] User blocked`, { userId: u.user_id, channel: primaryChannel });
+            log.warn(`[CRON] User blocked`, {
+              userId: u.user_id,
+              channel: primaryChannel,
+            });
             stats.skipped++;
           } else {
             stats.failed++;
@@ -255,7 +280,9 @@ export async function handleCronJobs(event, context) {
 
         if (boughtTripwire && isTripwireDozhim) {
           sendResult = await sendWithFallback(
-            u, "Training_Pro_Main", MAX_RETRIES,
+            u,
+            "Training_Pro_Main",
+            MAX_RETRIES,
           );
           if (sendResult.sent) {
             u.state = "Training_Pro_Main";
@@ -285,7 +312,8 @@ export async function handleCronJobs(event, context) {
           stats.skipped++;
         } else {
           const rule = DOZHIM_MAP[u.state];
-          let next = typeof rule === "object" && rule !== null ? rule.next : rule;
+          let next =
+            typeof rule === "object" && rule !== null ? rule.next : rule;
 
           if (next) {
             if (next.includes("Tripwire") && u.bought_tripwire) {
