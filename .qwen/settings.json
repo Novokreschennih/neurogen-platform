@@ -18,7 +18,8 @@
       "Bash(npm install *)",
       "Bash(zip *)",
       "Bash(unzip *)",
-      "Bash(echo *)"
+      "Bash(echo *)",
+      "Bash(stat *)"
     ]
   },
   "$version": 3
