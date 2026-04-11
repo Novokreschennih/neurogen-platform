@@ -151,51 +151,8 @@ export async function handleVkWebhook(event, context) {
           return { statusCode: 200, body: "ok" };
         }
 
-        // Отвечаем VK что событие обработано (убирает спиннер)
-        try {
-          const eventData = JSON.stringify({
-            event_type: "show_snackbar",
-            text: "✅",
-          });
-          const answerBody = new URLSearchParams();
-          answerBody.append("access_token", process.env.VK_GROUP_TOKEN);
-          answerBody.append("v", "5.199");
-          answerBody.append("event_id", eventId);
-          answerBody.append("user_id", String(userId));
-          answerBody.append("peer_id", String(peerId));
-          answerBody.append(
-            "event_data",
-            JSON.stringify({ event_type: "show_snackbar", text: "✅" }),
-          );
-
-          log.info(`[VK] sendMessageEventAnswer POST`, {
-            eventId,
-            userId,
-            peerId,
-            bodyPreview: answerBody.toString().substring(0, 200),
-          });
-
-          const snackbarResp = await fetch(
-            "https://api.vk.com/method/messages.sendMessageEventAnswer",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/x-www-form-urlencoded" },
-              body: answerBody,
-            },
-          );
-          const snackbarData = await snackbarResp.json();
-          log.info(`[VK] sendMessageEventAnswer result`, {
-            status: snackbarResp.status,
-            response: snackbarData.response,
-            error: snackbarData.error || null,
-            rawResponse: JSON.stringify(snackbarData).substring(0, 300),
-          });
-        } catch (snackErr) {
-          log.warn(`[VK] sendMessageEventAnswer failed`, {
-            message: snackErr.message,
-            stack: snackErr.stack,
-          });
-        }
+        // VK сам уберёт спиннер когда получит 200 OK
+        // sendMessageEventAnswer НЕ нужен — спиннер исчезает при ответе сервера
 
         const vkUserId = `vk:${userId}`;
         log.info(`[VK] Fetching user`, { vkUserId });
