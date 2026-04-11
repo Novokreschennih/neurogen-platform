@@ -239,6 +239,100 @@ export async function handleVkWebhook(event, context) {
           },
           replyWithPhoto: async (photoUrl, opts = {}) => {
             const cap = (opts.caption || "").replace(/<[^>]*>?/gm, "");
+
+            try {
+              // Скачиваем фото
+              log.info(`[VK PHOTO EVENT] Downloading photo`, { url: photoUrl });
+              const photoResp = await fetch(photoUrl);
+              if (!photoResp.ok) throw new Error(`HTTP ${photoResp.status}`);
+              const photoBuffer = Buffer.from(await photoResp.arrayBuffer());
+
+              // Получаем URL для загрузки
+              const uploadResp = await fetch(
+                `https://api.vk.com/method/photos.getMessagesUploadServer?access_token=${process.env.VK_GROUP_TOKEN}&v=5.199`,
+              );
+              const uploadData = await uploadResp.json();
+              const uploadUrl = uploadData.response?.upload_url;
+              if (!uploadUrl) throw new Error("No upload URL");
+
+              // Загружаем фото через multipart/form-data
+              const formData = new FormData();
+              formData.append("photo", new Blob([photoBuffer]), "photo.jpg");
+
+              const upResp = await fetch(uploadUrl, {
+                method: "POST",
+                body: formData,
+              });
+              const uploadResult = await upResp.json();
+              log.info(`[VK PHOTO EVENT] Upload result`, {
+                status: upResp.status,
+                hasPhoto: !!uploadResult.photo,
+                hasServer: !!uploadResult.server,
+                hasHash: !!uploadResult.hash,
+              });
+
+              if (
+                uploadResult.photo &&
+                uploadResult.server &&
+                uploadResult.hash
+              ) {
+                // Сохраняем фото
+                const saveResp = await fetch(
+                  `https://api.vk.com/method/photos.saveMessagesPhoto?access_token=${process.env.VK_GROUP_TOKEN}&v=5.199&server=${uploadResult.server}&photo=${uploadResult.photo}&hash=${uploadResult.hash}`,
+                  { method: "POST" },
+                );
+                const saveData = await saveResp.json();
+                const savedPhoto = saveData.response?.[0];
+
+                if (savedPhoto?.id) {
+                  // Фото с подписью (БЕЗ кнопок)
+                  const sendParams = new URLSearchParams();
+                  sendParams.append("access_token", process.env.VK_GROUP_TOKEN);
+                  sendParams.append("v", "5.199");
+                  sendParams.append("user_id", String(userId));
+                  sendParams.append(
+                    "random_id",
+                    String(Math.floor(Math.random() * 2147483647)),
+                  );
+                  sendParams.append(
+                    "attachment",
+                    `photo${savedPhoto.owner_id}_${savedPhoto.id}`,
+                  );
+                  if (cap) sendParams.append("message", cap);
+                  await fetch("https://api.vk.com/method/messages.send", {
+                    method: "POST",
+                    body: sendParams,
+                  });
+                  log.info(`[VK PHOTO EVENT] Photo sent`, {
+                    photoId: savedPhoto.id,
+                  });
+
+                  // Кнопки ОТДЕЛЬНЫМ минимальным сообщением
+                  if (opts?.reply_markup?.inline_keyboard) {
+                    const kbParams = new URLSearchParams();
+                    kbParams.append("access_token", process.env.VK_GROUP_TOKEN);
+                    kbParams.append("v", "5.199");
+                    kbParams.append("user_id", String(userId));
+                    kbParams.append(
+                      "random_id",
+                      String(Math.floor(Math.random() * 2147483647)),
+                    );
+                    kbParams.append("message", "👇");
+                    const vkKb = translateKb(opts);
+                    if (vkKb) kbParams.append("keyboard", vkKb);
+                    await fetch("https://api.vk.com/method/messages.send", {
+                      method: "POST",
+                      body: kbParams,
+                    });
+                  }
+                  return;
+                }
+              }
+            } catch (e) {
+              log.warn("[VK PHOTO EVENT] Upload failed:", e.message);
+            }
+
+            // Фолбэк: просто текст
             await vkCtx.reply(`${cap}\n\n${photoUrl}`, opts);
           },
           editMessageText: async () => {},
@@ -597,9 +691,11 @@ export async function handleVkWebhook(event, context) {
 
             try {
               // Скачиваем фото
+              log.info(`[VK PHOTO] Downloading photo`, { url: photoUrl });
               const photoResp = await fetch(photoUrl);
               if (!photoResp.ok) throw new Error(`HTTP ${photoResp.status}`);
-              const photoBuffer = await photoResp.arrayBuffer();
+              const photoBuffer = Buffer.from(await photoResp.arrayBuffer());
+              log.info(`[VK PHOTO] Downloaded`, { size: photoBuffer.length });
 
               // Получаем URL для загрузки
               const uploadResp = await fetch(
@@ -607,27 +703,30 @@ export async function handleVkWebhook(event, context) {
               );
               const uploadData = await uploadResp.json();
               const uploadUrl = uploadData.response?.upload_url;
-              if (!uploadUrl) throw new Error("No upload URL");
+              if (!uploadUrl) {
+                log.warn(`[VK PHOTO] No upload URL from VK API`, {
+                  uploadData: JSON.stringify(uploadData).substring(0, 300),
+                });
+                throw new Error("No upload URL");
+              }
+              log.info(`[VK PHOTO] Got upload URL`);
 
-              // Загружаем фото
-              const boundary =
-                "----WebKitFormBoundary" + Math.random().toString(36).slice(2);
-              const uploadForm = new Uint8Array([
-                ...new TextEncoder().encode(
-                  `--${boundary}\r\nContent-Disposition: form-data; name="photo"; filename="photo.jpg"\r\nContent-Type: image/jpeg\r\n\r\n`,
-                ),
-                ...new Uint8Array(photoBuffer),
-                ...new TextEncoder().encode(`\r\n--${boundary}--\r\n`),
-              ]);
+              // Загружаем фото через multipart/form-data с использованием FormData
+              const formData = new FormData();
+              formData.append("photo", new Blob([photoBuffer]), "photo.jpg");
 
               const upResp = await fetch(uploadUrl, {
                 method: "POST",
-                headers: {
-                  "Content-Type": `multipart/form-data; boundary=${boundary}`,
-                },
-                body: uploadForm,
+                body: formData,
               });
               const uploadResult = await upResp.json();
+              log.info(`[VK PHOTO] Upload result`, {
+                status: upResp.status,
+                hasPhoto: !!uploadResult.photo,
+                hasServer: !!uploadResult.server,
+                hasHash: !!uploadResult.hash,
+                error: uploadResult.error || null,
+              });
 
               if (
                 uploadResult.photo &&
@@ -685,10 +784,14 @@ export async function handleVkWebhook(event, context) {
                 }
               }
             } catch (e) {
-              log.warn("[VK] Photo upload failed:", e.message);
+              log.warn("[VK] Photo upload failed:", e.message, {
+                photoUrl,
+                stack: e.stack,
+              });
             }
 
             // Фолбэк: просто текст (без фото)
+            log.info(`[VK PHOTO] Fallback to text`, { photoUrl });
             await vkCtx.reply(captionText, opts);
           },
           editMessageText: async (replyText, opts = {}) =>
