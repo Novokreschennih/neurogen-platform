@@ -13,8 +13,6 @@
  * - sendEmail: функция отправки email
  */
 
-import FormData from "form-data";
-
 export async function handleVkWebhook(event, context) {
   const {
     ydb,
@@ -257,20 +255,20 @@ export async function handleVkWebhook(event, context) {
               const uploadUrl = uploadData.response?.upload_url;
               if (!uploadUrl) throw new Error("No upload URL");
 
-              // Загружаем фото через multipart/form-data
-              const form = new FormData();
-              form.append("photo", photoBuffer, {
-                filename: "photo.jpg",
-                contentType: "image/jpeg",
-              });
-
-              const formBuffer = form.getBuffer();
-              const formHeaders = form.getHeaders();
-              formHeaders["Content-Length"] = formBuffer.length;
+              // Загружаем фото через multipart/form-data (ручное формирование без form-data пакета)
+              const boundary = `----VKBoundary${Math.random().toString(36).slice(2)}`;
+              const header = `--${boundary}\r\nContent-Disposition: form-data; name="photo"; filename="photo.jpg"\r\nContent-Type: image/jpeg\r\n\r\n`;
+              const footer = `\r\n--${boundary}--\r\n`;
+              const formBuffer = Buffer.concat([
+                Buffer.from(header),
+                photoBuffer,
+                Buffer.from(footer),
+              ]);
+              const contentType = `multipart/form-data; boundary=${boundary}`;
 
               const upResp = await fetch(uploadUrl, {
                 method: "POST",
-                headers: formHeaders,
+                headers: { "Content-Type": contentType },
                 body: formBuffer,
               });
               const uploadResult = await upResp.json();
@@ -740,20 +738,20 @@ export async function handleVkWebhook(event, context) {
               }
               log.info(`[VK PHOTO] Got upload URL`);
 
-              // Загружаем фото через multipart/form-data
-              const form = new FormData();
-              form.append("photo", photoBuffer, {
-                filename: "photo.jpg",
-                contentType: "image/jpeg",
-              });
-
-              const formBuffer = form.getBuffer();
-              const formHeaders = form.getHeaders();
-              formHeaders["Content-Length"] = formBuffer.length;
+              // Загружаем фото через multipart/form-data (ручное формирование без form-data пакета)
+              const boundary = `----VKBoundary${Math.random().toString(36).slice(2)}`;
+              const header = `--${boundary}\r\nContent-Disposition: form-data; name="photo"; filename="photo.jpg"\r\nContent-Type: image/jpeg\r\n\r\n`;
+              const footer = `\r\n--${boundary}--\r\n`;
+              const formBuffer = Buffer.concat([
+                Buffer.from(header),
+                photoBuffer,
+                Buffer.from(footer),
+              ]);
+              const contentType = `multipart/form-data; boundary=${boundary}`;
 
               const upResp = await fetch(uploadUrl, {
                 method: "POST",
-                headers: formHeaders,
+                headers: { "Content-Type": contentType },
                 body: formBuffer,
               });
               const uploadResult = await upResp.json();
