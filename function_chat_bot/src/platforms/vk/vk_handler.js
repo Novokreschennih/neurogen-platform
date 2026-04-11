@@ -178,6 +178,38 @@ export async function handleVkWebhook(event, context) {
           return { statusCode: 200, body: "ok" };
         }
 
+        const translateKb = (tgOpts) => {
+          if (!tgOpts?.reply_markup?.inline_keyboard) return null;
+          const vkBtns = tgOpts.reply_markup.inline_keyboard.map((row) =>
+            row
+              .map((btn) => {
+                const cbData = btn.callback_data || btn.callback;
+                if (btn.url)
+                  return {
+                    action: {
+                      type: "open_link",
+                      link: btn.url,
+                      label: btn.text.substring(0, 40),
+                    },
+                  };
+                else if (cbData)
+                  return {
+                    action: {
+                      type: "callback",
+                      payload: JSON.stringify({
+                        callback_data: cbData,
+                      }),
+                      label: btn.text.substring(0, 40),
+                    },
+                    color: "positive",
+                  };
+                return null;
+              })
+              .filter(Boolean),
+          );
+          return JSON.stringify({ inline: true, buttons: vkBtns });
+        };
+
         const vkCtx = {
           isVk: true,
           from: { id: userId },
@@ -199,37 +231,6 @@ export async function handleVkWebhook(event, context) {
               String(Math.floor(Math.random() * 2147483647)),
             );
             params.append("message", msg);
-            const translateKb = (tgOpts) => {
-              if (!tgOpts?.reply_markup?.inline_keyboard) return null;
-              const vkBtns = tgOpts.reply_markup.inline_keyboard.map((row) =>
-                row
-                  .map((btn) => {
-                    const cbData = btn.callback_data || btn.callback;
-                    if (btn.url)
-                      return {
-                        action: {
-                          type: "open_link",
-                          link: btn.url,
-                          label: btn.text.substring(0, 40),
-                        },
-                      };
-                    else if (cbData)
-                      return {
-                        action: {
-                          type: "callback",
-                          payload: JSON.stringify({
-                            callback_data: cbData,
-                          }),
-                          label: btn.text.substring(0, 40),
-                        },
-                        color: "positive",
-                      };
-                    return null;
-                  })
-                  .filter(Boolean),
-              );
-              return JSON.stringify({ inline: true, buttons: vkBtns });
-            };
             const kb = translateKb(opts);
             if (kb) params.append("keyboard", kb);
             await fetch("https://api.vk.com/method/messages.send", {
