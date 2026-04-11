@@ -13,6 +13,8 @@
  * - sendEmail: функция отправки email
  */
 
+import FormData from "form-data";
+
 export async function handleVkWebhook(event, context) {
   const {
     ydb,
@@ -256,12 +258,16 @@ export async function handleVkWebhook(event, context) {
               if (!uploadUrl) throw new Error("No upload URL");
 
               // Загружаем фото через multipart/form-data
-              const formData = new FormData();
-              formData.append("photo", new Blob([photoBuffer]), "photo.jpg");
+              const form = new FormData();
+              form.append("photo", photoBuffer, {
+                filename: "photo.jpg",
+                contentType: "image/jpeg",
+              });
 
               const upResp = await fetch(uploadUrl, {
                 method: "POST",
-                body: formData,
+                headers: form.getHeaders(),
+                body: form,
               });
               const uploadResult = await upResp.json();
               log.info(`[VK PHOTO EVENT] Upload result`, {
@@ -285,7 +291,11 @@ export async function handleVkWebhook(event, context) {
                 const savedPhoto = saveData.response?.[0];
 
                 if (savedPhoto?.id) {
-                  // ОДНО сообщение: фото + caption + keyboard
+                  // Формат: photo{owner_id}_{media_id}_{access_key}
+                  const ak = savedPhoto.access_key
+                    ? `_${savedPhoto.access_key}`
+                    : "";
+                  const attachment = `photo${savedPhoto.owner_id}_${savedPhoto.id}${ak}`;
                   const sendParams = new URLSearchParams();
                   sendParams.append("access_token", process.env.VK_GROUP_TOKEN);
                   sendParams.append("v", "5.199");
@@ -294,10 +304,7 @@ export async function handleVkWebhook(event, context) {
                     "random_id",
                     String(Math.floor(Math.random() * 2147483647)),
                   );
-                  sendParams.append(
-                    "attachment",
-                    `photo${savedPhoto.owner_id}_${savedPhoto.id}`,
-                  );
+                  sendParams.append("attachment", attachment);
                   if (cap) sendParams.append("message", cap);
 
                   // VK поддерживает attachment + keyboard в одном сообщении!
@@ -305,6 +312,12 @@ export async function handleVkWebhook(event, context) {
                     const vkKb = translateKb(opts);
                     if (vkKb) sendParams.append("keyboard", vkKb);
                   }
+
+                  log.info(`[VK PHOTO EVENT] Sending photo`, {
+                    attachment,
+                    hasAccessKey: !!savedPhoto.access_key,
+                    hasKeyboard: !!opts?.reply_markup?.inline_keyboard,
+                  });
 
                   const sendResp = await fetch(
                     "https://api.vk.com/method/messages.send",
@@ -708,13 +721,17 @@ export async function handleVkWebhook(event, context) {
               }
               log.info(`[VK PHOTO] Got upload URL`);
 
-              // Загружаем фото через multipart/form-data с использованием FormData
-              const formData = new FormData();
-              formData.append("photo", new Blob([photoBuffer]), "photo.jpg");
+              // Загружаем фото через multipart/form-data
+              const form = new FormData();
+              form.append("photo", photoBuffer, {
+                filename: "photo.jpg",
+                contentType: "image/jpeg",
+              });
 
               const upResp = await fetch(uploadUrl, {
                 method: "POST",
-                body: formData,
+                headers: form.getHeaders(),
+                body: form,
               });
               const uploadResult = await upResp.json();
               log.info(`[VK PHOTO] Upload result`, {
@@ -739,8 +756,11 @@ export async function handleVkWebhook(event, context) {
                 const savedPhoto = saveData.response?.[0];
 
                 if (savedPhoto?.id) {
-                  // ОДНО сообщение: фото attachment + caption + keyboard
-                  const attachment = `photo${savedPhoto.owner_id}_${savedPhoto.id}`;
+                  // Формат: photo{owner_id}_{media_id}_{access_key}
+                  const ak = savedPhoto.access_key
+                    ? `_${savedPhoto.access_key}`
+                    : "";
+                  const attachment = `photo${savedPhoto.owner_id}_${savedPhoto.id}${ak}`;
                   const sendParams = new URLSearchParams();
                   sendParams.append("access_token", process.env.VK_GROUP_TOKEN);
                   sendParams.append("v", "5.199");
