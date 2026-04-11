@@ -19,7 +19,8 @@
       "Bash(zip *)",
       "Bash(unzip *)",
       "Bash(echo *)",
-      "Bash(stat *)"
+      "Bash(stat *)",
+      "Bash(grep *)"
     ]
   },
   "$version": 3
