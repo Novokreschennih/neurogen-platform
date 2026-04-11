@@ -151,8 +151,18 @@ export async function handleVkWebhook(event, context) {
           return { statusCode: 200, body: "ok" };
         }
 
-        // VK сам уберёт спиннер когда получит 200 OK
-        // sendMessageEventAnswer НЕ нужен — спиннер исчезает при ответе сервера
+        // Убираем спиннер НЕМЕДЛЕННО (fire-and-forget, не ждём ответа)
+        // Без event_data — просто сигнал что кнопка обработана
+        const stopBody = new URLSearchParams();
+        stopBody.append("access_token", process.env.VK_GROUP_TOKEN);
+        stopBody.append("v", "5.199");
+        stopBody.append("event_id", eventId);
+        stopBody.append("user_id", String(userId));
+        stopBody.append("peer_id", String(peerId));
+        fetch("https://api.vk.com/method/messages.sendMessageEventAnswer", {
+          method: "POST",
+          body: stopBody,
+        }).catch((e) => log.warn(`[VK] spinner stop failed`, e.message));
 
         const vkUserId = `vk:${userId}`;
         log.info(`[VK] Fetching user`, { vkUserId });
