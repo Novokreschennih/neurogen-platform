@@ -99,12 +99,15 @@ export async function handleVkWebhook(event, context) {
         const userId =
           payload.user_id || payload.object?.user_id || payload.group_id;
         const eventId = payload.event_id || payload.object?.event_id;
+        const peerId = payload.object?.peer_id || userId; // peer_id из object
 
         log.info(`[VK] message_event received`, {
           payloadUserId: payload.user_id,
           objectUserId: payload.object?.user_id,
+          objectPeerId: payload.object?.peer_id,
           groupId: payload.group_id,
           resolvedUserId: userId,
+          resolvedPeerId: peerId,
           eventId,
           objectType: typeof payload.object,
           objectKeys: payload.object ? Object.keys(payload.object) : null,
@@ -160,12 +163,14 @@ export async function handleVkWebhook(event, context) {
             `&v=5.199` +
             `&event_id=${encodeURIComponent(eventId)}` +
             `&user_id=${userId}` +
+            `&peer_id=${peerId}` +
             `&event_data=${encodeURIComponent(eventData)}`;
 
           log.info(`[VK] sendMessageEventAnswer request`, {
             eventId,
             userId,
-            urlPreview: answerUrl.substring(0, 200),
+            peerId,
+            urlPreview: answerUrl.substring(0, 250),
           });
 
           const snackbarResp = await fetch(answerUrl, { method: "POST" });
