@@ -155,6 +155,7 @@ export async function handleVkWebhook(event, context) {
           answerBody.append("v", "5.199");
           answerBody.append("event_id", String(eventId));
           answerBody.append("peer_id", String(userId));
+          answerBody.append("user_id", String(userId));
           const eventData = JSON.stringify({
             event_type: "show_snackbar",
             text: "✅",
