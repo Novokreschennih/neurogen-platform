@@ -148,11 +148,20 @@ export async function handleVkWebhook(event, context) {
           return { statusCode: 200, body: "ok" };
         }
 
-        // Отвечаем VK что событие обработано (убирает кнопку)
+        // Отвечаем VK что событие обработано (убирает спиннер)
         try {
+          const answerBody = new URLSearchParams();
+          answerBody.append("access_token", process.env.VK_GROUP_TOKEN);
+          answerBody.append("v", "5.199");
+          answerBody.append("event_id", String(eventId));
+          answerBody.append("user_id", String(userId));
+          answerBody.append(
+            "event_data",
+            JSON.stringify({ event_type: "show_snackbar", text: "✅" }),
+          );
           const snackbarResp = await fetch(
-            `https://api.vk.com/method/messages.sendMessageEventAnswer?access_token=${process.env.VK_GROUP_TOKEN}&v=5.199&event_id=${eventId}&user_id=${userId}&event_data=${encodeURIComponent(JSON.stringify({ event_type: "show_snackbar", text: "✅" }))}`,
-            { method: "POST" },
+            "https://api.vk.com/method/messages.sendMessageEventAnswer",
+            { method: "POST", body: answerBody },
           );
           const snackbarData = await snackbarResp.json();
           log.info(`[VK] sendMessageEventAnswer response`, {
