@@ -150,28 +150,25 @@ export async function handleVkWebhook(event, context) {
 
         // Отвечаем VK что событие обработано (убирает спиннер)
         try {
-          const answerBody = new URLSearchParams();
-          answerBody.append("access_token", process.env.VK_GROUP_TOKEN);
-          answerBody.append("v", "5.199");
-          answerBody.append("event_id", String(eventId));
-          answerBody.append("peer_id", String(userId));
-          answerBody.append("user_id", String(userId));
           const eventData = JSON.stringify({
             event_type: "show_snackbar",
             text: "✅",
           });
-          answerBody.append("event_data", eventData);
+          const answerUrl =
+            `https://api.vk.com/method/messages.sendMessageEventAnswer` +
+            `?access_token=${process.env.VK_GROUP_TOKEN}` +
+            `&v=5.199` +
+            `&event_id=${encodeURIComponent(eventId)}` +
+            `&user_id=${userId}` +
+            `&event_data=${encodeURIComponent(eventData)}`;
 
           log.info(`[VK] sendMessageEventAnswer request`, {
             eventId,
-            peerId: userId,
-            eventData,
+            userId,
+            urlPreview: answerUrl.substring(0, 200),
           });
 
-          const snackbarResp = await fetch(
-            "https://api.vk.com/method/messages.sendMessageEventAnswer",
-            { method: "POST", body: answerBody },
-          );
+          const snackbarResp = await fetch(answerUrl, { method: "POST" });
           const snackbarData = await snackbarResp.json();
           log.info(`[VK] sendMessageEventAnswer result`, {
             status: snackbarResp.status,
