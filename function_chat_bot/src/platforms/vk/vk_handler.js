@@ -161,7 +161,7 @@ export async function handleVkWebhook(event, context) {
             `https://api.vk.com/method/messages.sendMessageEventAnswer` +
             `?access_token=${process.env.VK_GROUP_TOKEN}` +
             `&v=5.199` +
-            `&event_id=${encodeURIComponent(eventId)}` +
+            `&event_id=${eventId}` +
             `&user_id=${userId}` +
             `&peer_id=${peerId}` +
             `&event_data=${encodeURIComponent(eventData)}`;
@@ -173,7 +173,7 @@ export async function handleVkWebhook(event, context) {
             urlPreview: answerUrl.substring(0, 250),
           });
 
-          const snackbarResp = await fetch(answerUrl, { method: "POST" });
+          const snackbarResp = await fetch(answerUrl, { method: "GET" });
           const snackbarData = await snackbarResp.json();
           log.info(`[VK] sendMessageEventAnswer result`, {
             status: snackbarResp.status,
