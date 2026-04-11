@@ -264,10 +264,14 @@ export async function handleVkWebhook(event, context) {
                 contentType: "image/jpeg",
               });
 
+              const formBuffer = form.getBuffer();
+              const formHeaders = form.getHeaders();
+              formHeaders["Content-Length"] = formBuffer.length;
+
               const upResp = await fetch(uploadUrl, {
                 method: "POST",
-                headers: form.getHeaders(),
-                body: form,
+                headers: formHeaders,
+                body: formBuffer,
               });
               const uploadResult = await upResp.json();
               log.info(`[VK PHOTO EVENT] Upload result`, {
@@ -275,6 +279,7 @@ export async function handleVkWebhook(event, context) {
                 hasPhoto: !!uploadResult.photo,
                 hasServer: !!uploadResult.server,
                 hasHash: !!uploadResult.hash,
+                error: uploadResult.error || null,
               });
 
               if (
@@ -288,14 +293,28 @@ export async function handleVkWebhook(event, context) {
                   { method: "POST" },
                 );
                 const saveData = await saveResp.json();
+                log.info(`[VK PHOTO EVENT] saveMessagesPhoto result`, {
+                  hasResponse: !!saveData.response,
+                  responseLength: Array.isArray(saveData.response)
+                    ? saveData.response.length
+                    : 0,
+                  rawResponse: JSON.stringify(saveData.response).substring(
+                    0,
+                    300,
+                  ),
+                  error: saveData.error || null,
+                });
                 const savedPhoto = saveData.response?.[0];
+                log.info(`[VK PHOTO EVENT] savedPhoto check`, {
+                  hasId: !!savedPhoto?.id,
+                  id: savedPhoto?.id,
+                  ownerId: savedPhoto?.owner_id,
+                  accessKey: savedPhoto?.access_key,
+                });
 
                 if (savedPhoto?.id) {
-                  // Формат: photo{owner_id}_{media_id}_{access_key}
-                  const ak = savedPhoto.access_key
-                    ? `_${savedPhoto.access_key}`
-                    : "";
-                  const attachment = `photo${savedPhoto.owner_id}_${savedPhoto.id}${ak}`;
+                  // Формат: photo{owner_id}_{media_id} (access_key не нужен для своих фото)
+                  const attachment = `photo${savedPhoto.owner_id}_${savedPhoto.id}`;
                   const sendParams = new URLSearchParams();
                   sendParams.append("access_token", process.env.VK_GROUP_TOKEN);
                   sendParams.append("v", "5.199");
@@ -728,10 +747,14 @@ export async function handleVkWebhook(event, context) {
                 contentType: "image/jpeg",
               });
 
+              const formBuffer = form.getBuffer();
+              const formHeaders = form.getHeaders();
+              formHeaders["Content-Length"] = formBuffer.length;
+
               const upResp = await fetch(uploadUrl, {
                 method: "POST",
-                headers: form.getHeaders(),
-                body: form,
+                headers: formHeaders,
+                body: formBuffer,
               });
               const uploadResult = await upResp.json();
               log.info(`[VK PHOTO] Upload result`, {
@@ -756,11 +779,8 @@ export async function handleVkWebhook(event, context) {
                 const savedPhoto = saveData.response?.[0];
 
                 if (savedPhoto?.id) {
-                  // Формат: photo{owner_id}_{media_id}_{access_key}
-                  const ak = savedPhoto.access_key
-                    ? `_${savedPhoto.access_key}`
-                    : "";
-                  const attachment = `photo${savedPhoto.owner_id}_${savedPhoto.id}${ak}`;
+                  // Формат: photo{owner_id}_{media_id} (access_key не нужен для своих фото)
+                  const attachment = `photo${savedPhoto.owner_id}_${savedPhoto.id}`;
                   const sendParams = new URLSearchParams();
                   sendParams.append("access_token", process.env.VK_GROUP_TOKEN);
                   sendParams.append("v", "5.199");
