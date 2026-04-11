@@ -155,21 +155,34 @@ export async function handleVkWebhook(event, context) {
           answerBody.append("v", "5.199");
           answerBody.append("event_id", String(eventId));
           answerBody.append("user_id", String(userId));
-          answerBody.append(
-            "event_data",
-            JSON.stringify({ event_type: "show_snackbar", text: "✅" }),
-          );
+          const eventData = JSON.stringify({
+            event_type: "show_snackbar",
+            text: "✅",
+          });
+          answerBody.append("event_data", eventData);
+
+          log.info(`[VK] sendMessageEventAnswer request`, {
+            eventId,
+            userId,
+            eventData,
+          });
+
           const snackbarResp = await fetch(
             "https://api.vk.com/method/messages.sendMessageEventAnswer",
             { method: "POST", body: answerBody },
           );
           const snackbarData = await snackbarResp.json();
-          log.info(`[VK] sendMessageEventAnswer response`, {
-            ok: snackbarData.response === 1,
+          log.info(`[VK] sendMessageEventAnswer result`, {
+            status: snackbarResp.status,
+            response: snackbarData.response,
             error: snackbarData.error || null,
+            rawResponse: JSON.stringify(snackbarData).substring(0, 300),
           });
         } catch (snackErr) {
-          log.warn(`[VK] sendMessageEventAnswer failed`, snackErr.message);
+          log.warn(`[VK] sendMessageEventAnswer failed`, {
+            message: snackErr.message,
+            stack: snackErr.stack,
+          });
         }
 
         const vkUserId = `vk:${userId}`;
@@ -210,7 +223,7 @@ export async function handleVkWebhook(event, context) {
                       }),
                       label: btn.text.substring(0, 40),
                     },
-                    color: "positive",
+                    color: "default",
                   };
                 return null;
               })
@@ -673,7 +686,7 @@ export async function handleVkWebhook(event, context) {
                         }),
                         label: btn.text.substring(0, 40),
                       },
-                      color: "positive",
+                      color: "default",
                     };
                   return null;
                 })
