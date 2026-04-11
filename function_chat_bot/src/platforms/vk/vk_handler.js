@@ -285,7 +285,7 @@ export async function handleVkWebhook(event, context) {
                 const savedPhoto = saveData.response?.[0];
 
                 if (savedPhoto?.id) {
-                  // Фото с подписью (БЕЗ кнопок)
+                  // ОДНО сообщение: фото + caption + keyboard
                   const sendParams = new URLSearchParams();
                   sendParams.append("access_token", process.env.VK_GROUP_TOKEN);
                   sendParams.append("v", "5.199");
@@ -299,32 +299,29 @@ export async function handleVkWebhook(event, context) {
                     `photo${savedPhoto.owner_id}_${savedPhoto.id}`,
                   );
                   if (cap) sendParams.append("message", cap);
-                  await fetch("https://api.vk.com/method/messages.send", {
-                    method: "POST",
-                    body: sendParams,
-                  });
-                  log.info(`[VK PHOTO EVENT] Photo sent`, {
-                    photoId: savedPhoto.id,
-                  });
 
-                  // Кнопки ОТДЕЛЬНЫМ минимальным сообщением
+                  // VK поддерживает attachment + keyboard в одном сообщении!
                   if (opts?.reply_markup?.inline_keyboard) {
-                    const kbParams = new URLSearchParams();
-                    kbParams.append("access_token", process.env.VK_GROUP_TOKEN);
-                    kbParams.append("v", "5.199");
-                    kbParams.append("user_id", String(userId));
-                    kbParams.append(
-                      "random_id",
-                      String(Math.floor(Math.random() * 2147483647)),
-                    );
-                    kbParams.append("message", "👇");
                     const vkKb = translateKb(opts);
-                    if (vkKb) kbParams.append("keyboard", vkKb);
-                    await fetch("https://api.vk.com/method/messages.send", {
-                      method: "POST",
-                      body: kbParams,
-                    });
+                    if (vkKb) sendParams.append("keyboard", vkKb);
                   }
+
+                  const sendResp = await fetch(
+                    "https://api.vk.com/method/messages.send",
+                    { method: "POST", body: sendParams },
+                  );
+                  const sendResult = await sendResp.json();
+                  if (sendResult.error) {
+                    log.warn(`[VK PHOTO EVENT] Send error`, sendResult.error);
+                    throw new Error(
+                      `VK send error: ${sendResult.error.error_msg}`,
+                    );
+                  }
+
+                  log.info(`[VK PHOTO EVENT] Photo + keyboard sent`, {
+                    photoId: savedPhoto.id,
+                    msgId: sendResult.response,
+                  });
                   return;
                 }
               }
@@ -742,7 +739,8 @@ export async function handleVkWebhook(event, context) {
                 const savedPhoto = saveData.response?.[0];
 
                 if (savedPhoto?.id) {
-                  // Фото с подписью (БЕЗ кнопок)
+                  // ОДНО сообщение: фото attachment + caption + keyboard
+                  const attachment = `photo${savedPhoto.owner_id}_${savedPhoto.id}`;
                   const sendParams = new URLSearchParams();
                   sendParams.append("access_token", process.env.VK_GROUP_TOKEN);
                   sendParams.append("v", "5.199");
@@ -751,35 +749,36 @@ export async function handleVkWebhook(event, context) {
                     "random_id",
                     String(Math.floor(Math.random() * 2147483647)),
                   );
-                  sendParams.append(
-                    "attachment",
-                    `photo${savedPhoto.owner_id}_${savedPhoto.id}`,
-                  );
+                  sendParams.append("attachment", attachment);
                   if (captionText) sendParams.append("message", captionText);
-                  await fetch("https://api.vk.com/method/messages.send", {
-                    method: "POST",
-                    body: sendParams,
-                  });
-                  log.info(`[VK] Photo sent`, { photoId: savedPhoto.id });
 
-                  // Кнопки ОТДЕЛЬНЫМ минимальным сообщением (без дублирования текста!)
+                  // Keyboard в том же сообщении
                   if (opts?.reply_markup?.inline_keyboard) {
-                    const kbParams = new URLSearchParams();
-                    kbParams.append("access_token", process.env.VK_GROUP_TOKEN);
-                    kbParams.append("v", "5.199");
-                    kbParams.append("user_id", String(message.from_id));
-                    kbParams.append(
-                      "random_id",
-                      String(Math.floor(Math.random() * 2147483647)),
-                    );
-                    kbParams.append("message", "👇");
                     const vkKb = translateKeyboard(opts);
-                    if (vkKb) kbParams.append("keyboard", vkKb);
-                    await fetch("https://api.vk.com/method/messages.send", {
-                      method: "POST",
-                      body: kbParams,
-                    });
+                    if (vkKb) sendParams.append("keyboard", vkKb);
                   }
+
+                  log.info(`[VK PHOTO] Sending photo + caption + keyboard`, {
+                    attachment,
+                    captionLength: captionText?.length || 0,
+                    hasKeyboard: !!opts?.reply_markup?.inline_keyboard,
+                  });
+
+                  const sendResp = await fetch(
+                    "https://api.vk.com/method/messages.send",
+                    { method: "POST", body: sendParams },
+                  );
+                  const sendResult = await sendResp.json();
+                  if (sendResult.error) {
+                    log.warn(`[VK PHOTO] Send error`, sendResult.error);
+                    throw new Error(
+                      `VK send error: ${sendResult.error.error_msg}`,
+                    );
+                  }
+
+                  log.info(`[VK] Photo + keyboard sent`, {
+                    msgId: sendResult.response,
+                  });
                   return;
                 }
               }
