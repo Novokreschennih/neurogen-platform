@@ -563,8 +563,13 @@ export async function handleVkWebhook(event, context) {
           let partnerId = process.env.MY_PARTNER_ID || "p_qdr";
 
           // v5.0: Поддержка partner_id из разных источников
+          // 0. Из VK deep link (message.ref при переходе по ссылке vk.me/club?ref=xxx)
+          if (message.ref) {
+            partnerId = message.ref;
+            log.info(`[VK REF] Caught referral from deep link:`, { partnerId });
+          }
           // 1. Из message.payload (JSON с command или ref)
-          if (message.payload) {
+          else if (message.payload) {
             try {
               const parsedPayload = JSON.parse(message.payload);
               if (parsedPayload.command) {

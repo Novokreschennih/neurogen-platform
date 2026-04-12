@@ -34,6 +34,12 @@ export function getLinks(
   // Берем цифровой ID владельца бота (пригласителя), а если его нет — резервный ID из .env
   const partnerId = sh_user_id || process.env.MY_SH_USER_ID || "1123";
 
+  // VK deep link для центрального бота
+  const vkGroupId = process.env.VK_CENTRAL_GROUP || "";
+  const vkBotLink = sh_ref_tail
+    ? `https://vk.me/club${vkGroupId}?ref=${sh_ref_tail}`
+    : `https://vk.me/club${vkGroupId}`;
+
   return {
     reg: regUrl,
     reg_free: `https://sethubble.com/ru/?s=${PRODUCT_ID_FREE}&afid=${partnerId}`,
@@ -51,5 +57,6 @@ export function getLinks(
       process.env.DISK_LINK || "https://disk.yandex.ru/d/auId7HugR0sdzA",
     free_disk:
       process.env.FREE_DISK_LINK || "https://disk.yandex.ru/d/a2Gsuwnu32eJKg",
+    vk_bot: vkBotLink,
   };
 }
