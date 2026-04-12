@@ -332,7 +332,7 @@ export async function handleVkWebhook(event, context) {
           return { statusCode: 200, body: "ok" };
         }
 
-        const translateKb = (tgOpts) => {
+        const translateKb = (tgOpts, addMainMenu = true) => {
           if (!tgOpts?.reply_markup?.inline_keyboard) return null;
           const vkBtns = tgOpts.reply_markup.inline_keyboard.map((row) =>
             row
@@ -343,6 +343,14 @@ export async function handleVkWebhook(event, context) {
                     action: {
                       type: "open_link",
                       link: btn.url,
+                      label: btn.text.substring(0, 40),
+                    },
+                  };
+                else if (btn.web_app?.url)
+                  return {
+                    action: {
+                      type: "open_link",
+                      link: btn.web_app.url,
                       label: btn.text.substring(0, 40),
                     },
                   };
@@ -361,6 +369,19 @@ export async function handleVkWebhook(event, context) {
               })
               .filter(Boolean),
           );
+          // Добавляем кнопку "Главное меню" в конец
+          if (addMainMenu) {
+            vkBtns.push([
+              {
+                action: {
+                  type: "callback",
+                  payload: JSON.stringify({ callback_data: "VK_MAIN_MENU" }),
+                  label: "🏠 ГЛАВНОЕ МЕНЮ",
+                },
+                color: "secondary",
+              },
+            ]);
+          }
           return JSON.stringify({ inline: true, buttons: vkBtns });
         };
 
@@ -797,7 +818,7 @@ export async function handleVkWebhook(event, context) {
           });
         }
 
-        const translateKeyboard = (tgOpts) => {
+        const translateKeyboard = (tgOpts, addMainMenu = true) => {
           if (
             !tgOpts ||
             !tgOpts.reply_markup ||
@@ -817,6 +838,14 @@ export async function handleVkWebhook(event, context) {
                         label: btn.text.substring(0, 40),
                       },
                     };
+                  else if (btn.web_app?.url)
+                    return {
+                      action: {
+                        type: "open_link",
+                        link: btn.web_app.url,
+                        label: btn.text.substring(0, 40),
+                      },
+                    };
                   else if (cbData)
                     return {
                       action: {
@@ -833,6 +862,19 @@ export async function handleVkWebhook(event, context) {
                 .filter(Boolean);
             },
           );
+          // Добавляем кнопку "Главное меню" в конец
+          if (addMainMenu) {
+            vkButtonsArr.push([
+              {
+                action: {
+                  type: "callback",
+                  payload: JSON.stringify({ callback_data: "VK_MAIN_MENU" }),
+                  label: "🏠 ГЛАВНОЕ МЕНЮ",
+                },
+                color: "secondary",
+              },
+            ]);
+          }
           return JSON.stringify({ inline: true, buttons: vkButtonsArr });
         };
 
@@ -1024,6 +1066,11 @@ export async function handleVkWebhook(event, context) {
                 `[VK] Text button pressed: ${txt} -> ${textBtnRoutes[txt]}`,
               );
               callbackData = textBtnRoutes[txt];
+            }
+
+            // === ГЛАВНОЕ МЕНЮ (inline кнопка) ===
+            if (callbackData === "VK_MAIN_MENU") {
+              return await renderStep(vkCtx, "MAIN_MENU", vkToken);
             }
 
             log.info(`[VK ROUTER] Enter`, {
