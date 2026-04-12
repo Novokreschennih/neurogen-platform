@@ -369,19 +369,6 @@ export async function handleVkWebhook(event, context) {
               })
               .filter(Boolean),
           );
-          // Добавляем кнопку "Главное меню" в конец
-          if (addMainMenu) {
-            vkBtns.push([
-              {
-                action: {
-                  type: "callback",
-                  payload: JSON.stringify({ callback_data: "VK_MAIN_MENU" }),
-                  label: "🏠 ГЛАВНОЕ МЕНЮ",
-                },
-                color: "secondary",
-              },
-            ]);
-          }
           return JSON.stringify({ inline: true, buttons: vkBtns });
         };
 
@@ -862,19 +849,6 @@ export async function handleVkWebhook(event, context) {
                 .filter(Boolean);
             },
           );
-          // Добавляем кнопку "Главное меню" в конец
-          if (addMainMenu) {
-            vkButtonsArr.push([
-              {
-                action: {
-                  type: "callback",
-                  payload: JSON.stringify({ callback_data: "VK_MAIN_MENU" }),
-                  label: "🏠 ГЛАВНОЕ МЕНЮ",
-                },
-                color: "secondary",
-              },
-            ]);
-          }
           return JSON.stringify({ inline: true, buttons: vkButtonsArr });
         };
 
@@ -1066,11 +1040,6 @@ export async function handleVkWebhook(event, context) {
                 `[VK] Text button pressed: ${txt} -> ${textBtnRoutes[txt]}`,
               );
               callbackData = textBtnRoutes[txt];
-            }
-
-            // === ГЛАВНОЕ МЕНЮ (inline кнопка) ===
-            if (callbackData === "VK_MAIN_MENU") {
-              return await renderStep(vkCtx, "MAIN_MENU", vkToken);
             }
 
             log.info(`[VK ROUTER] Enter`, {
