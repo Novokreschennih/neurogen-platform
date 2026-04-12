@@ -146,7 +146,7 @@ export async function handleVkWebhook(event, context) {
         stopBody.append("event_id", eventId);
         stopBody.append("user_id", String(userId));
         stopBody.append("peer_id", String(peerId));
-        stopBody.append("event_data", "{}");
+        // event_data НЕ передаём — ВК просто снимет спиннер
 
         try {
           const stopResp = await fetch(
@@ -157,7 +157,7 @@ export async function handleVkWebhook(event, context) {
           if (stopData.error) {
             log.error(
               `[VK] Ошибка API при остановке спиннера:`,
-              stopData.error,
+              JSON.stringify(stopData.error),
             );
           } else {
             log.info(`[VK] Спиннер остановлен`, {
