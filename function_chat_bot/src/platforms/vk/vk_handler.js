@@ -95,23 +95,20 @@ export async function handleVkWebhook(event, context) {
       // === MESSAGE_EVENT (callback кнопка нажата) ===
       if (payload.type === "message_event") {
         const rawPayload = payload.object?.payload;
-        // VK шлёт user_id на разных уровнях — пробуем оба
+
+        // VK шлёт user_id на разных уровнях
         const userId =
-          payload.user_id || payload.object?.user_id || payload.group_id;
-        const eventId = payload.event_id || payload.object?.event_id;
-        const peerId = payload.object?.peer_id || userId; // peer_id из object
+          payload.object?.user_id || payload.user_id || payload.group_id;
+        const peerId = payload.object?.peer_id || userId;
+
+        // ⚠️ СТРОГО из object! payload.event_id — это ID вебхука (доставки),
+        // а payload.object.event_id — ID нажатия кнопки
+        const eventId = payload.object?.event_id;
 
         log.info(`[VK] message_event received`, {
-          payloadUserId: payload.user_id,
-          objectUserId: payload.object?.user_id,
-          objectPeerId: payload.object?.peer_id,
-          groupId: payload.group_id,
           resolvedUserId: userId,
           resolvedPeerId: peerId,
           eventId,
-          objectType: typeof payload.object,
-          objectKeys: payload.object ? Object.keys(payload.object) : null,
-          rawPayloadType: typeof rawPayload,
           rawPayloadPreview: rawPayload
             ? typeof rawPayload === "string"
               ? rawPayload.substring(0, 200)
@@ -128,43 +125,47 @@ export async function handleVkWebhook(event, context) {
             parsed = rawPayload;
           }
         } catch (e) {
-          log.warn(`[VK] Failed to parse payload`, {
-            rawPayload: String(rawPayload),
-            error: e.message,
-          });
           return { statusCode: 200, body: "ok" };
         }
 
         const callbackData = parsed?.callback_data;
-        log.info(`[VK] message_event parsed`, {
-          userId,
-          callbackData,
-          eventId,
-        });
 
-        if (!callbackData || !userId) {
+        if (!callbackData || !userId || !eventId) {
           log.warn(`[VK] message_event missing data`, {
             hasCallbackData: !!callbackData,
             hasUserId: !!userId,
-            payloadKeys: Object.keys(payload),
+            hasEventId: !!eventId,
           });
           return { statusCode: 200, body: "ok" };
         }
 
-        // Убираем спиннер НЕМЕДЛЕННО (await — в YCF без await запрос не уйдёт)
+        // Убираем спиннер НЕМЕДЛЕННО
         const stopBody = new URLSearchParams();
         stopBody.append("access_token", process.env.VK_GROUP_TOKEN);
         stopBody.append("v", "5.199");
         stopBody.append("event_id", eventId);
         stopBody.append("user_id", String(userId));
         stopBody.append("peer_id", String(peerId));
+        stopBody.append("event_data", "{}");
+
         try {
-          await fetch(
+          const stopResp = await fetch(
             "https://api.vk.com/method/messages.sendMessageEventAnswer",
             { method: "POST", body: stopBody },
           );
+          const stopData = await stopResp.json();
+          if (stopData.error) {
+            log.error(
+              `[VK] Ошибка API при остановке спиннера:`,
+              stopData.error,
+            );
+          } else {
+            log.info(`[VK] Спиннер остановлен`, {
+              response: stopData.response,
+            });
+          }
         } catch (e) {
-          log.warn(`[VK] spinner stop failed`, e.message);
+          log.warn(`[VK] Сетевая ошибка спиннера`, e.message);
         }
 
         const vkUserId = `vk:${userId}`;
