@@ -404,14 +404,12 @@ export async function handleVkWebhook(event, context) {
             {},
           );
         }
-        if (callbackData === "SETUP_BOT_START") {
-          vkUser.state = "WAIT_BOT_TOKEN";
-          if (vkUser.bot_token) vkUser.session.is_changing_token = true;
-          await ydb.saveUser(vkUser);
-          return await vkCtx.reply(
-            "🚀 НАСТРОЙКА БОТА-КЛОНА\n\nПришли мне API TOKEN твоего бота из @BotFather.",
-            {},
-          );
+        if (
+          callbackData === "SETUP_BOT_START" ||
+          callbackData === "CHANGE_BOT_TOKEN"
+        ) {
+          // В центральном VK боте нечего менять — показываем статус
+          return await renderStep(vkCtx, "MY_AI_BOT", vkToken);
         }
         if (callbackData === "CONFIRM_UPGRADE") {
           if (!vkUser.session.tags.includes("seen_plans"))
@@ -451,17 +449,6 @@ export async function handleVkWebhook(event, context) {
           return await renderStep(vkCtx, "LOCKED_PRO_TRAINING_INFO", vkToken);
         if (callbackData === "LOCKED_NEED_PLANS")
           return await renderStep(vkCtx, "LOCKED_PLANS_INFO", vkToken);
-        if (callbackData === "CHANGE_BOT_TOKEN") {
-          vkUser.state = "WAIT_BOT_TOKEN";
-          vkUser.session.old_bot_token = vkUser.bot_token;
-          vkUser.saved_state = "";
-          vkUser.session.is_changing_token = true;
-          await ydb.saveUser(vkUser);
-          return await vkCtx.reply(
-            "🔄 ИЗМЕНЕНИЕ ТОКЕНА БОТА\n\nПришли мне НОВЫЙ API TOKEN из @BotFather.",
-            {},
-          );
-        }
         if (callbackData === "CONTINUE_WITH_CURRENT_BOT") {
           vkUser.state = "Module_3_Offline";
           await ydb.saveUser(vkUser);
@@ -1415,16 +1402,10 @@ export async function handleVkWebhook(event, context) {
                 }
 
                 if (config.next === "WAIT_BOT_TOKEN") {
-                  vkUser.state = "WAIT_BOT_TOKEN";
+                  // Для VK пропускаем создание бота — сразу к Модулю 3
+                  vkUser.state = "Module_3_Offline";
                   await ydb.saveUser(vkUser);
-                  return await vkCtx.reply(
-                    `🚀 <b>ПЕРЕХОДИМ К ПРАКТИКЕ: ЗАПУСК ИИ-КЛОНА</b>\n\n` +
-                      `Отлично, секретный код принят! 🪙\n\n` +
-                      `Ты уже оформил профиль своего бота по инструкции из Модуля 2. Теперь нам осталось подключить его к нашему нейроядру. Твой бот оживет и в нём сразу будут зашиты твои реферальные ссылки.\n\n` +
-                      `Скопируй и пришли мне <b>API TOKEN</b> твоего нового бота из @BotFather (это длинный набор букв и цифр).\n\n` +
-                      `🔒 <i>Помни: он не дает нам доступ к твоему аккаунту. Это совершенно безопасно.</i>`,
-                    {},
-                  );
+                  return await renderStep(vkCtx, "Module_3_Offline", vkToken);
                 }
 
                 vkUser.state = config.next;
@@ -1438,34 +1419,11 @@ export async function handleVkWebhook(event, context) {
               }
             }
 
+            // Для VK WAIT_BOT_TOKEN больше не используется — сразу к Модулю 3
             if (vkUser.state === "WAIT_BOT_TOKEN") {
-              const res = await fetch(
-                `https://api.telegram.org/bot${txt}/getMe`,
-              ).then((r) => r.json());
-              if (!res.ok)
-                return await vkCtx.reply(
-                  "❌ Неверный токен. Проверь и пришли ещё раз:",
-                  {},
-                );
-
-              vkUser.saved_state = txt;
-              vkUser.session.bot_username = res.result.username;
-
-              if (vkUser.sh_user_id && vkUser.sh_ref_tail) {
-                vkUser.state = "CONFIRM_BOT_DATA";
-                await ydb.saveUser(vkUser);
-                return await vkCtx.reply(
-                  `В моей базе уже есть твои данные SetHubble:\n🆔 ID: <b>${vkUser.sh_user_id}</b>\n🔗 Хвост: <b>${vkUser.sh_ref_tail}</b>\n\nИспользуем их для настройки твоего нового клона?\n\n✅ ДА, ВСЁ ВЕРНО\n✏️ НЕТ, ВВЕСТИ ДРУГИЕ`,
-                  {},
-                );
-              } else {
-                vkUser.state = "WAIT_SH_ID_P";
-                await ydb.saveUser(vkUser);
-                return await vkCtx.reply(
-                  "Пришли цифровой ID для привязки к этому боту (только цифры):",
-                  {},
-                );
-              }
+              vkUser.state = "Module_3_Offline";
+              await ydb.saveUser(vkUser);
+              return await renderStep(vkCtx, "Module_3_Offline", vkToken);
             }
 
             // === ДЕФОЛТ: Если состояние не распознано — показать START ===
