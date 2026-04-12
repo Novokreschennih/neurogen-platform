@@ -13,6 +13,155 @@
  * - sendEmail: функция отправки email
  */
 
+/**
+ * Генерирует клавиатуру главного меню в зависимости от прогресса пользователя
+ * @param {object} user - объект пользователя из YDB
+ * @param {string} userId - VK user ID
+ * @returns {string} JSON строка клавиатуры
+ */
+function getVkMainMenuKeyboard(user, userId) {
+  const hasData = !!user.sh_ref_tail;
+  const isPro = user.bought_tripwire;
+  const hasMod3 = user.session?.mod3_done || isPro;
+  const seenPlans = user.session?.tags?.includes("seen_plans");
+
+  const buttons = [];
+
+  // --- БЛОК 1: ТОЛЬКО ДЛЯ НОВИЧКОВ ---
+  if (!hasData) {
+    buttons.push([
+      {
+        action: {
+          type: "callback",
+          payload: JSON.stringify({ callback_data: "Agent_1_Pain" }),
+          label: "🚀 ПУТЬ АГЕНТА",
+        },
+        color: "primary",
+      },
+    ]);
+    buttons.push([
+      {
+        action: {
+          type: "callback",
+          payload: JSON.stringify({ callback_data: "Business_Online_Pain" }),
+          label: "💻 ДЛЯ ОНЛАЙН-БИЗНЕСА",
+        },
+        color: "default",
+      },
+    ]);
+    buttons.push([
+      {
+        action: {
+          type: "callback",
+          payload: JSON.stringify({ callback_data: "Business_Offline_Pain" }),
+          label: "🏢 ДЛЯ ОФЛАЙН-БИЗНЕСА",
+        },
+        color: "default",
+      },
+    ]);
+  } else {
+    // --- БЛОК 2: ЗАРЕГИСТРИРОВАНЫ ---
+    if (isPro) {
+      buttons.push([
+        {
+          action: {
+            type: "callback",
+            payload: JSON.stringify({ callback_data: "Training_Pro_Main" }),
+            label: "💎 PRO-ИНСТРУМЕНТЫ",
+          },
+          color: "primary",
+        },
+      ]);
+      const setupStep =
+        user.bot_token === "VK_CENTRAL_GROUP" ? "MY_AI_BOT" : "SYSTEM_SETUP";
+      buttons.push([
+        {
+          action: {
+            type: "callback",
+            payload: JSON.stringify({ callback_data: setupStep }),
+            label: "⚙️ НАСТРОЙКА СИСТЕМЫ",
+          },
+          color: "default",
+        },
+      ]);
+    } else if (hasMod3 || seenPlans) {
+      buttons.push([
+        {
+          action: {
+            type: "callback",
+            payload: JSON.stringify({ callback_data: "Rocket_Limits" }),
+            label: "💎 МАСШТАБ",
+          },
+          color: "primary",
+        },
+      ]);
+      const setupStep =
+        user.bot_token === "VK_CENTRAL_GROUP" ? "MY_AI_BOT" : "SYSTEM_SETUP";
+      buttons.push([
+        {
+          action: {
+            type: "callback",
+            payload: JSON.stringify({ callback_data: setupStep }),
+            label: "⚙️ НАСТРОЙКА СИСТЕМЫ",
+          },
+          color: "default",
+        },
+      ]);
+    } else {
+      // В процессе обучения
+      const savedState = user.saved_state || "Training_Main";
+      buttons.push([
+        {
+          action: {
+            type: "callback",
+            payload: JSON.stringify({ callback_data: savedState }),
+            label: "📚 ПРОДОЛЖИТЬ ОБУЧЕНИЕ",
+          },
+          color: "primary",
+        },
+      ]);
+      buttons.push([
+        {
+          action: {
+            type: "callback",
+            payload: JSON.stringify({ callback_data: "Training_Main" }),
+            label: "🔄 НАЧАТЬ ЗАНОВО",
+          },
+          color: "default",
+        },
+      ]);
+    }
+  }
+
+  // --- ОБЩИЕ КНОПКИ ---
+  buttons.push([
+    {
+      action: {
+        type: "callback",
+        payload: JSON.stringify({ callback_data: "VK_STATISTIKA" }),
+        label: "📊 СТАТИСТИКА",
+      },
+      color: "default",
+    },
+  ]);
+  buttons.push([
+    {
+      action: {
+        type: "callback",
+        payload: JSON.stringify({ callback_data: "SUPPORT_ASK" }),
+        label: "📞 ПОДДЕРЖКА",
+      },
+      color: "default",
+    },
+  ]);
+
+  return JSON.stringify({
+    inline: false,
+    one_time: false,
+    buttons,
+  });
+}
+
 export async function handleVkWebhook(event, context) {
   const {
     ydb,
@@ -237,7 +386,13 @@ export async function handleVkWebhook(event, context) {
             );
             params.append("message", msg);
             const kb = translateKb(opts);
-            if (kb) params.append("keyboard", kb);
+            if (kb) {
+              params.append("keyboard", kb);
+            } else {
+              // Persistent main menu keyboard
+              const mainMenuKb = getVkMainMenuKeyboard(vkUser, userId);
+              params.append("keyboard", mainMenuKb);
+            }
             await fetch("https://api.vk.com/method/messages.send", {
               method: "POST",
               body: params,
@@ -711,7 +866,13 @@ export async function handleVkWebhook(event, context) {
             params.append("message", finalMessage);
 
             const vkKb = translateKeyboard(opts);
-            if (vkKb) params.append("keyboard", vkKb);
+            if (vkKb) {
+              params.append("keyboard", vkKb);
+            } else {
+              // Persistent main menu keyboard
+              const mainMenuKb = getVkMainMenuKeyboard(vkUser, message.from_id);
+              params.append("keyboard", mainMenuKb);
+            }
 
             try {
               await fetch("https://api.vk.com/method/messages.send", {
@@ -851,6 +1012,19 @@ export async function handleVkWebhook(event, context) {
           try {
             const vkToken = "VK_CENTRAL_GROUP";
             const txt = (text || "").trim();
+
+            // === МАРШРУТИЗАЦИЯ ТЕКСТОВЫХ КНОПОК ГЛАВНОГО МЕНЮ ===
+            // Пользователь нажал текстовую кнопку в persistent keyboard
+            const textBtnRoutes = {
+              "📊 СТАТИСТИКА": "VK_STATISTIKA",
+              "📞 ПОДДЕРЖКА": "SUPPORT_ASK",
+            };
+            if (textBtnRoutes[txt]) {
+              log.info(
+                `[VK] Text button pressed: ${txt} -> ${textBtnRoutes[txt]}`,
+              );
+              callbackData = textBtnRoutes[txt];
+            }
 
             log.info(`[VK ROUTER] Enter`, {
               callbackData,
