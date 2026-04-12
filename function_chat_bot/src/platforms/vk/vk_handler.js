@@ -376,6 +376,16 @@ export async function handleVkWebhook(event, context) {
         const vkToken = "VK_CENTRAL_GROUP";
 
         // Выполняем callback
+        if (callbackData?.startsWith("ENTER_SECRET_")) {
+          const level = callbackData.split("_")[2];
+          vkUser.state = `WAIT_SECRET_${level}`;
+          await ydb.saveUser(vkUser);
+          return await vkCtx.reply(
+            `✍️ ВВОД КОДА: МОДУЛЬ ${level}\n\nОтправь мне секретное слово:`,
+            {},
+          );
+        }
+
         if (callbackData === "CLICK_REG_ID") {
           if (vkUser.sh_user_id && vkUser.sh_ref_tail)
             return await renderStep(vkCtx, "REGISTRATION_EXIST", vkToken);
@@ -849,6 +859,12 @@ export async function handleVkWebhook(event, context) {
           try {
             const vkToken = "VK_CENTRAL_GROUP";
             const txt = (text || "").trim();
+
+            log.info(`[VK ROUTER] Enter`, {
+              callbackData,
+              text: txt,
+              userState: vkUser.state,
+            });
 
             if (callbackData) {
               if (callbackData.startsWith("ENTER_SECRET_")) {
