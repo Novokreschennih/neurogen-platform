@@ -40,11 +40,11 @@ export async function handlePartnerApi(event, context) {
     const firstName = tgData.user.first_name || "Партнёр";
     const username = tgData.user.username || telegramId;
 
-    let user = await ydb.getUser(telegramId);
+    let user = await ydb.findUser({ tg_id: Number(telegramId) });
 
     if (!user) {
       user = {
-        user_id: telegramId,
+        tg_id: Number(telegramId),
         partner_id: "",
         state: "START",
         bought_tripwire: false,
@@ -67,8 +67,9 @@ export async function handlePartnerApi(event, context) {
         last_reminder_time: 0,
         reminders_count: 0,
       };
-      await ydb.saveUser(user);
-      log.info(`[PROMO-KIT] New user registered via WebApp`, { userId: telegramId });
+      const result = await ydb.saveUser(user);
+      user.id = result.id;
+      log.info(`[PROMO-KIT] New user registered via WebApp`, { userId: telegramId, dbId: result.id });
     }
 
     // === ГЕНЕРАЦИЯ РЕФЕРАЛЬНОЙ ССЫЛКИ ===

@@ -1,39 +1,64 @@
 -- ============================================================
--- YDB Schema для SaaS-платформы NeuroGen (Версия 3.0)
+-- YDB Schema для SaaS-платформы NeuroGen (Версия 6.0 — Омниканальность)
+-- ============================================================
+-- Ключевые изменения v6.0:
+-- - Переход от префиксов в user_id (vk:, email:, web:) к UUID Primary Key
+-- - Отдельные колонки для каждого канала: tg_id, vk_id, web_id, email
+-- - Вторичные индексы для быстрого поиска по любому каналу
+-- - Таблица user_merges для аудита слияний профилей
 -- ============================================================
 
 -- -------------------------------------------------------------
--- Таблица: users (пользователи бота)
+-- Таблица: users (пользователи)
 -- -------------------------------------------------------------
--- Хранит всех пользователей всех ботов
--- Ключ: user_id (Telegram ID)
+-- Хранит всех пользователей across all bots и каналов
+-- Primary Key: id (UUID v4) — генерируется один раз при первом касании
+-- Поиск: по любому каналу через secondary indexes
 
 CREATE TABLE users (
-    user_id Utf8,
-    partner_id Utf8,
-    state Utf8,
-    bought_tripwire Bool,
-    session Json,
-    last_seen Uint64,
-    saved_state Utf8,
-    bot_token Utf8,
-    tariff Utf8,
-    sh_user_id Utf8,
-    sh_ref_tail Utf8,
-    purchases Json,
-    first_name Utf8,
-    last_reminder_time Uint64,
-    reminders_count Uint64,
-    pin_code Utf8,
-    session_version Uint64,
-    PRIMARY KEY (user_id)
+    id Utf8,                        -- 🔑 Primary Key: UUID v4
+    email Utf8,                     -- ⚡ Email (клей для объединения каналов)
+    tg_id Uint64,                   -- ⚡ Telegram ID (только цифры)
+    vk_id Uint64,                   -- ⚡ VK ID (только цифры)
+    web_id Utf8,                    -- ⚡ Web session ID (cookie с лендинга)
+    partner_id Utf8,                -- Реферальный хвост
+    state Utf8,                     -- Текущий шаг воронки
+    bought_tripwire Bool,           -- Куплен ли Tripwire/PRO
+    session Json,                   -- JSON: dialog_history, tags, channel_states, XP
+    last_seen Uint64,               -- Timestamp последнего действия (Unix ms)
+    saved_state Utf8,               -- Сохранённая позиция для возврата
+    bot_token Utf8,                 -- Токен бота
+    tariff Utf8,                    -- "PAID" если оплачен тариф
+    sh_user_id Utf8,                -- Цифровой ID в SetHubble
+    sh_ref_tail Utf8,               -- Партнёрский хвост в SetHubble
+    purchases Json,                 -- JSON массив купленных продуктов
+    first_name Utf8,                -- Имя пользователя
+    last_reminder_time Uint64,      -- Timestamp последнего напоминания
+    reminders_count Uint64,         -- Счётчик отправленных напоминаний
+    pin_code Utf8,                  -- 4-значный PIN для ИИ-приложений
+    session_version Uint64,         -- Версия сессии (race condition protection)
+    created_at Uint64,              -- Timestamp создания (Unix ms)
+    PRIMARY KEY (id)
 );
 
 -- -------------------------------------------------------------
--- Таблица: bots (информация о ботах партнеров)
+-- Таблица: user_merges (аудит слияний профилей)
 -- -------------------------------------------------------------
--- Хранит данные о ботах, созданных партнерами
--- Ключ: bot_token (Telegram Bot Token)
+-- Append-only: только запись, никогда не обновляется
+
+CREATE TABLE user_merges (
+    id Utf8,                        -- 🔑 Primary Key: UUID операции слияния
+    surviving_user_id Utf8,         -- ID основного пользователя (остался)
+    deleted_user_id Utf8,           -- ID поглощённого пользователя (удалён)
+    merge_reason Utf8,              -- Причина: email_match, web_merge, tg_merge, vk_merge, manual
+    merged_at Uint64,               -- Timestamp слияния (Unix ms)
+    deleted_session_backup Json,    -- Backup JSON удалённого профиля
+    PRIMARY KEY (id)
+);
+
+-- -------------------------------------------------------------
+-- Таблица: bots (информация о ботах партнёров)
+-- -------------------------------------------------------------
 
 CREATE TABLE bots (
     bot_token Utf8,
@@ -48,10 +73,8 @@ CREATE TABLE bots (
 );
 
 -- -------------------------------------------------------------
--- Таблица: link_clicks (аналитика переходов по ссылкам)
+-- Таблица: link_clicks (аналитика переходов)
 -- -------------------------------------------------------------
--- Хранит статистику кликов по реферальным ссылкам
--- Ключ: (partner_id, clicked_at) — для группировки по времени
 
 CREATE TABLE link_clicks (
     partner_id Utf8,
@@ -62,97 +85,39 @@ CREATE TABLE link_clicks (
 );
 
 -- -------------------------------------------------------------
--- Индексы для ускорения поиска
+-- Индексы
 -- -------------------------------------------------------------
 
--- Индекс для поиска пользователей по боту
+-- Канальные индексы (критично для омниканальности)
+CREATE INDEX idx_users_email ON users (email);
+CREATE INDEX idx_users_tg_id ON users (tg_id);
+CREATE INDEX idx_users_vk_id ON users (vk_id);
+CREATE INDEX idx_users_web_id ON users (web_id);
+
+-- Бизнес-индексы
 CREATE INDEX idx_users_bot_token ON users (bot_token);
-
--- Индекс для поиска пользователей по партнеру
 CREATE INDEX idx_users_partner_id ON users (partner_id);
-
--- Индекс для поиска пользователей по статусу оплаты
 CREATE INDEX idx_users_bought_tripwire ON users (bought_tripwire);
-
--- Индекс для поиска пользователей по последнему визиту (для крона)
 CREATE INDEX idx_users_last_seen ON users (last_seen);
-
--- Индекс для поиска ботов по VK группе
 CREATE INDEX idx_bots_vk_group_id ON bots (vk_group_id);
-
--- -------------------------------------------------------------
--- Примечания по использованию
--- -------------------------------------------------------------
-
--- 1. users:
---    - user_id: Telegram ID пользователя (строка)
---    - partner_id: Реферальный хвост (например, "p_qdr")
---    - state: Текущий шаг воронки (например, "START", "Tripwire_Offer")
---    - bought_tripwire: true если куплен PRO
---    - session: JSON с тегами и временными данными
---    - last_seen: Timestamp последнего действия (Unix ms)
---    - saved_state: Сохранённая позиция для возврата из напоминаний
---    - bot_token: Токен бота, в котором находится пользователь
---    - tariff: "PAID" если оплачен тариф Rocket/Shuttle
---    - sh_user_id: Цифровой ID в SetHubble
---    - sh_ref_tail: Хвост партнёрской ссылки
---    - purchases: JSON массив купленных продуктов
---    - first_name: Имя пользователя
---    - last_reminder_time: Timestamp последнего напоминания
---    - reminders_count: Счётчик отправленных напоминаний
---    - pin_code: 4-значный PIN-код для доступа к ИИ-приложениям (v4.3+)
-
--- 2. bots:
---    - bot_token: Токен бота от @BotFather
---    - user_id: Telegram ID владельца бота
---    - bot_username: Юзернейм бота (например, "my_funnel_bot")
---    - created_at: Timestamp создания бота
---    - sh_user_id: ID владельца в SetHubble
---    - sh_ref_tail: Партнёрский хвост владельца
---    - tripwire_link: Ссылка на оплату Tripwire
 
 -- -------------------------------------------------------------
 -- Примеры запросов
 -- -------------------------------------------------------------
 
--- Получить пользователя:
--- SELECT * FROM users WHERE user_id = "123456789";
+-- Найти по UUID:
+-- SELECT * FROM users WHERE id = "550e8400-e29b-41d4-a716-446655440000";
 
--- Сохранить пользователя:
--- UPSERT INTO users (user_id, partner_id, state, bought_tripwire, session, last_seen)
--- VALUES ("123456789", "p_qdr", "START", false, Json("{"tags":[]}"), Uint64("1708800000000"));
+-- Найти по Telegram ID:
+-- SELECT * FROM users WHERE tg_id = 123456789;
 
--- Получить бот по токену:
--- SELECT * FROM bots WHERE bot_token = "1234567890:ABCdefGHIjklMNOpqrsTUVwxyz";
+-- Найти по email:
+-- SELECT * FROM users WHERE email = "user@example.com";
 
--- Найти всех пользователей бота:
--- SELECT user_id FROM users WHERE bot_token = "1234567890:ABCdefGHIjklMNOpqrsTUVwxyz";
+-- Привязать Telegram к пользователю найденному по web_id:
+-- UPDATE users SET tg_id = 999888 WHERE web_id = "abc-123-def";
 
--- Найти всех пользователей партнёра:
--- SELECT * FROM users WHERE partner_id = "p_qdr";
-
--- Обновить статус оплаты:
--- UPDATE users SET bought_tripwire = true, state = "Delivery_1"
--- WHERE user_id = "123456789";
-
--- -------------------------------------------------------------
--- Миграции (v4.3+)
--- -------------------------------------------------------------
-
--- v4.3.1: Добавить поле pin_code в существующую таблицу users:
--- ALTER TABLE users ADD COLUMN pin_code Utf8;
-
--- Обновить PIN для существующих PRO-пользователей:
--- UPDATE users SET pin_code = "1234" WHERE bought_tripwire = true AND pin_code IS NULL;
-
--- v4.3.2: Добавить поле session_version для защиты от race condition:
--- ALTER TABLE users ADD COLUMN session_version Uint64;
-
--- Инициализировать версию для существующих пользователей:
--- UPDATE users SET session_version = 0 WHERE session_version IS NULL;
-
--- v5.0: Добавить поле vk_group_id для VK-ботов:
--- ALTER TABLE bots ADD COLUMN vk_group_id Utf8;
-
--- Создать индекс для поиска по VK группе:
--- CREATE INDEX idx_bots_vk_group_id ON bots (vk_group_id);
+-- Слияние: обновить основной + удалить дубликат + записать аудит
+-- UPSERT INTO users (id, email, tg_id, ...) VALUES (...);
+-- UPSERT INTO user_merges (id, surviving_user_id, deleted_user_id, merge_reason, merged_at) VALUES (...);
+-- DELETE FROM users WHERE id = "deleted-uuid";

@@ -208,26 +208,21 @@ export async function getUsersByChannel(
 
 /**
  * Get user identifier for a specific channel
- * @param {object} user — User object from YDB
+ * v6.0: ID каналов теперь в отдельных колонках (tg_id, vk_id, web_id)
+ * @param {object} user — User object from YDB (v6.0 schema)
  * @param {string} channel — Channel key
  * @returns {string|null} Channel-specific user ID, or null
  */
 export function getChannelUserId(user, channel) {
   switch (channel) {
     case "telegram":
-      // Telegram user_id is the base user_id
-      return user.user_id && !user.user_id.startsWith("vk:") && !user.user_id.startsWith("web:")
-        ? user.user_id
-        : null;
+      return user.tg_id ? String(user.tg_id) : null;
     case "vk":
-      // VK users stored with "vk:" prefix
-      return user.user_id && user.user_id.startsWith("vk:")
-        ? user.user_id.replace("vk:", "")
-        : getChannelConfig(user, "vk").user_id || null;
+      return user.vk_id ? String(user.vk_id) : null;
     case "web":
-      return getChannelConfig(user, "web").session_id || null;
+      return user.web_id || null;
     case "email":
-      return user.session?.email || null;
+      return user.email || null;
     default:
       return null;
   }

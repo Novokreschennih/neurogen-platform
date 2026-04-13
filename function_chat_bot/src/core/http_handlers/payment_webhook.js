@@ -63,7 +63,7 @@ export async function handlePaymentWebhook(event, context) {
     return response(400, "invalid_product_id");
   }
 
-  const u = await ydb.getUser(hubTelegramId);
+  const u = await ydb.findUser({ tg_id: Number(hubTelegramId) });
   if (u) {
     if (!u.purchases.includes(hubProductId)) u.purchases.push(hubProductId);
 

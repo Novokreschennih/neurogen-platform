@@ -69,7 +69,7 @@ export async function handleAppAuth(event, context) {
         throw err;
       }
 
-      const user = await ydb.getUser(decoded.uid);
+      const user = await ydb.findUser({ tg_id: Number(decoded.uid) });
 
       if (!user || !user.bought_tripwire) {
         return {
@@ -156,7 +156,7 @@ export async function handleAppAuth(event, context) {
         };
       }
 
-      const user = await ydb.getUser(String(userId));
+      const user = await ydb.findUser({ tg_id: Number(userId) });
 
       if (!user) {
         return {

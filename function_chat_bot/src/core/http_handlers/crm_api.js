@@ -215,7 +215,17 @@ export async function handleCrmApi(event, context) {
     const emailUsers = [];
 
     for (const uid of targetUserIds) {
-      const u = userMap.get(uid) || (await ydb.getUser(uid));
+      let u = userMap.get(uid);
+      if (!u) {
+        // v6.0: Пробуем найти по разным каналам
+        u = await ydb.findUser({ id: uid });
+        if (!u && /^\d{3,20}$/.test(uid)) {
+          u = await ydb.findUser({ tg_id: Number(uid) });
+        }
+        if (!u) {
+          u = await ydb.findUser({ email: uid });
+        }
+      }
       if (!u) continue;
 
       const ch = channelManager.getPrimaryChannel(u);

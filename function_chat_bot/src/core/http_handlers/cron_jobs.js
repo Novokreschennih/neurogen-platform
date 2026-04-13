@@ -92,7 +92,7 @@ export async function handleCronJobs(event, context) {
   };
 
   const checkTripwirePurchase = async (user) => {
-    const freshUser = await ydb.getUser(user.user_id);
+    const freshUser = await ydb.findUser({ id: user.id });
     if (freshUser && freshUser.bought_tripwire) return true;
     return false;
   };
@@ -208,11 +208,12 @@ export async function handleCronJobs(event, context) {
         continue;
       }
 
-      // v5.0: Пропускаем merged email-записи (email уже привязан к Telegram-пользователю)
-      if (u.user_id?.startsWith("email:") && u.session?.merged_to) {
-        log.debug(`[CRON] Skip merged email record`, {
-          emailId: u.user_id,
-          mergedTo: u.session.merged_to,
+      // v6.0: Пропускаем пользователей без настроенных каналов
+      // (пользователи с пустыми tg_id, vk_id, web_id, email — это дубликаты после мерджа)
+      const hasChannel = u.tg_id || u.vk_id || u.web_id || u.email;
+      if (!hasChannel) {
+        log.debug(`[CRON] Skip user without channels (likely merge artifact)`, {
+          userId: u.id,
         });
         stats.skipped++;
         continue;

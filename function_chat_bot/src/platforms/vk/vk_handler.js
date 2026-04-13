@@ -317,15 +317,16 @@ export async function handleVkWebhook(event, context) {
           log.warn(`[VK] Сетевая ошибка спиннера`, e.message);
         }
 
-        const vkUserId = `vk:${userId}`;
-        log.info(`[VK] Fetching user`, { vkUserId });
-        const vkUser = await ydb.getUser(vkUserId);
-        log.info(`[VK] getUser result`, {
+        const vkUserId = Number(userId);
+        log.info(`[VK] Fetching user`, { vkId: vkUserId });
+        const vkUser = await ydb.findUser({ vk_id: vkUserId });
+        log.info(`[VK] findUser result`, {
           found: !!vkUser,
-          userId: vkUser?.user_id,
+          userId: vkUser?.id,
+          vkId: vkUser?.vk_id,
           state: vkUser?.state,
         });
-        if (!vkUser || !vkUser.user_id) {
+        if (!vkUser || !vkUser.id) {
           log.warn(`[VK] User not found after button press`, {
             vkUserId,
           });
@@ -707,9 +708,10 @@ export async function handleVkWebhook(event, context) {
         processedUpdates.set(vkUpdateId, Date.now());
 
         const text = message.text || "";
-        let vkUser = await ydb.getUser(vkUserId);
+        // v6.0: Ищем по vk_id (без префиксов)
+        let vkUser = await ydb.findUser({ vk_id: vkUserId });
 
-        if (!vkUser || typeof vkUser !== "object" || !vkUser.user_id) {
+        if (!vkUser || typeof vkUser !== "object" || !vkUser.id) {
           let partnerId = process.env.MY_PARTNER_ID || "p_qdr";
 
           // v5.0: Поддержка partner_id из разных источников
@@ -748,7 +750,7 @@ export async function handleVkWebhook(event, context) {
           }
 
           vkUser = {
-            user_id: vkUserId,
+            vk_id: vkUserId,
             partner_id: partnerId,
             state: "START",
             bought_tripwire: false,
@@ -767,7 +769,13 @@ export async function handleVkWebhook(event, context) {
             reminders_count: 0,
             last_reminder_time: 0,
           };
-          await ydb.saveUser(vkUser);
+          const result = await ydb.saveUser(vkUser);
+          vkUser.id = result.id;
+          log.info(`[VK] New user created`, {
+            vkId: vkUserId,
+            userId: result.id,
+            partnerId,
+          });
         }
 
         if (!vkUser.session || typeof vkUser.session !== "object")
@@ -1496,34 +1504,53 @@ export async function handleVkWebhook(event, context) {
                 );
               }
 
-              // v5.0: Ищем email-запись для merge
-              const emailUserId = `email:${txt}`;
-              const emailRecord = await ydb.getUser(emailUserId);
+              // v6.0: Ищем пользователя по email для merge
+              const emailRecord = await ydb.findUser({ email: txt });
 
-              vkUser.session.email = txt;
+              vkUser.email = txt;
               vkUser.session.email_verified = true;
-              channelManager.enableChannel(vkUser, "email");
-              channelManager.configureChannel(vkUser, "email", {
+              vkUser.session.channels = vkUser.session.channels || {};
+              vkUser.session.channels.email = {
+                enabled: true,
+                configured: true,
                 subscribed: true,
-              });
-              channelManager.setChannelState(
-                vkUser,
-                "email",
-                "CHANNEL_SETUP_EMAIL_SUCCESS",
-              );
+              };
+              vkUser.session.channel_states = vkUser.session.channel_states || {};
+              vkUser.session.channel_states.email = "START";
               await ydb.saveUser(vkUser);
 
-              // v5.0: MERGE — если нашли email-запись
-              if (emailRecord) {
-                emailRecord.session = emailRecord.session || {};
-                emailRecord.session.merged_to = vkUser.user_id;
-                emailRecord.session.merged_at = Date.now();
-                await ydb.saveUser(emailRecord);
-                log.info("[VK] Merged email record", {
+              // v6.0: MERGE — если нашли другого пользователя с таким email
+              if (emailRecord && emailRecord.id !== vkUser.id) {
+                log.info("[VK] Merging email record into VK user", {
                   email: txt,
-                  vkUserId: vkUser.user_id,
-                  emailRecordId: emailRecord.user_id,
+                  vkUserId: vkUser.id,
+                  emailRecordId: emailRecord.id,
                 });
+
+                // Обновляем основной профиль: добавляем vk_id
+                emailRecord.vk_id = vkUserId;
+                emailRecord.session.channels = emailRecord.session.channels || {};
+                emailRecord.session.channels.vk = {
+                  enabled: true,
+                  configured: true,
+                  linked_at: Date.now(),
+                };
+                emailRecord.session.channel_states = emailRecord.session.channel_states || {};
+                emailRecord.session.channel_states.vk = "START";
+
+                // Мержим dialog_history
+                if (vkUser.session?.dialog_history?.length) {
+                  emailRecord.session.dialog_history = emailRecord.session.dialog_history || [];
+                  emailRecord.session.dialog_history.push(
+                    ...vkUser.session.dialog_history.slice(-10),
+                  );
+                  if (emailRecord.session.dialog_history.length > 20) {
+                    emailRecord.session.dialog_history = emailRecord.session.dialog_history.slice(-20);
+                  }
+                }
+
+                await ydb.mergeUsers(emailRecord, vkUser.id, "email_match");
+                // vkUser теперь удалён, основной профиль — emailRecord
               }
 
               // Отправляем приветственное письмо

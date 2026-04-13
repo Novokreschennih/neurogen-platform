@@ -302,13 +302,15 @@ export function setupTelegramHandlers(bot, context) {
       userId: ctx.from.id,
     });
 
-    const userId = String(ctx.from.id);
-    ctx.dbUser = await ydb.getUser(userId);
+    // v6.0: Ищем пользователя по tg_id (без префиксов)
+    const tgId = Number(ctx.from.id);
+    ctx.dbUser = await ydb.findUser({ tg_id: tgId });
 
     log.info(`[MIDDLEWARE] User loaded`, {
-      userId,
+      userId: ctx.from.id,
       hasDbUser: !!ctx.dbUser,
       state: ctx.dbUser?.state,
+      dbId: ctx.dbUser?.id,
     });
 
     if (updateId) {
@@ -318,90 +320,103 @@ export function setupTelegramHandlers(bot, context) {
     if (!ctx.dbUser) {
       let pid = process.env.MY_PARTNER_ID || "p_qdr";
       let emailFromJoin = null;
+      let webIdFromStart = null;
 
       if (!isMainBot) {
         const info = await ydb.getBotInfo(token);
         if (info?.sh_ref_tail) pid = info.sh_ref_tail;
       }
 
+      // v6.0: Парсим start payload — может содержать web_id или partnerId|email
       if (ctx.message?.text?.startsWith("/start ")) {
         const rawRef = ctx.message.text.split(" ")[1];
         if (rawRef && isMainBot) {
-          // v5.0: Валидируем start payload — защита от инъекций
           const parsed = validateStartPayload(rawRef);
           if (parsed) {
             pid = parsed.partnerId;
             emailFromJoin = parsed.email || null;
-            await ydb.recordLinkClick(pid, userId, token);
+            webIdFromStart = parsed.webId || null;
+            await ydb.recordLinkClick(pid, String(tgId), token);
           } else {
             log.warn("[TG] Invalid start payload", {
               raw: rawRef.substring(0, 50),
             });
-            // Фолбэк на дефолтный partner_id
           }
         }
       }
 
-      // v5.0: Проверяем есть ли email-запись с таким же email → MERGE
-      let mergedEmailRecord = null;
-      if (emailFromJoin) {
-        const emailUserId = `email:${emailFromJoin}`;
-        mergedEmailRecord = await ydb.getUser(emailUserId);
+      // v6.0: Пробуем найти пользователя по web_id (пришёл с сайта)
+      let existingWebUser = null;
+      if (webIdFromStart) {
+        existingWebUser = await ydb.findUser({ web_id: webIdFromStart });
       }
 
-      ctx.dbUser = {
-        user_id: userId,
-        partner_id: pid,
-        state: "START",
-        session: {
-          tags: [],
-          // v5.0: Если email пришёл с /join/ — сохраняем и связываем каналы
-          ...(emailFromJoin
-            ? {
-                email: emailFromJoin,
-                channels: {
-                  telegram: {
-                    enabled: true,
-                    configured: true,
-                    bot_username: ctx.me?.username,
-                    linked_at: Date.now(),
-                  },
-                },
-                channel_states: { telegram: "START" },
-              }
-            : {
-                channels: {
-                  telegram: {
-                    enabled: true,
-                    configured: true,
-                    bot_username: ctx.me?.username,
-                    linked_at: Date.now(),
-                  },
-                },
-                channel_states: { telegram: "START" },
-              }),
-        },
-        bot_token: token,
-        sh_user_id: "",
-        sh_ref_tail: "",
-        tariff: "",
-        bought_tripwire: false,
-        purchases: [],
-        first_name: ctx.from.first_name || "Друг",
-        last_reminder_time: 0,
-        reminders_count: 0,
-      };
+      // v6.0: Пробуем найти пользователя по email (пришёл с /join/)
+      let existingEmailUser = null;
+      if (emailFromJoin) {
+        existingEmailUser = await ydb.findUser({ email: emailFromJoin });
+      }
 
-      // v5.0: Если нашли email-запись → помечаем как merged (чтобы CRON не дублировал)
-      if (mergedEmailRecord) {
-        mergedEmailRecord.session = mergedEmailRecord.session || {};
-        mergedEmailRecord.session.merged_to = userId;
-        mergedEmailRecord.session.merged_at = Date.now();
-        await ydb.saveUser(mergedEmailRecord);
-        console.info("[TG] Merged email record", {
-          email: emailFromJoin,
-          tgUserId: userId,
-          emailRecordId: mergedEmailRecord.user_id,
+      if (existingWebUser || existingEmailUser) {
+        // v6.0: Нашли существующего пользователя — привязываем Telegram
+        ctx.dbUser = existingWebUser || existingEmailUser;
+        ctx.dbUser.tg_id = tgId;
+        ctx.dbUser.bot_token = token;
+        ctx.dbUser.first_name = ctx.from.first_name || ctx.dbUser.first_name || "Друг";
+        ctx.dbUser.session.channels = ctx.dbUser.session.channels || {};
+        ctx.dbUser.session.channels.telegram = {
+          enabled: true,
+          configured: true,
+          bot_username: ctx.me?.username,
+          linked_at: Date.now(),
+        };
+        ctx.dbUser.session.channel_states = ctx.dbUser.session.channel_states || {};
+        ctx.dbUser.session.channel_states.telegram = "START";
+        await ydb.saveUser(ctx.dbUser);
+
+        log.info("[TG] Merged Telegram ID into existing user", {
+          tgId,
+          userId: ctx.dbUser.id,
+          hadWeb: !!existingWebUser,
+          hadEmail: !!existingEmailUser,
+        });
+      } else {
+        // v6.0: Создаём нового пользователя
+        ctx.dbUser = {
+          tg_id: tgId,
+          email: emailFromJoin || "",
+          partner_id: pid,
+          state: "START",
+          session: {
+            tags: [],
+            channels: {
+              telegram: {
+                enabled: true,
+                configured: true,
+                bot_username: ctx.me?.username,
+                linked_at: Date.now(),
+              },
+            },
+            channel_states: { telegram: "START" },
+          },
+          bot_token: token,
+          sh_user_id: "",
+          sh_ref_tail: "",
+          tariff: "",
+          bought_tripwire: false,
+          purchases: [],
+          first_name: ctx.from.first_name || "Друг",
+          last_reminder_time: 0,
+          reminders_count: 0,
+        };
+
+        const result = await ydb.saveUser(ctx.dbUser);
+        ctx.dbUser.id = result.id;
+
+        log.info("[TG] New user created", {
+          tgId,
+          userId: result.id,
+          partnerId: pid,
         });
       }
 

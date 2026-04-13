@@ -87,8 +87,12 @@ export function validateBotToken(raw) {
 }
 
 /**
- * Валидировать start payload (partner_id или partner_id|encodedEmail)
- * @returns {{ partnerId: string, email?: string } | null}
+ * Валидировать start payload
+ * Поддерживаемые форматы:
+ *  - partnerId
+ *  - partnerId|email@example.com
+ *  - partnerId|web:webSessionId  (v6.0: web_id с сайта)
+ * @returns {{ partnerId: string, email?: string, webId?: string } | null}
  */
 export function validateStartPayload(raw) {
   if (!raw || typeof raw !== "string") return null;
@@ -101,17 +105,25 @@ export function validateStartPayload(raw) {
   const result = { partnerId };
 
   if (parts[1]) {
-    // Декодируем base64url email
-    try {
-      const encoded = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-      const padded = encoded + "=".repeat((4 - (encoded.length % 4)) % 4);
-      const decoded = Buffer.from(padded, "base64").toString("utf8");
-      const email = validateEmail(decoded);
-      if (email) {
-        result.email = email;
+    // v6.0: Проверяем формат web:xxx
+    if (parts[1].startsWith("web:")) {
+      const webId = parts[1].substring(4);
+      if (/^[a-f0-9-]{20,50}$/i.test(webId)) {
+        result.webId = webId;
       }
-    } catch (e) {
-      // Не удалось декодировать — игнорируем email
+    } else {
+      // Пробуем декодировать как email (base64)
+      try {
+        const encoded = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+        const padded = encoded + "=".repeat((4 - (encoded.length % 4)) % 4);
+        const decoded = Buffer.from(padded, "base64").toString("utf8");
+        const email = validateEmail(decoded);
+        if (email) {
+          result.email = email;
+        }
+      } catch (e) {
+        // Не удалось декодировать — игнорируем
+      }
     }
   }
 

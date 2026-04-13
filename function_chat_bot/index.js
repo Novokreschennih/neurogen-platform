@@ -489,7 +489,7 @@ async function authorizeCrmRequest(headers, eventBody, isBase64Encoded) {
     }
 
     // Проверяем PRO-статус владельца бота
-    const ownerUser = await ydb.getUser(tgData.user.id);
+    const ownerUser = await ydb.findUser({ tg_id: Number(tgData.user.id) });
     if (!ownerUser || !ownerUser.bought_tripwire) {
       console.error("[AUTH FAIL] PRO required", {
         userId: tgData.user.id,
@@ -973,6 +973,33 @@ export const handler = async (event) => {
       : event.details || {};
   const paramsEarly = event.queryStringParameters || timerDataEarly || event;
   const action = paramsEarly.action;
+
+  // === v6.0: RATE LIMITING (защита от DDoS и слива бюджета OpenRouter) ===
+  const clientIp =
+    event.requestContext?.identity?.sourceIp ||
+    event.headers?.["x-real-ip"] ||
+    event.headers?.["x-forwarded-for"] ||
+    "unknown_ip";
+
+  // Исключаем webhook'и Telegram и VK (у них свои IP, их блочить нельзя)
+  const isWebhook =
+    event.body &&
+    (event.body.includes("update_id") || event.body.includes('type":"message_new"'));
+
+  if (!isWebhook && clientIp !== "unknown_ip") {
+    const rateCheck = checkRateLimit(clientIp);
+    if (!rateCheck.allowed) {
+      log.warn(`[RATE LIMIT] IP blocked: ${clientIp}, retryAfter ${rateCheck.retryAfter}s`);
+      return {
+        statusCode: 429,
+        headers: { ...corsHeaders, "Retry-After": String(rateCheck.retryAfter) },
+        body: JSON.stringify({
+          error: "Too many requests",
+          retryAfter: rateCheck.retryAfter,
+        }),
+      };
+    }
+  }
 
   // === HEALTH CHECK (v5.0) ===
   if (action === "health" || action === "ping") {

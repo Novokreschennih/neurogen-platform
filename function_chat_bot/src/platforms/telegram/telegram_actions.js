@@ -275,7 +275,7 @@ export function registerTelegramActions(bot, ctx) {
   // === handleAppsCommand — выдача доступа к ИИ-приложениям ===
   async function handleAppsCommandLocal(ctx, token) {
     const userId = ctx.from.id;
-    const user = await ydb.getUser(String(userId));
+    const user = await ydb.findUser({ tg_id: Number(userId) });
 
     if (!user || !user.bought_tripwire) {
       await ctx.reply(
@@ -499,15 +499,12 @@ export function registerTelegramActions(bot, ctx) {
 
           try {
             if (u.session.old_bot_token) {
-              const oldLeadsId = await ydb.getBotUsers(u.session.old_bot_token);
-              for (const leadId of oldLeadsId) {
-                const lead = await ydb.getUser(leadId);
-                if (lead) {
-                  lead.bot_token = txt;
-                  await ydb.saveUser(lead);
-                }
+              const oldLeads = await ydb.getBotUsers(u.session.old_bot_token);
+              for (const lead of oldLeads) {
+                lead.bot_token = txt;
+                await ydb.saveUser(lead);
               }
-              log.info(`[TOKEN UPDATE] Migrated ${oldLeadsId.length} leads to new bot token`, {
+              log.info(`[TOKEN UPDATE] Migrated ${oldLeads.length} leads to new bot token`, {
                 userId: u.user_id,
                 oldToken: u.session.old_bot_token?.substring(0, 20) + "...",
                 newToken: txt.substring(0, 20) + "...",
