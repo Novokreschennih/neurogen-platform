@@ -65,3 +65,22 @@ export function verifyToken(token) {
     return null;
   }
 }
+
+/**
+ * Декодировать JWT токен без валидации подписи
+ * Используется для чтения payload (логи, дебаг, админка)
+ * ⚠️ Не использовать для авторизации — подпись НЕ проверяется!
+ *
+ * @param {string} token - JWT токен
+ * @returns {Object|null} Payload или null
+ */
+export function decodeToken(token) {
+  if (!token) return null;
+
+  try {
+    return jwt.decode(token);
+  } catch (error) {
+    log.warn("[JWT] Token decode failed", { error: error.message });
+    return null;
+  }
+}

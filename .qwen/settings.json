@@ -21,7 +21,11 @@
       "Bash(echo *)",
       "Bash(stat *)",
       "Bash(grep *)",
-      "Bash(find *)"
+      "Bash(find *)",
+      "Bash(mv *)",
+      "Bash(rmdir *)",
+      "Bash(sed *)",
+      "Bash(npm ls *)"
     ]
   },
   "$version": 3

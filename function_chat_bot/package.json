@@ -15,6 +15,7 @@
   },
   "scripts": {
     "check": "node --check index.js",
+    "test": "node tests/run.js",
     "deploy": "zip -r function.zip . -x '*.git*' '*.env' 'node_modules/*' '*.md' 'знания/*'"
   },
   "engines": {
