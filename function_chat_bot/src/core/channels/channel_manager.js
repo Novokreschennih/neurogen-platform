@@ -249,6 +249,89 @@ export function getChannelSummary(user) {
   return result;
 }
 
+/**
+ * v6.0: Auto-detect and enable channels from DB columns
+ * Если у пользователя заполнены tg_id/vk_id/web_id/email —
+ * соответствующие каналы помечаются как configured автоматически
+ * @param {object} user — User object from YDB (v6.0 schema)
+ */
+export function autoDetectChannels(user) {
+  if (!user.session) user.session = { tags: [], dialog_history: [] };
+  if (!user.session.channels) user.session.channels = {};
+  if (!user.session.channel_states) user.session.channel_states = {};
+
+  // Telegram — если есть tg_id
+  if (user.tg_id && !user.session.channels.telegram?.configured) {
+    user.session.channels.telegram = {
+      ...user.session.channels.telegram,
+      enabled: true,
+      configured: true,
+      configured_at: Date.now(),
+    };
+    user.session.channel_states.telegram = user.session.channel_states.telegram || "START";
+  }
+
+  // VK — если есть vk_id
+  if (user.vk_id && !user.session.channels.vk?.configured) {
+    user.session.channels.vk = {
+      ...user.session.channels.vk,
+      enabled: true,
+      configured: true,
+      configured_at: Date.now(),
+      group_id: String(user.vk_id),
+    };
+    user.session.channel_states.vk = user.session.channel_states.vk || "START";
+  }
+
+  // Web — если есть web_id
+  if (user.web_id && !user.session.channels.web?.configured) {
+    user.session.channels.web = {
+      ...user.session.channels.web,
+      enabled: true,
+      configured: true,
+      configured_at: Date.now(),
+      session_id: user.web_id,
+    };
+    user.session.channel_states.web = user.session.channel_states.web || "START";
+  }
+
+  // Email — если есть email
+  if (user.email && !user.session.channels.email?.configured) {
+    user.session.channels.email = {
+      ...user.session.channels.email,
+      enabled: true,
+      configured: true,
+      configured_at: Date.now(),
+      subscribed: true,
+    };
+    user.session.channel_states.email = user.session.channel_states.email || "START";
+  }
+}
+
+/**
+ * v6.0: Получить список каналов, доступных для настройки
+ * Исключает уже настроенные каналы
+ * @param {object} user — User object from YDB
+ * @returns {string[]} Array of channel keys that need setup
+ */
+export function getAvailableChannels(user) {
+  return Object.keys(CHANNELS).filter((ch) => !isChannelEnabled(user, ch));
+}
+
+/**
+ * v6.0: Получить рекомендуемый следующий канал для предложения
+ * Приоритет: Telegram > VK > Email > Web
+ * @param {object} user — User object from YDB
+ * @returns {string|null} Channel key to suggest, or null if all configured
+ */
+export function getNextChannelToSuggest(user) {
+  const priority = ["telegram", "vk", "email", "web"];
+  for (const ch of priority) {
+    if (!isChannelEnabled(user, ch)) return ch;
+  }
+  return null;
+}
+
 export default {
   CHANNELS,
   getChannelConfig,
@@ -265,4 +348,7 @@ export default {
   getUsersByChannel,
   getChannelUserId,
   getChannelSummary,
+  autoDetectChannels,
+  getAvailableChannels,
+  getNextChannelToSuggest,
 };

@@ -711,6 +711,11 @@ export async function handleVkWebhook(event, context) {
         // v6.0: Ищем по vk_id (без префиксов)
         let vkUser = await ydb.findUser({ vk_id: vkUserId });
 
+        // v6.0: Auto-detect channels from DB columns
+        if (vkUser) {
+          channelManager.autoDetectChannels(vkUser);
+        }
+
         if (!vkUser || typeof vkUser !== "object" || !vkUser.id) {
           let partnerId = process.env.MY_PARTNER_ID || "p_qdr";
 
@@ -1250,6 +1255,20 @@ export async function handleVkWebhook(event, context) {
                     "MULTI_CHANNEL_SELECT",
                     vkToken,
                   );
+                case "MULTI_CHANNEL_TG":
+                  // Пользователь VK хочет подключить Telegram
+                  vkUser.state = "WAIT_TG_SETUP";
+                  await ydb.saveUser(vkUser);
+                  return await vkCtx.reply(
+                    `📱 <b>ПОДКЛЮЧЕНИЕ TELEGRAM</b>\n\n` +
+                      `Чтобы подключить Telegram:\n\n` +
+                      `1️⃣ Открой бота @BotFather в Telegram\n` +
+                      `2️⃣ Отправь /newbot (или используй существующего)\n` +
+                      `3️⃣ Скопируй токен бота\n` +
+                      `4️⃣ Отправь токен сюда сообщением\n\n` +
+                      `<i>Токен выглядит так: 123456789:ABCdefGHIjklMNOpqrsTUVwxyz</i>`,
+                    {},
+                  );
                 case "CHANNEL_SETUP_VK":
                   vkUser.state = "WAIT_VK_GROUP_ID";
                   await ydb.saveUser(vkUser);
@@ -1490,6 +1509,35 @@ export async function handleVkWebhook(event, context) {
               return await renderStep(
                 vkCtx,
                 "CHANNEL_SETUP_VK_SUCCESS",
+                vkToken,
+              );
+            }
+
+            // === MULTI_CHANNEL: Настройка Telegram (из VK) ===
+            if (vkUser.state === "WAIT_TG_SETUP") {
+              const tokenMatch = txt.match(/^(\d+:[A-Za-z0-9_-]+)$/);
+              if (!tokenMatch) {
+                return await vkCtx.reply(
+                  "❌ Это не похоже на токен бота. Токен должен быть в формате: 123456789:ABCdefGHIjkl...\n\nПопробуй ещё раз:",
+                  {},
+                );
+              }
+              channelManager.enableChannel(vkUser, "telegram");
+              channelManager.setChannelConfig(vkUser, "telegram", {
+                bot_token: txt,
+                enabled: true,
+                configured: true,
+                configured_at: Date.now(),
+              });
+              channelManager.setChannelState(
+                vkUser,
+                "telegram",
+                "CHANNEL_SETUP_TG_SUCCESS",
+              );
+              await ydb.saveUser(vkUser);
+              return await renderStep(
+                vkCtx,
+                "CHANNEL_SETUP_TG_SUCCESS",
                 vkToken,
               );
             }

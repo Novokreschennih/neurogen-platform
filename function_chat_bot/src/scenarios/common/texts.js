@@ -298,29 +298,37 @@ export const texts = {
         }
       },
 
-  // === MULTI_CHANNEL: Выбор дополнительных каналов ===
+  // === MULTI_CHANNEL: Выбор дополнительных каналов (v6.0 — динамический текст) ===
   MULTI_CHANNEL_SELECT: (links, user) => {
         const channels = user.session?.channels || {};
-        const enabled = Object.keys(channels).filter(ch => channels[ch]?.enabled);
         const configured = Object.keys(channels).filter(ch => channels[ch]?.configured);
+        const allChannels = ["telegram", "vk", "web", "email"];
+        const available = allChannels.filter(ch => !channels[ch]?.configured);
 
+        // Что уже настроено
         let summary = "";
         if (configured.length > 0) {
-          summary = "\n<b>✅ Уже настроены:</b> " + configured.map(ch => {
+          summary = "\n<b>✅ Уже подключены:</b> " + configured.map(ch => {
             const names = { telegram: "📱 Telegram", vk: "💬 VK", web: "🌐 Web", email: "📧 Email" };
             return names[ch] || ch;
           }).join(", ");
         }
 
+        // Что можно подключить
+        let availableText = "";
+        if (available.length > 0) {
+          const details = [];
+          if (available.includes("vk")) details.push("💬 <b>VKontakte</b> — 80M+ аудитории в РФ");
+          if (available.includes("telegram")) details.push("📱 <b>Telegram</b> — самый активный канал");
+          if (available.includes("web")) details.push("🌐 <b>Чат на сайте</b> — AI-консультант на странице");
+          if (available.includes("email")) details.push("📧 <b>Email</b> — авто-дожимы и напоминания");
+          availableText = "\n<b>ДОСТУПНО ДЛЯ ПОДКЛЮЧЕНИЯ:</b>\n" + details.join("\n");
+        }
+
         return (
           `🌐 <b>МУЛЬТИКАНАЛЬНАЯ СИСТЕМА</b>\n\n` +
-          `Ты уже настроил один канал. Но настоящие деньги — это охват везде, где сидят твои клиенты.\n\n` +
-          `<b>ДОСТУПНЫЕ КАНАЛЫ:</b>\n` +
-          `💬 <b>VKontakte</b> — аудитория 80M+ в РФ (не заблокирован)\n` +
-          `🌐 <b>Чат на сайте</b> — AI-консультант прямо на твоей странице\n` +
-          `📧 <b>Email-рассылка</b> — автоматические дожимы и напоминания\n\n` +
-          `Каждый канал работает автономно: ловит лидов, прогревает, продаёт.\n\n` +
-          `Какие каналы хочешь подключить?${summary || ""}`
+          `Каждый дополнительный канал = новые клиенты и продажи. Все каналы работают автономно: ловят лидов, прогревают, продают.${availableText || ""}\n` +
+          `Выбери канал для подключения:${summary ? "\n" + summary : ""}`
         );
       },
 
@@ -342,14 +350,13 @@ export const texts = {
           `✅ <b>VK ПОДКЛЮЧЁН!</b>\n\n` +
           `ID сообщества: <code>${groupId}</code>\n\n` +
           `Теперь VK-бот будет принимать лидов и вести их по воронке.\n\n` +
-          `⚠️ <b>ВАЖНО:</b> Не забудь настроить Callback API в сообществе:\n` +
+          `⚠️ <b>ВАЖНО:</b> Настрой Callback API в сообществе:\n` +
           `• URL: https://d5dsbah1d4ju0glmp9d0.3zvepvee.apigw.yandexcloud.net\n` +
-          `• Типы событий: message_new, message_event\n\n` +
-          `Хочешь подключить ещё каналы?`
+          `• Типы событий: message_new, message_event`
         );
       },
 
-  // === CHANNEL_SETUP_WEB: Шаг — веб-виджет ===
+  // === CHANNEL_SETUP_WEB: Шаг — веб-виджет (v6.0 — без вопроса "ещё каналы") ===
   CHANNEL_SETUP_WEB: (links, user) => {
         const embedCode = `<script src="https://sethubble.ru/js/widget.js" data-bot="${user.sh_user_id || 'demo'}"></script>`;
         return (
@@ -359,8 +366,7 @@ export const texts = {
           `1️⃣ Скопируй код ниже:\n` +
           `<code>${embedCode}</code>\n\n` +
           `2️⃣ Вставь его перед закрывающим тегом </body> на своём сайте\n\n` +
-          `3️⃣ Готово! Виджет появится в правом нижнем углу.\n\n` +
-          `Хочешь подключить ещё каналы?`
+          `3️⃣ Готово! Виджет появится в правом нижнем углу.`
         );
       },
 
@@ -376,14 +382,13 @@ export const texts = {
         );
       },
 
-  // === CHANNEL_SETUP_EMAIL_SUCCESS: Email подтверждён ===
+  // === CHANNEL_SETUP_EMAIL_SUCCESS: Email подтверждён (v6.0 — без вопроса "ещё каналы") ===
   CHANNEL_SETUP_EMAIL_SUCCESS: (links, user) =>
         `✅ <b>EMAIL ПОДТВЕРЖДЁН!</b>\n\n` +
         `Теперь ты будешь получать:\n` +
         `• Напоминания о продолжении обучения\n` +
         `• Дожимы по офферам (Tripwire, тарифы)\n` +
-        `• Уведомления о новых лидах в сети\n\n` +
-        `Хочешь подключить ещё каналы?`,
+        `• Уведомления о новых лидах в сети`,
 
   // === CHANNEL_SETUP_COMPLETE: Все каналы настроены ===
   CHANNEL_SETUP_COMPLETE: (links, user) => {
@@ -402,6 +407,27 @@ export const texts = {
           `• Отправляет дожимы и напоминания\n\n` +
           `🚀 <b>Следующий шаг:</b> продолжай обучение или перейди к модулям PRO-уровня.\n\n` +
           `<i>Управление каналами — кнопка «Инструменты» внизу.</i>`
+        );
+      },
+
+  // === CHANNEL_SETUP_TG: Настройка Telegram (из VK или Web) ===
+  CHANNEL_SETUP_TG: (links, user) =>
+        `📱 <b>ПОДКЛЮЧЕНИЕ TELEGRAM</b>\n\n` +
+        `Telegram — самый активный канал для работы с аудиторией.\n\n` +
+        `<b>ЧТО НУЖНО СДЕЛАТЬ:</b>\n` +
+        `1️⃣ Открой @BotFather в Telegram\n` +
+        `2️⃣ Отправь /newbot (или используй существующего)\n` +
+        `3️⃣ Скопируй токен бота\n` +
+        `4️⃣ Отправь токен сюда сообщением\n\n` +
+        `<i>Токен выглядит так: 123456789:ABCdefGHIjklMNOpqrsTUVwxyz</i>`,
+
+  // === CHANNEL_SETUP_TG_SUCCESS: Telegram подключён ===
+  CHANNEL_SETUP_TG_SUCCESS: (links, user) => {
+        const botUsername = user.session?.channels?.telegram?.bot_username || "настроен";
+        return (
+          `✅ <b>TELEGRAM ПОДКЛЮЧЁН!</b>\n\n` +
+          `Бот: <code>${botUsername}</code>\n\n` +
+          `Теперь Telegram-бот будет принимать лидов и вести их по воронке.`
         );
       },
 

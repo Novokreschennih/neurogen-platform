@@ -306,6 +306,11 @@ export function setupTelegramHandlers(bot, context) {
     const tgId = Number(ctx.from.id);
     ctx.dbUser = await ydb.findUser({ tg_id: tgId });
 
+    // v6.0: Auto-detect channels from DB columns (tg_id, vk_id, web_id, email)
+    if (ctx.dbUser) {
+      channelManager.autoDetectChannels(ctx.dbUser);
+    }
+
     log.info(`[MIDDLEWARE] User loaded`, {
       userId: ctx.from.id,
       hasDbUser: !!ctx.dbUser,

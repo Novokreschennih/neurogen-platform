@@ -532,42 +532,66 @@ export const vkButtons = {
     return r;
   },
 
-  // === MULTI_CHANNEL_SELECT: Выбор дополнительных каналов ===
+  // === MULTI_CHANNEL_SELECT: Выбор дополнительных каналов (v6.0 — показываем только не-настроенные) ===
   MULTI_CHANNEL_SELECT: (links, user) => {
     const channels = user.session?.channels || {};
     const r = [];
+    let anyAvailable = false;
+
+    // Telegram (v6.0: может быть уже настроен из tg_id)
+    const tgConfigured = channels.telegram?.configured;
+    if (!tgConfigured) {
+      r.push([
+        {
+          text: "📱 ПОДКЛЮЧИТЬ TELEGRAM",
+          callback: "MULTI_CHANNEL_TG",
+        },
+      ]);
+      anyAvailable = true;
+    }
 
     // VK
     const vkConfigured = channels.vk?.configured;
-    r.push([
-      {
-        text: vkConfigured ? "✅ VKontakte (настроено)" : "💬 ПОДКЛЮЧИТЬ VK",
-        callback: vkConfigured ? "CHANNEL_SETUP_VK" : "CHANNEL_SETUP_VK",
-      },
-    ]);
+    if (!vkConfigured) {
+      r.push([
+        {
+          text: "💬 ПОДКЛЮЧИТЬ VK",
+          callback: "CHANNEL_SETUP_VK",
+        },
+      ]);
+      anyAvailable = true;
+    }
 
-    // Web
+    // Web (v6.0: обычно уже настроен автоматически из web_id)
     const webConfigured = channels.web?.configured;
-    r.push([
-      {
-        text: webConfigured ? "✅ Чат на сайте (настроено)" : "🌐 ЧАТ НА САЙТЕ",
-        callback: webConfigured ? "CHANNEL_SETUP_WEB" : "CHANNEL_SETUP_WEB",
-      },
-    ]);
+    if (!webConfigured) {
+      r.push([
+        {
+          text: "🌐 ЧАТ НА САЙТЕ",
+          callback: "CHANNEL_SETUP_WEB",
+        },
+      ]);
+      anyAvailable = true;
+    }
 
-    // Email
+    // Email (v6.0: обычно уже настроен автоматически из email)
     const emailConfigured = channels.email?.configured;
-    r.push([
-      {
-        text: emailConfigured ? "✅ Email (настроено)" : "📧 EMAIL-РАССЫЛКА",
-        callback: emailConfigured
-          ? "CHANNEL_SETUP_EMAIL"
-          : "CHANNEL_SETUP_EMAIL",
-      },
-    ]);
+    if (!emailConfigured) {
+      r.push([
+        {
+          text: "📧 EMAIL-РАССЫЛКА",
+          callback: "CHANNEL_SETUP_EMAIL",
+        },
+      ]);
+      anyAvailable = true;
+    }
 
-    // Skip
-    r.push([{ text: "⏭ ПРОПУСТИТЬ", callback: "CHANNEL_SKIPPED" }]);
+    // Если все каналы уже настроены — показываем сообщение
+    if (!anyAvailable) {
+      r.push([{ text: "✅ ВСЕ КАНАЛЫ ПОДКЛЮЧЕНЫ", callback: "CHANNEL_SKIPPED" }]);
+    } else {
+      r.push([{ text: "⏭ ПРОПУСТИТЬ", callback: "CHANNEL_SKIPPED" }]);
+    }
 
     return r;
   },
@@ -576,6 +600,14 @@ export const vkButtons = {
   CHANNEL_SETUP_VK: (links, user) => {
     const r = [];
     r.push([{ text: "❓ КАК НАЙТИ ID СООБЩЕСТВА?", callback: "VK_HELP" }]);
+    r.push([{ text: "⏭ НАЗАД", callback: "MULTI_CHANNEL_SELECT" }]);
+    return r;
+  },
+
+  // === MULTI_CHANNEL_TG (для VK users, которые хотят подключить TG) ===
+  MULTI_CHANNEL_TG: (links, user) => {
+    const r = [];
+    r.push([{ text: "📱 НАСТРОИТЬ TELEGRAM", callback: "CHANNEL_SETUP_TG" }]);
     r.push([{ text: "⏭ НАЗАД", callback: "MULTI_CHANNEL_SELECT" }]);
     return r;
   },
@@ -626,6 +658,16 @@ export const vkButtons = {
 
   // === CHANNEL_SETUP_EMAIL_SUCCESS ===
   CHANNEL_SETUP_EMAIL_SUCCESS: (links, user) => {
+    const r = [];
+    r.push([
+      { text: "🌐 ПОДКЛЮЧИТЬ ЕЩЁ КАНАЛЫ", callback: "MULTI_CHANNEL_SELECT" },
+    ]);
+    r.push([{ text: "🚀 ПРОДОЛЖИТЬ ОБУЧЕНИЕ", callback: "Training_Main" }]);
+    return r;
+  },
+
+  // === CHANNEL_SETUP_TG_SUCCESS: Telegram подключён (из VK) ===
+  CHANNEL_SETUP_TG_SUCCESS: (links, user) => {
     const r = [];
     r.push([
       { text: "🌐 ПОДКЛЮЧИТЬ ЕЩЁ КАНАЛЫ", callback: "MULTI_CHANNEL_SELECT" },

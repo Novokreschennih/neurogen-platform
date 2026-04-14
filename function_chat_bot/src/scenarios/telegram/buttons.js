@@ -546,34 +546,58 @@ export const telegramButtons = {
         return r;
       },
 
-  // === MULTI_CHANNEL_SELECT: Выбор дополнительных каналов ===
+  // === MULTI_CHANNEL_SELECT: Выбор дополнительных каналов (v6.0 — показываем только не-настроенные) ===
   MULTI_CHANNEL_SELECT: (links, user) => {
         const channels = user.session?.channels || {};
         const r = [];
+        let anyAvailable = false;
+
+        // Telegram — показываем только если НЕ настроен
+        const tgConfigured = channels.telegram?.configured;
+        if (!tgConfigured) {
+          r.push([{
+            text: "📱 ПОДКЛЮЧИТЬ TELEGRAM",
+            callback_data: "MULTI_CHANNEL_TG",
+          }]);
+          anyAvailable = true;
+        }
 
         // VK
         const vkConfigured = channels.vk?.configured;
-        r.push([{
-          text: vkConfigured ? "✅ VKontakte (настроено)" : "💬 ПОДКЛЮЧИТЬ VK",
-          callback_data: "MULTI_CHANNEL_VK",
-        }]);
+        if (!vkConfigured) {
+          r.push([{
+            text: "💬 ПОДКЛЮЧИТЬ VK",
+            callback_data: "MULTI_CHANNEL_VK",
+          }]);
+          anyAvailable = true;
+        }
 
-        // Web
+        // Web (v6.0: обычно уже настроен автоматически из web_id)
         const webConfigured = channels.web?.configured;
-        r.push([{
-          text: webConfigured ? "✅ Чат на сайте (настроено)" : "🌐 ЧАТ НА САЙТЕ",
-          callback_data: "MULTI_CHANNEL_WEB",
-        }]);
+        if (!webConfigured) {
+          r.push([{
+            text: "🌐 ЧАТ НА САЙТЕ",
+            callback_data: "MULTI_CHANNEL_WEB",
+          }]);
+          anyAvailable = true;
+        }
 
-        // Email
+        // Email (v6.0: обычно уже настроен автоматически из email)
         const emailConfigured = channels.email?.configured;
-        r.push([{
-          text: emailConfigured ? "✅ Email (настроено)" : "📧 EMAIL-РАССЫЛКА",
-          callback_data: "MULTI_CHANNEL_EMAIL",
-        }]);
+        if (!emailConfigured) {
+          r.push([{
+            text: "📧 EMAIL-РАССЫЛКА",
+            callback_data: "MULTI_CHANNEL_EMAIL",
+          }]);
+          anyAvailable = true;
+        }
 
-        // Skip
-        r.push([{ text: "⏭ ПРОПУСТИТЬ", callback_data: "CHANNEL_SKIPPED" }]);
+        // Если все каналы уже настроены — показываем сообщение
+        if (!anyAvailable) {
+          r.push([{ text: "✅ ВСЕ КАНАЛЫ ПОДКЛЮЧЕНЫ", callback_data: "CHANNEL_SKIPPED" }]);
+        } else {
+          r.push([{ text: "⏭ ПРОПУСТИТЬ", callback_data: "CHANNEL_SKIPPED" }]);
+        }
 
         return r;
       },
@@ -582,6 +606,14 @@ export const telegramButtons = {
   MULTI_CHANNEL_VK: (links, user) => {
         const r = [];
         r.push([{ text: "💬 НАСТРОИТЬ VK", callback_data: "CHANNEL_SETUP_VK" }]);
+        r.push([{ text: "⏭ НАЗАД", callback_data: "MULTI_CHANNEL_SELECT" }]);
+        return r;
+      },
+
+  // === MULTI_CHANNEL_TG ===
+  MULTI_CHANNEL_TG: (links, user) => {
+        const r = [];
+        r.push([{ text: "📱 НАСТРОИТЬ TELEGRAM", callback_data: "CHANNEL_SETUP_TG" }]);
         r.push([{ text: "⏭ НАЗАД", callback_data: "MULTI_CHANNEL_SELECT" }]);
         return r;
       },
@@ -609,6 +641,13 @@ export const telegramButtons = {
         return r;
       },
 
+  // === CHANNEL_SETUP_TG ===
+  CHANNEL_SETUP_TG: (links, user) => {
+        const r = [];
+        r.push([{ text: "⏭ НАЗАД К ВЫБОРУ КАНАЛОВ", callback_data: "MULTI_CHANNEL_SELECT" }]);
+        return r;
+      },
+
   // === CHANNEL_SETUP_WEB ===
   CHANNEL_SETUP_WEB: (links, user) => {
         const r = [];
@@ -629,6 +668,14 @@ export const telegramButtons = {
         const r = [];
         r.push([{ text: "🚀 ПРОДОЛЖИТЬ ОБУЧЕНИЕ", callback_data: "Training_Main" }]);
         r.push([{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }]);
+        return r;
+      },
+
+  // === CHANNEL_SETUP_TG_SUCCESS ===
+  CHANNEL_SETUP_TG_SUCCESS: (links, user) => {
+        const r = [];
+        r.push([{ text: "🌐 ПОДКЛЮЧИТЬ ЕЩЁ КАНАЛЫ", callback_data: "MULTI_CHANNEL_SELECT" }]);
+        r.push([{ text: "🚀 ПРОДОЛЖИТЬ ОБУЧЕНИЕ", callback_data: "Training_Main" }]);
         return r;
       },
 
