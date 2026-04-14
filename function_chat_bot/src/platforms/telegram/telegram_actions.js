@@ -13,6 +13,7 @@
 
 import TelegrafPkg from "telegraf";
 const { Telegraf } = TelegrafPkg;
+import { detectLoop, getLoopHint } from "../../utils/ux_helpers.js";
 
 export function registerTelegramActions(bot, ctx) {
   const {
@@ -388,6 +389,19 @@ export function registerTelegramActions(bot, ctx) {
     const u = ctx.dbUser;
 
     if (txt.startsWith("/")) return next();
+
+    // v6.0: Loop Detection — если пользователь повторяет одно и то же 3+ раз
+    if (detectLoop(u, txt)) {
+      const hint = getLoopHint(u.state);
+      await ctx.reply(
+        `🤔 <b>Кажется, ты застрял?</b>\n\n` +
+        `Ты отправляешь одно и то же несколько раз. Возможно я не понял команду.\n\n` +
+        `${hint || `Попробуй:\n• /menu — главное меню\n• /help — помощь\n• /start — начать сначала`}\n\n` +
+        `Если нужна помощь — пиши, я тут! 👋`,
+        { parse_mode: "HTML", protect_content: true },
+      );
+      return;
+    }
 
     // === ЛОГИКА ПРОВЕРКИ СЕКРЕТНЫХ СЛОВ ===
     const secretsConfig = {
