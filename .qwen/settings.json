@@ -20,7 +20,8 @@
       "Bash(unzip *)",
       "Bash(echo *)",
       "Bash(stat *)",
-      "Bash(grep *)"
+      "Bash(grep *)",
+      "Bash(find *)"
     ]
   },
   "$version": 3

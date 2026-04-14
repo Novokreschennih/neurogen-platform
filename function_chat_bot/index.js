@@ -18,7 +18,7 @@ import {
   generateToken,
   verifyToken,
 } from "./src/utils/jwt_utils.js";
-import { generatePin, generateNeuroPin } from "./src/utils/pin.js";
+import { generatePin } from "./src/utils/pin.js";
 
 // === КАНАЛЫ И EMAIL ===
 import channelManager from "./src/core/channels/channel_manager.js";

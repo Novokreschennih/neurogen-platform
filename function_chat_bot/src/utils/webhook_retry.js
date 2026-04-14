@@ -66,22 +66,4 @@ export async function retryWebhook(handlerFn, options = {}) {
   };
 }
 
-/**
- * Обёртка для Express/YC API handler — автоматически ретраит
- * если handlerFn возвращает { success: false }
- *
- * Используется как middleware перед основной логикой.
- */
-export function createWebhookRetry(handlerFn, options = {}) {
-  return async function (event, context) {
-    return retryWebhook(async () => {
-      const result = await handlerFn(event, context);
-      if (result && result.success === false) {
-        throw new Error(result.error || "Handler returned success: false");
-      }
-      return result;
-    }, options);
-  };
-}
-
-export default { retryWebhook, createWebhookRetry, DEFAULT_DELAYS };
+export default { retryWebhook, DEFAULT_DELAYS };

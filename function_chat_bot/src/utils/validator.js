@@ -165,33 +165,6 @@ export function escapeHtml(str) {
     .replace(/'/g, "&#x27;");
 }
 
-/**
- * Safe JSON → HTML для вывода в CRM без XSS
- */
-export function safeJsonToHtml(obj, indent = 0) {
-  if (obj === null || obj === undefined) return '<span class="text-gray-400">null</span>';
-  if (typeof obj === "string") return `<span class="text-green-400">"${escapeHtml(obj)}"</span>`;
-  if (typeof obj === "number") return `<span class="text-cyan-400">${obj}</span>`;
-  if (typeof obj === "boolean") return `<span class="text-yellow-400">${obj}</span>`;
-  if (Array.isArray(obj)) {
-    if (obj.length === 0) return "[]";
-    const items = obj.map((item) => safeJsonToHtml(item, indent + 1)).join(",\n");
-    return `[\n${"  ".repeat(indent + 1)}${items}\n${"  ".repeat(indent)}]`;
-  }
-  if (typeof obj === "object") {
-    const entries = Object.entries(obj);
-    if (entries.length === 0) return "{}";
-    const items = entries
-      .map(
-        ([k, v]) =>
-          `${"  ".repeat(indent + 1)}<span class="text-purple-400">"${escapeHtml(k)}"</span>: ${safeJsonToHtml(v, indent + 1)}`,
-      )
-      .join(",\n");
-    return `{\n${items}\n${"  ".repeat(indent)}}`;
-  }
-  return escapeHtml(String(obj));
-}
-
 // ============================================================
 // Экспорт
 // ============================================================
@@ -205,5 +178,4 @@ export default {
   validateCallbackData,
   validateState,
   escapeHtml,
-  safeJsonToHtml,
 };

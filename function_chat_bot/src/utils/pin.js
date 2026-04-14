@@ -1,5 +1,5 @@
 /**
- * Генерация PIN-кодов для интеграции с Supabase
+ * Генерация PIN-кодов
  */
 
 /**
@@ -15,13 +15,4 @@ export function generatePin(length = 4) {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return result;
-}
-
-/**
- * Сгенерировать alphanumeric PIN в формате NG-XXXXXX
- *
- * @returns {string} PIN в формате NG-XXXXXX
- */
-export function generateNeuroPin() {
-  return "NG-" + Math.random().toString(36).substring(2, 8).toUpperCase();
 }

@@ -65,21 +65,3 @@ export function verifyToken(token) {
     return null;
   }
 }
-
-/**
- * Безопасно декодировать JWT токен без валидации
- * Используется только для извлечения данных (не для авторизации!)
- *
- * @param {string} token - JWT токен
- * @returns {Object|null} Payload или null
- */
-export function decodeToken(token) {
-  if (!token) return null;
-
-  try {
-    return jwt.decode(token);
-  } catch (error) {
-    log.warn("[JWT] Token decode failed", { error: error.message });
-    return null;
-  }
-}

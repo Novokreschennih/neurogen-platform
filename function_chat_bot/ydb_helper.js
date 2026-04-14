@@ -406,45 +406,6 @@ export async function registerPartnerBot(
   }
 }
 
-export async function updatePartnerBot(token, updates) {
-  // Валидация токена перед запросом к БД
-  if (!isValidBotToken(token)) {
-    log.warn(`Invalid bot token format attempt`, { token });
-    throw new Error("Invalid bot token format");
-  }
-
-  try {
-    return await driver.tableClient.withSession(async (session) => {
-      const updatesQuery = Object.entries(updates)
-        .map(([key, value]) => `${key} = $${key}`)
-        .join(", ");
-
-      const query = `
-        DECLARE $tok AS Utf8;
-        UPDATE bots SET ${updatesQuery} WHERE bot_token = $tok;
-      `;
-
-      const params = {
-        $tok: TypedValues.utf8(String(token)),
-      };
-
-      Object.entries(updates).forEach(([key, value]) => {
-        params[`$${key}`] = TypedValues.utf8(String(value));
-      });
-
-      await session.executeQuery(query, params);
-      log.info(`Partner bot updated`, {
-        token: token.substring(0, 10) + "...",
-      });
-    });
-  } catch (e) {
-    log.error(`Failed to update partner bot`, e, {
-      token: token.substring(0, 10) + "...",
-    });
-    throw e;
-  }
-}
-
 export async function getBotInfo(token) {
   if (!isValidBotToken(token)) return null;
 
