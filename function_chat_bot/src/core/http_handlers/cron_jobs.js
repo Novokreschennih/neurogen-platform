@@ -222,6 +222,17 @@ export async function handleCronJobs(event, context) {
       // Определяем основной канал пользователя
       const primaryChannel = channelManager.getPrimaryChannel(u) || "telegram";
 
+      // v6.0: Логируем контекст для отладки
+      const hoursInactive = ((Date.now() - (u.session?.last_activity || u.last_seen)) / (1000 * 60 * 60)).toFixed(1);
+      log.debug(`[CRON CONTEXT]`, {
+        userId: u.id,
+        firstName: u.first_name,
+        state: u.state,
+        channel: primaryChannel,
+        hoursInactive,
+        channels: Object.keys(u.session?.channels || {}).filter(ch => u.session.channels[ch]?.configured),
+      });
+
       let actionTaken = false;
       let sendResult = null;
 

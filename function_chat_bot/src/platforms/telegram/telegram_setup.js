@@ -28,6 +28,7 @@ import TelegrafPkg from "telegraf";
 const { Telegraf, Markup } = TelegrafPkg;
 import { registerTelegramActions } from "./telegram_actions.js";
 import { validateStartPayload } from "../../utils/validator.js";
+import { formatTrainingProgress, detectLoop, getLoopHint, buildChannelSummary } from "../../utils/ux_helpers.js";
 
 /**
  * Setup all Telegram handlers for a bot instance
@@ -163,6 +164,11 @@ export function setupTelegramHandlers(bot, context) {
       typeof step.text === "function"
         ? step.text(links, user, info)
         : step.text;
+
+    // v6.0: Добавляем прогресс-бар для обучающих шагов
+    const progress = formatTrainingProgress(stepKey, user);
+    const finalText = progress ? `${progress}${messageText}` : messageText;
+
     const keyboard = getKeyboard(step, links, user, info);
 
     log.info(`[renderStep] Preparing message`, {
@@ -208,7 +214,7 @@ export function setupTelegramHandlers(bot, context) {
       }
 
       const opts = {
-        caption: messageText,
+        caption: finalText,
         parse_mode: "HTML",
         protect_content: true,
         ...keyboard,
@@ -229,10 +235,10 @@ export function setupTelegramHandlers(bot, context) {
             image: step.image,
             error: photoError.message,
           });
-          await ctx.reply(messageText, opts);
+          await ctx.reply(finalText, opts);
         }
       } else {
-        await ctx.reply(messageText, opts);
+        await ctx.reply(finalText, opts);
       }
 
       log.info(`[renderStep] Message sent`, { stepKey, userId: user.user_id });

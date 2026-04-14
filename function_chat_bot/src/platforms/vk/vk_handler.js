@@ -1490,7 +1490,10 @@ export async function handleVkWebhook(event, context) {
             if (vkUser.state === "WAIT_VK_GROUP_ID") {
               if (isNaN(txt))
                 return await vkCtx.reply(
-                  "❌ ID сообщества — только цифры. Попробуй ещё раз:",
+                  `❌ ID сообщества — только цифры.\n\n` +
+                    `Ты ввёл: <code>${txt}</code>\n\n` +
+                    `💡 Подсказка: зайди в сообщество → «Управление» → «Работа с API» → ID указан там\n\n` +
+                    `Попробуй ещё раз:`,
                   {},
                 );
               channelManager.enableChannel(vkUser, "vk");
@@ -1506,10 +1509,24 @@ export async function handleVkWebhook(event, context) {
                 "CHANNEL_SETUP_VK_SUCCESS",
               );
               await ydb.saveUser(vkUser);
-              return await renderStep(
-                vkCtx,
-                "CHANNEL_SETUP_VK_SUCCESS",
-                vkToken,
+
+              // Сводка каналов
+              const allConfigured = Object.keys(vkUser.session?.channels || {}).filter(
+                (ch) => vkUser.session.channels[ch]?.configured
+              );
+              const channelNames = { telegram: "📱 Telegram", vk: "💬 VK", web: "🌐 Web", email: "📧 Email" };
+
+              let summaryMsg = "";
+              if (allConfigured.length > 0) {
+                summaryMsg = `\n\n📊 <b>Твои каналы:</b> ${allConfigured.map(ch => channelNames[ch] || ch).join(" • ")}`;
+                if (allConfigured.length >= 3) {
+                  summaryMsg += `\n\n🎉 <b>3 канала!</b> По статистике это даёт в 3 раза больше лидов!`;
+                }
+              }
+
+              return await vkCtx.reply(
+                `✅ <b>VK ПОДКЛЮЧЁН!</b>\n\nID сообщества: <code>${txt}</code>${summaryMsg}`,
+                {},
               );
             }
 
@@ -1518,7 +1535,11 @@ export async function handleVkWebhook(event, context) {
               const tokenMatch = txt.match(/^(\d+:[A-Za-z0-9_-]+)$/);
               if (!tokenMatch) {
                 return await vkCtx.reply(
-                  "❌ Это не похоже на токен бота. Токен должен быть в формате: 123456789:ABCdefGHIjkl...\n\nПопробуй ещё раз:",
+                  `❌ Это не похоже на токен бота.\n\n` +
+                    `Ты ввёл: <code>${txt.substring(0, 30)}...</code>\n\n` +
+                    `Токен должен быть в формате: 123456789:ABCdefGHIjkl...\n\n` +
+                    `💡 Подсказка: зайди в @BotFather → выбери бота → скопируй токен\n\n` +
+                    `Попробуй ещё раз:`,
                   {},
                 );
               }
@@ -1547,7 +1568,10 @@ export async function handleVkWebhook(event, context) {
               const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
               if (!emailRegex.test(txt)) {
                 return await vkCtx.reply(
-                  "❌ Это не похоже на email. Попробуй ещё раз:",
+                  `❌ Это не похоже на email.\n\n` +
+                    `Ты ввёл: <code>${txt}</code>\n\n` +
+                    `💡 Формат: name@example.com\n\n` +
+                    `Попробуй ещё раз:`,
                   {},
                 );
               }
