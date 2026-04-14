@@ -11,9 +11,8 @@
 -- -------------------------------------------------------------
 -- Таблица: users (пользователи)
 -- -------------------------------------------------------------
--- Хранит всех пользователей across all bots и каналов
--- Primary Key: id (UUID v4) — генерируется один раз при первом касании
--- Поиск: по любому каналу через secondary indexes
+-- Primary Key: id (UUID v4)
+-- Индексы объявлены inline внутри CREATE TABLE (YDB требует так)
 
 CREATE TABLE users (
     id Utf8,                        -- 🔑 Primary Key: UUID v4
@@ -38,7 +37,17 @@ CREATE TABLE users (
     pin_code Utf8,                  -- 4-значный PIN для ИИ-приложений
     session_version Uint64,         -- Версия сессии (race condition protection)
     created_at Uint64,              -- Timestamp создания (Unix ms)
-    PRIMARY KEY (id)
+    PRIMARY KEY (id),
+
+    -- Вторичные индексы (inline — YDB требует внутри CREATE TABLE)
+    INDEX idx_users_email GLOBAL ON (email),
+    INDEX idx_users_tg_id GLOBAL ON (tg_id),
+    INDEX idx_users_vk_id GLOBAL ON (vk_id),
+    INDEX idx_users_web_id GLOBAL ON (web_id),
+    INDEX idx_users_bot_token GLOBAL ON (bot_token),
+    INDEX idx_users_partner_id GLOBAL ON (partner_id),
+    INDEX idx_users_bought_tripwire GLOBAL ON (bought_tripwire),
+    INDEX idx_users_last_seen GLOBAL ON (last_seen)
 );
 
 -- -------------------------------------------------------------
@@ -69,7 +78,9 @@ CREATE TABLE bots (
     sh_ref_tail Utf8,
     tripwire_link Utf8,
     vk_group_id Utf8,
-    PRIMARY KEY (bot_token)
+    PRIMARY KEY (bot_token),
+
+    INDEX idx_bots_vk_group_id GLOBAL ON (vk_group_id)
 );
 
 -- -------------------------------------------------------------
@@ -83,23 +94,6 @@ CREATE TABLE link_clicks (
     bot_token Utf8,
     PRIMARY KEY (partner_id, clicked_at, user_id)
 );
-
--- -------------------------------------------------------------
--- Индексы
--- -------------------------------------------------------------
-
--- Канальные индексы (критично для омниканальности)
-CREATE INDEX idx_users_email ON users (email);
-CREATE INDEX idx_users_tg_id ON users (tg_id);
-CREATE INDEX idx_users_vk_id ON users (vk_id);
-CREATE INDEX idx_users_web_id ON users (web_id);
-
--- Бизнес-индексы
-CREATE INDEX idx_users_bot_token ON users (bot_token);
-CREATE INDEX idx_users_partner_id ON users (partner_id);
-CREATE INDEX idx_users_bought_tripwire ON users (bought_tripwire);
-CREATE INDEX idx_users_last_seen ON users (last_seen);
-CREATE INDEX idx_bots_vk_group_id ON bots (vk_group_id);
 
 -- -------------------------------------------------------------
 -- Примеры запросов
