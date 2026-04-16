@@ -115,6 +115,7 @@ export async function findUser(criteria) {
     return await driver.tableClient.withSession(async (session) => {
       let whereClause = "";
       let params = {};
+      let declareType = "Utf8"; // По умолчанию строка
 
       if (criteria.id) {
         whereClause = "id = $search_val";
@@ -122,6 +123,7 @@ export async function findUser(criteria) {
       } else if (criteria.tg_id) {
         whereClause = "tg_id = $search_val";
         params = { $search_val: TypedValues.uint64(String(criteria.tg_id)) };
+        declareType = "Uint64"; // Указываем правильный тип для YDB!
       } else if (criteria.email) {
         whereClause = "email = $search_val";
         params = {
@@ -133,12 +135,14 @@ export async function findUser(criteria) {
       } else if (criteria.vk_id) {
         whereClause = "vk_id = $search_val";
         params = { $search_val: TypedValues.uint64(String(criteria.vk_id)) };
+        declareType = "Uint64"; // Указываем правильный тип для YDB!
       } else {
         return null;
       }
 
+      // Подставляем правильный DECLARE
       const query = `
-        DECLARE $search_val AS Utf8;
+        DECLARE $search_val AS ${declareType};
         SELECT ${USER_FIELDS} FROM users WHERE ${whereClause};
       `;
 
@@ -166,7 +170,11 @@ export async function getUser(userId) {
       // Пробуем найти по UUID (id)
       let query, params;
 
-      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
+      if (
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          userId,
+        )
+      ) {
         query = `DECLARE $id AS Utf8; SELECT ${USER_FIELDS} FROM users WHERE id = $id;`;
         params = { $id: TypedValues.utf8(userId) };
       } else if (/^\d{3,20}$/.test(userId)) {
@@ -278,7 +286,11 @@ export async function saveUser(user) {
  * @param {string} reason - Причина: 'email_match', 'web_merge', 'tg_merge', 'vk_merge', 'manual'
  * @returns {boolean} Успешность слияния
  */
-export async function mergeUsers(surviving, deletedUserId, reason = "auto_merge") {
+export async function mergeUsers(
+  surviving,
+  deletedUserId,
+  reason = "auto_merge",
+) {
   const mergeId = crypto.randomUUID();
 
   try {
@@ -296,7 +308,9 @@ export async function mergeUsers(surviving, deletedUserId, reason = "auto_merge"
         $pid: TypedValues.utf8(String(surviving.partner_id || "p_qdr")),
         $st: TypedValues.utf8(String(surviving.state || "START")),
         $br: TypedValues.bool(Boolean(surviving.bought_tripwire)),
-        $js: TypedValues.json(JSON.stringify(surviving.session || { tags: [] })),
+        $js: TypedValues.json(
+          JSON.stringify(surviving.session || { tags: [] }),
+        ),
         $ls: TypedValues.uint64(String(now)),
         $sv: TypedValues.utf8(String(surviving.saved_state || "")),
         $bt: TypedValues.utf8(String(surviving.bot_token || "")),
@@ -351,15 +365,21 @@ export async function mergeUsers(surviving, deletedUserId, reason = "auto_merge"
 
       await session.executeQuery(query, saveParams);
 
-      log.info(`[MERGE] Successfully merged ${deletedUserId} into ${surviving.id}`, {
-        reason,
-        survivingId: surviving.id,
-        deletedId: deletedUserId,
-      });
+      log.info(
+        `[MERGE] Successfully merged ${deletedUserId} into ${surviving.id}`,
+        {
+          reason,
+          survivingId: surviving.id,
+          deletedId: deletedUserId,
+        },
+      );
       return true;
     });
   } catch (e) {
-    log.error(`[MERGE FAILED] Could not merge ${deletedUserId} into ${surviving?.id}`, e);
+    log.error(
+      `[MERGE FAILED] Could not merge ${deletedUserId} into ${surviving?.id}`,
+      e,
+    );
     return false;
   }
 }

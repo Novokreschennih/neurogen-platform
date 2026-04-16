@@ -28,7 +28,12 @@ import TelegrafPkg from "telegraf";
 const { Telegraf, Markup } = TelegrafPkg;
 import { registerTelegramActions } from "./telegram_actions.js";
 import { validateStartPayload } from "../../utils/validator.js";
-import { formatTrainingProgress, detectLoop, getLoopHint, buildChannelSummary } from "../../utils/ux_helpers.js";
+import {
+  formatTrainingProgress,
+  detectLoop,
+  getLoopHint,
+  buildChannelSummary,
+} from "../../utils/ux_helpers.js";
 
 /**
  * Setup all Telegram handlers for a bot instance
@@ -373,7 +378,8 @@ export function setupTelegramHandlers(bot, context) {
         ctx.dbUser = existingWebUser || existingEmailUser;
         ctx.dbUser.tg_id = tgId;
         ctx.dbUser.bot_token = token;
-        ctx.dbUser.first_name = ctx.from.first_name || ctx.dbUser.first_name || "Друг";
+        ctx.dbUser.first_name =
+          ctx.from.first_name || ctx.dbUser.first_name || "Друг";
         ctx.dbUser.session.channels = ctx.dbUser.session.channels || {};
         ctx.dbUser.session.channels.telegram = {
           enabled: true,
@@ -381,7 +387,8 @@ export function setupTelegramHandlers(bot, context) {
           bot_username: ctx.me?.username,
           linked_at: Date.now(),
         };
-        ctx.dbUser.session.channel_states = ctx.dbUser.session.channel_states || {};
+        ctx.dbUser.session.channel_states =
+          ctx.dbUser.session.channel_states || {};
         ctx.dbUser.session.channel_states.telegram = "START";
         await ydb.saveUser(ctx.dbUser);
 
@@ -398,6 +405,7 @@ export function setupTelegramHandlers(bot, context) {
           email: emailFromJoin || "",
           partner_id: pid,
           state: "START",
+          saved_state: "",
           session: {
             tags: [],
             channels: {
