@@ -57,15 +57,15 @@ function mapUser(row) {
     id: row.items[0]?.textValue || "",
     email: row.items[1]?.textValue || "",
     // Безопасное извлечение как Int64
-    tg_id: row.items[2]?.int64Value
-      ? Number(row.items[2].int64Value)
-      : row.items[2]?.uint64Value
-        ? Number(row.items[2].uint64Value)
+    tg_id: row.items[2]?.uint64Value
+      ? Number(row.items[2].uint64Value)
+      : row.items[2]?.int64Value
+        ? Number(row.items[2].int64Value)
         : null,
-    vk_id: row.items[3]?.int64Value
-      ? Number(row.items[3].int64Value)
-      : row.items[3]?.uint64Value
-        ? Number(row.items[3].uint64Value)
+    vk_id: row.items[3]?.uint64Value
+      ? Number(row.items[3].uint64Value)
+      : row.items[3]?.int64Value
+        ? Number(row.items[3].int64Value)
         : null,
     web_id: row.items[4]?.textValue || "",
     partner_id: row.items[5]?.textValue || "p_qdr",
@@ -117,8 +117,8 @@ export async function findUser(criteria) {
         params = { $search_val: TypedValues.utf8(String(criteria.id)) };
       } else if (criteria.tg_id) {
         whereClause = "tg_id = $search_val";
-        params = { $search_val: TypedValues.int64(String(criteria.tg_id)) };
-        declareType = "Int64";
+        params = { $search_val: TypedValues.uint64(String(criteria.tg_id)) };
+        declareType = "Uint64";
       } else if (criteria.email) {
         whereClause = "email = $search_val";
         params = {
@@ -129,8 +129,8 @@ export async function findUser(criteria) {
         params = { $search_val: TypedValues.utf8(String(criteria.web_id)) };
       } else if (criteria.vk_id) {
         whereClause = "vk_id = $search_val";
-        params = { $search_val: TypedValues.int64(String(criteria.vk_id)) };
-        declareType = "Int64";
+        params = { $search_val: TypedValues.uint64(String(criteria.vk_id)) };
+        declareType = "Uint64";
       } else {
         return null;
       }
@@ -170,8 +170,8 @@ export async function getUser(userId) {
         query = `DECLARE $id AS Utf8; SELECT ${USER_FIELDS} FROM users WHERE id = $id;`;
         params = { $id: TypedValues.utf8(userId) };
       } else if (/^\d{3,20}$/.test(userId)) {
-        query = `DECLARE $id AS Int64; SELECT ${USER_FIELDS} FROM users WHERE tg_id = $id OR vk_id = $id LIMIT 1;`;
-        params = { $id: TypedValues.int64(userId) };
+        query = `DECLARE $id AS Uint64; SELECT ${USER_FIELDS} FROM users WHERE tg_id = $id OR vk_id = $id LIMIT 1;`;
+        params = { $id: TypedValues.uint64(userId) };
       } else if (
         /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(userId)
       ) {
@@ -208,8 +208,8 @@ export async function saveUser(user) {
       const params = {
         $id: TypedValues.utf8(String(userId)),
         $email: TypedValues.utf8(String(user.email || "").toLowerCase()),
-        $tg_id: TypedValues.int64(String(tgId || "0")),
-        $vk_id: TypedValues.int64(String(user.vk_id || "0")),
+        $tg_id: TypedValues.uint64(String(tgId || "0")),
+        $vk_id: TypedValues.uint64(String(user.vk_id || "0")),
         $web_id: TypedValues.utf8(String(user.web_id || "")),
         $pid: TypedValues.utf8(String(user.partner_id || "p_qdr")),
         $st: TypedValues.utf8(String(user.state || "START")),
@@ -232,7 +232,7 @@ export async function saveUser(user) {
 
       const query = `
         DECLARE $id AS Utf8; DECLARE $email AS Utf8;
-        DECLARE $tg_id AS Int64; DECLARE $vk_id AS Int64; DECLARE $web_id AS Utf8;
+        DECLARE $tg_id AS Uint64; DECLARE $vk_id AS Uint64; DECLARE $web_id AS Utf8;
         DECLARE $pid AS Utf8; DECLARE $st AS Utf8; DECLARE $br AS Bool;
         DECLARE $js AS Json; DECLARE $ls AS Uint64; DECLARE $sv AS Utf8; DECLARE $bt AS Utf8;
         DECLARE $tr AS Utf8; DECLARE $shui AS Utf8; DECLARE $shrt AS Utf8; DECLARE $pur AS Json;
@@ -274,8 +274,8 @@ export async function mergeUsers(
       const saveParams = {
         $id: TypedValues.utf8(String(surviving.id)),
         $email: TypedValues.utf8(String(surviving.email || "").toLowerCase()),
-        $tg_id: TypedValues.int64(String(surviving.tg_id || "0")),
-        $vk_id: TypedValues.int64(String(surviving.vk_id || "0")),
+        $tg_id: TypedValues.uint64(String(surviving.tg_id || "0")),
+        $vk_id: TypedValues.uint64(String(surviving.vk_id || "0")),
         $web_id: TypedValues.utf8(String(surviving.web_id || "")),
         $pid: TypedValues.utf8(String(surviving.partner_id || "p_qdr")),
         $st: TypedValues.utf8(String(surviving.state || "START")),
@@ -305,7 +305,7 @@ export async function mergeUsers(
 
       const query = `
         DECLARE $id AS Utf8; DECLARE $email AS Utf8;
-        DECLARE $tg_id AS Int64; DECLARE $vk_id AS Int64; DECLARE $web_id AS Utf8;
+        DECLARE $tg_id AS Uint64; DECLARE $vk_id AS Uint64; DECLARE $web_id AS Utf8;
         DECLARE $pid AS Utf8; DECLARE $st AS Utf8; DECLARE $br AS Bool;
         DECLARE $js AS Json; DECLARE $ls AS Uint64; DECLARE $sv AS Utf8; DECLARE $bt AS Utf8;
         DECLARE $tr AS Utf8; DECLARE $shui AS Utf8; DECLARE $shrt AS Utf8; DECLARE $pur AS Json;
@@ -498,8 +498,8 @@ export async function getUserReferrals(userId) {
 
       return (userRes.resultSets[0]?.rows || []).map((r) => {
         const id = r.items[0].textValue;
-        const tgId = r.items[1].int64Value
-          ? String(r.items[1].int64Value)
+        const tgId = r.items[1].uint64Value
+          ? String(r.items[1].uint64Value)
           : null;
         return {
           user_id: tgId || id, // Сохраняем совместимость для фронтенда CRM

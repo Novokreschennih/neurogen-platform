@@ -984,15 +984,21 @@ export const handler = async (event) => {
   // Исключаем webhook'и Telegram и VK (у них свои IP, их блочить нельзя)
   const isWebhook =
     event.body &&
-    (event.body.includes("update_id") || event.body.includes('type":"message_new"'));
+    (event.body.includes("update_id") ||
+      event.body.includes('type":"message_new"'));
 
   if (!isWebhook && clientIp !== "unknown_ip") {
     const rateCheck = checkRateLimit(clientIp);
     if (!rateCheck.allowed) {
-      log.warn(`[RATE LIMIT] IP blocked: ${clientIp}, retryAfter ${rateCheck.retryAfter}s`);
+      log.warn(
+        `[RATE LIMIT] IP blocked: ${clientIp}, retryAfter ${rateCheck.retryAfter}s`,
+      );
       return {
         statusCode: 429,
-        headers: { ...corsHeaders, "Retry-After": String(rateCheck.retryAfter) },
+        headers: {
+          ...corsHeaders,
+          "Retry-After": String(rateCheck.retryAfter),
+        },
         body: JSON.stringify({
           error: "Too many requests",
           retryAfter: rateCheck.retryAfter,
@@ -1059,6 +1065,17 @@ export const handler = async (event) => {
   try {
     const { token, bot, isMainBot } = createBotContext(event);
 
+    // === КРИТИЧЕСКИ ВАЖНО: Ловим ошибки Telegraf, иначе они молча убивают функцию ===
+    bot.catch((err, ctx) => {
+      log.error(`[TELEGRAF ERROR] Unhandled error in update processing`, {
+        error: err?.message || String(err),
+        stack: err?.stack?.split("\n").slice(0, 5).join(" "),
+        userId: ctx?.from?.id,
+        updateType: ctx?.updateType,
+        state: ctx?.dbUser?.state,
+      });
+    });
+
     // === ОБРАБОТКА ПАРАМЕТРОВ ===
     // Timer trigger: event.details.payload содержит JSON строку с данными
     const timerData =
@@ -1102,6 +1119,7 @@ export const handler = async (event) => {
       processedUpdates,
       updateCache,
       corsHeaders,
+      channelManager,
       aiEngine,
       addToDialogHistory,
       cleanupDialogHistory,

@@ -50,6 +50,7 @@ export function setupTelegramHandlers(bot, context) {
     processedUpdates,
     updateCache,
     corsHeaders,
+    channelManager,
     aiEngine,
     addToDialogHistory,
     cleanupDialogHistory,
@@ -444,8 +445,8 @@ export function setupTelegramHandlers(bot, context) {
 
       const newLeadMsg =
         `👥 <b>У ТЕБЯ НОВЫЙ ЛИД!</b>\n\n` +
-        `👤 <b>Имя:</b> <a href="tg://user?id=${userId}">${ctx.from.first_name || "Без имени"}</a>\n` +
-        `🆔 <b>ID:</b> <code>${userId}</code>\n` +
+        `👤 <b>Имя:</b> <a href="tg://user?id=${tgId}">${ctx.from.first_name || "Без имени"}</a>\n` +
+        `🆔 <b>ID:</b> <code>${tgId}</code>\n` +
         (emailFromJoin
           ? `📧 <b>Email:</b> <code>${emailFromJoin}</code>\n`
           : "") +
@@ -467,7 +468,7 @@ export function setupTelegramHandlers(bot, context) {
 
       if (ctx.dbUser.session?.is_banned) {
         ctx.dbUser.session.is_banned = false;
-        log.info(`[SELF-HEALING] User unblocked`, { userId });
+        log.info(`[SELF-HEALING] User unblocked`, { userId: ctx.from.id });
       }
     }
 
