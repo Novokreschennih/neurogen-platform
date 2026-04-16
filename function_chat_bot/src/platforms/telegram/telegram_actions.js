@@ -1,6 +1,6 @@
 /**
  * Telegram Handlers — Actions, Commands, Text, Callback
- * 
+ *
  * Зависимости (передаются через context):
  * - bot: Telegraf instance (уже с middleware)
  * - renderStep, getKeyboard: helper функции
@@ -17,11 +17,21 @@ import { detectLoop, getLoopHint } from "../../utils/ux_helpers.js";
 
 export function registerTelegramActions(bot, ctx) {
   const {
-    renderStep, getKeyboard,
-    ydb, scenario, log, MAIN_TOKEN, isMainBot, token,
-    AI_PRO_LIMIT, AI_FREE_LIMIT,
-    askNeuroGenAI, getOrCreatePin, generateToken,
-    handleAppsCommand, notifyBotOwner,
+    renderStep,
+    getKeyboard,
+    ydb,
+    scenario,
+    log,
+    MAIN_TOKEN,
+    isMainBot,
+    token,
+    AI_PRO_LIMIT,
+    AI_FREE_LIMIT,
+    askNeuroGenAI,
+    getOrCreatePin,
+    generateToken,
+    handleAppsCommand,
+    notifyBotOwner,
     event,
   } = ctx;
 
@@ -293,7 +303,12 @@ export function registerTelegramActions(bot, ctx) {
           protect_content: true,
           reply_markup: {
             inline_keyboard: [
-              [{ text: "💎 АКТИВИРОВАТЬ PRO", callback_data: "Offer_Tripwire" }],
+              [
+                {
+                  text: "💎 АКТИВИРОВАТЬ PRO",
+                  callback_data: "Offer_Tripwire",
+                },
+              ],
               [{ text: "🔙 К ИНСТРУМЕНТАМ", callback_data: "TOOLS_MENU" }],
             ],
           },
@@ -307,8 +322,15 @@ export function registerTelegramActions(bot, ctx) {
         uid: String(userId),
         isPro: true,
         apps: [
-          "viral-video", "bot-scenarios", "master-architect", "landing-pages",
-          "web-design", "ads", "deploy", "monetization", "neurogen-studio",
+          "viral-video",
+          "bot-scenarios",
+          "master-architect",
+          "landing-pages",
+          "web-design",
+          "ads",
+          "deploy",
+          "monetization",
+          "neurogen-studio",
         ],
       },
       { expiresIn: "7d" },
@@ -322,20 +344,32 @@ export function registerTelegramActions(bot, ctx) {
 
     const apps = [
       {
-        id: "master-architect", name: "🏗️ NeuroGen: Master Architect",
-        url: process.env.NEUROGEN_MASTER_ARCHITECT_URL || "https://neuro-gen-strategy.vercel.app/",
+        id: "master-architect",
+        name: "🏗️ NeuroGen: Master Architect",
+        url:
+          process.env.NEUROGEN_MASTER_ARCHITECT_URL ||
+          "https://neuro-gen-strategy.vercel.app/",
       },
       {
-        id: "bot-scenarios", name: "🤖 NeuroGen: Bot Scenarios",
-        url: process.env.NEUROGEN_BOT_SCENARIOS_URL || "https://telegram-bot-script-factory.vercel.app",
+        id: "bot-scenarios",
+        name: "🤖 NeuroGen: Bot Scenarios",
+        url:
+          process.env.NEUROGEN_BOT_SCENARIOS_URL ||
+          "https://telegram-bot-script-factory.vercel.app",
       },
       {
-        id: "viral-video", name: "🎬 NeuroGen: Viral Video",
-        url: process.env.NEUROGEN_VIRAL_VIDEO_URL || "https://neurogen-viral-video.vercel.app",
+        id: "viral-video",
+        name: "🎬 NeuroGen: Viral Video",
+        url:
+          process.env.NEUROGEN_VIRAL_VIDEO_URL ||
+          "https://neurogen-viral-video.vercel.app",
       },
       {
-        id: "neurogen-studio", name: "🌐 NeuroGen: Studio (Сайты)",
-        url: process.env.NEUROGEN_STUDIO_URL || "https://neurogen-studio.vercel.app/",
+        id: "neurogen-studio",
+        name: "🌐 NeuroGen: Studio (Сайты)",
+        url:
+          process.env.NEUROGEN_STUDIO_URL ||
+          "https://neurogen-studio.vercel.app/",
       },
     ];
 
@@ -357,9 +391,12 @@ export function registerTelegramActions(bot, ctx) {
         `• Введи свой PIN-код\n` +
         `• Доступ сохранится на 24 часа\n\n` +
         `<b>🎯 ТВОИ HUB-ПРИЛОЖЕНИЯ:</b>\n\n` +
-        apps.map((app) =>
-          `${app.name} — <a href="${app.url}?token=${encodedToken}">${app.url.split("/")[2]}</a>`
-        ).join("\n") +
+        apps
+          .map(
+            (app) =>
+              `${app.name} — <a href="${app.url}?token=${encodedToken}">${app.url.split("/")[2]}</a>`,
+          )
+          .join("\n") +
         `\n\n` +
         `<b>🔑 Твой PIN-код:</b> <code>${user.pin_code || "не создан"}</code>\n` +
         `<b>🆔 Твой Telegram ID:</b> <code>${userId}</code>\n\n` +
@@ -395,22 +432,48 @@ export function registerTelegramActions(bot, ctx) {
       const hint = getLoopHint(u.state);
       await ctx.reply(
         `🤔 <b>Кажется, ты застрял?</b>\n\n` +
-        `Ты отправляешь одно и то же несколько раз. Возможно я не понял команду.\n\n` +
-        `${hint || `Попробуй:\n• /menu — главное меню\n• /help — помощь\n• /start — начать сначала`}\n\n` +
-        `Если нужна помощь — пиши, я тут! 👋`,
+          `Ты отправляешь одно и то же несколько раз. Возможно я не понял команду.\n\n` +
+          `${hint || `Попробуй:\n• /menu — главное меню\n• /help — помощь\n• /start — начать сначала`}\n\n` +
+          `Если нужна помощь — пиши, я тут! 👋`,
         { parse_mode: "HTML", protect_content: true },
       );
       return;
     }
 
     // === ЛОГИКА ПРОВЕРКИ СЕКРЕТНЫХ СЛОВ ===
+    log.info(`[SECRET WORDS] Checking`, {
+      state: u.state,
+      text: txt.substring(0, 30),
+    });
     const secretsConfig = {
-      WAIT_SECRET_1: { word: "гибрид", xp: 20, next: "Module_2_Online", flag: "mod1_done", awardKey: "mod1_awarded" },
-      WAIT_SECRET_2: { word: "облако", xp: 30, next: "WAIT_BOT_TOKEN", flag: "mod2_done", awardKey: "mod2" },
-      WAIT_SECRET_3: { word: "сарафан", xp: 40, next: "Lesson_Final_Comparison", flag: "mod3_done", awardKey: "mod3_awarded" },
+      WAIT_SECRET_1: {
+        word: "гибрид",
+        xp: 20,
+        next: "Module_2_Online",
+        flag: "mod1_done",
+        awardKey: "mod1_awarded",
+      },
+      WAIT_SECRET_2: {
+        word: "облако",
+        xp: 30,
+        next: "WAIT_BOT_TOKEN",
+        flag: "mod2_done",
+        awardKey: "mod2",
+      },
+      WAIT_SECRET_3: {
+        word: "сарафан",
+        xp: 40,
+        next: "Lesson_Final_Comparison",
+        flag: "mod3_done",
+        awardKey: "mod3_awarded",
+      },
     };
 
     if (secretsConfig[u.state]) {
+      log.info(`[SECRET WORDS] State matched!`, {
+        state: u.state,
+        word: secretsConfig[u.state].word,
+      });
       const config = secretsConfig[u.state];
 
       if (txt.toLowerCase().trim() === config.word.toLowerCase()) {
@@ -489,18 +552,28 @@ export function registerTelegramActions(bot, ctx) {
 
     if (u.state === "WAIT_BROADCAST") {
       const ids = await ydb.getBotUsers(token);
-      await ctx.reply(`🚀 Рассылка на ${ids.length} чел...`, { protect_content: true });
-      const res = await ydb.broadcastWithRateLimit(bot, ids, txt, { parse_mode: "HTML" });
+      await ctx.reply(`🚀 Рассылка на ${ids.length} чел...`, {
+        protect_content: true,
+      });
+      const res = await ydb.broadcastWithRateLimit(bot, ids, txt, {
+        parse_mode: "HTML",
+      });
       u.state = "START";
-      return ctx.reply(`✅ Доставлено: ${res.sent}\nОшибок: ${res.failed}`, { protect_content: true });
+      return ctx.reply(`✅ Доставлено: ${res.sent}\nОшибок: ${res.failed}`, {
+        protect_content: true,
+      });
     }
 
     // === УНИВЕРСАЛЬНАЯ ЛОГИКА СОЗДАНИЯ БОТА ===
     if (u.state === "WAIT_BOT_TOKEN") {
       try {
-        const res = await fetch(`https://api.telegram.org/bot${txt}/getMe`).then((r) => r.json());
+        const res = await fetch(
+          `https://api.telegram.org/bot${txt}/getMe`,
+        ).then((r) => r.json());
         if (!res.ok)
-          return ctx.reply("❌ Неверный токен. Проверь и пришли ещё раз:", { protect_content: true });
+          return ctx.reply("❌ Неверный токен. Проверь и пришли ещё раз:", {
+            protect_content: true,
+          });
 
         u.saved_state = txt;
 
@@ -518,20 +591,33 @@ export function registerTelegramActions(bot, ctx) {
                 lead.bot_token = txt;
                 await ydb.saveUser(lead);
               }
-              log.info(`[TOKEN UPDATE] Migrated ${oldLeads.length} leads to new bot token`, {
-                userId: u.user_id,
-                oldToken: u.session.old_bot_token?.substring(0, 20) + "...",
-                newToken: txt.substring(0, 20) + "...",
-              });
+              log.info(
+                `[TOKEN UPDATE] Migrated ${oldLeads.length} leads to new bot token`,
+                {
+                  userId: u.user_id,
+                  oldToken: u.session.old_bot_token?.substring(0, 20) + "...",
+                  newToken: txt.substring(0, 20) + "...",
+                },
+              );
               u.session.old_bot_token = null;
             }
 
             await ydb.registerPartnerBot(
-              ctx.from.id, txt, res.result.username, u.sh_user_id, u.sh_ref_tail, "",
+              ctx.from.id,
+              txt,
+              res.result.username,
+              u.sh_user_id,
+              u.sh_ref_tail,
+              "",
             );
-            const host = event.headers.Host || event.headers.host || process.env.API_GW_HOST;
+            const host =
+              event.headers.Host ||
+              event.headers.host ||
+              process.env.API_GW_HOST;
             if (host) {
-              await fetch(`https://api.telegram.org/bot${txt}/setWebhook?url=https://${host}/?bot_token=${txt}`);
+              await fetch(
+                `https://api.telegram.org/bot${txt}/setWebhook?url=https://${host}/?bot_token=${txt}`,
+              );
             }
             u.session.is_migrating = false;
           } catch (dbErr) {
@@ -555,11 +641,22 @@ export function registerTelegramActions(bot, ctx) {
           return ctx.reply(
             `В моей базе уже есть твои данные SetHubble:\n🆔 ID: <b>${u.sh_user_id}</b>\n🔗 Хвост: <b>${u.sh_ref_tail}</b>\n\nИспользуем их для настройки твоего нового клона?`,
             {
-              parse_mode: "HTML", protect_content: true,
+              parse_mode: "HTML",
+              protect_content: true,
               reply_markup: {
                 inline_keyboard: [
-                  [{ text: "✅ ДА, ВСЁ ВЕРНО", callback_data: "USE_EXISTING_DATA" }],
-                  [{ text: "✏️ НЕТ, ВВЕСТИ ДРУГИЕ", callback_data: "ENTER_NEW_DATA" }],
+                  [
+                    {
+                      text: "✅ ДА, ВСЁ ВЕРНО",
+                      callback_data: "USE_EXISTING_DATA",
+                    },
+                  ],
+                  [
+                    {
+                      text: "✏️ НЕТ, ВВЕСТИ ДРУГИЕ",
+                      callback_data: "ENTER_NEW_DATA",
+                    },
+                  ],
                 ],
               },
             },
@@ -567,10 +664,16 @@ export function registerTelegramActions(bot, ctx) {
         } else {
           u.state = "WAIT_SH_ID_P";
           await ydb.saveUser(u);
-          return ctx.reply("Пришли цифровой ID для привязки к этому боту (только цифры):", { protect_content: true });
+          return ctx.reply(
+            "Пришли цифровой ID для привязки к этому боту (только цифры):",
+            { protect_content: true },
+          );
         }
       } catch (e) {
-        return ctx.reply("❌ Ошибка сети при проверке токена. Попробуй позже.", { protect_content: true });
+        return ctx.reply(
+          "❌ Ошибка сети при проверке токена. Попробуй позже.",
+          { protect_content: true },
+        );
       }
     }
 
@@ -615,7 +718,11 @@ export function registerTelegramActions(bot, ctx) {
           `3. Продукт автоматически добавится в твой кабинет\n` +
           `4. После этого у тебя появятся личные ссылки на продажу и регистрацию агентов\n\n` +
           `<i>💡 Это займёт 1-2 минуты. После регистрации вернись в бота и напиши любое слово (например, "готов"):</i>`,
-        { parse_mode: "HTML", protect_content: true, disable_web_page_preview: true },
+        {
+          parse_mode: "HTML",
+          protect_content: true,
+          disable_web_page_preview: true,
+        },
       );
     }
 
@@ -629,18 +736,28 @@ export function registerTelegramActions(bot, ctx) {
       u.saved_state = "";
 
       try {
-        const res = await fetch(`https://api.telegram.org/bot${botToken}/getMe`).then((r) => r.json());
+        const res = await fetch(
+          `https://api.telegram.org/bot${botToken}/getMe`,
+        ).then((r) => r.json());
 
         if (res.ok) {
           u.session.bot_username = res.result.username;
 
           await ydb.registerPartnerBot(
-            ctx.from.id, botToken, res.result.username, shUserId, shRefTail, "",
+            ctx.from.id,
+            botToken,
+            res.result.username,
+            shUserId,
+            shRefTail,
+            "",
           );
 
-          const host = event.headers.Host || event.headers.host || process.env.API_GW_HOST;
+          const host =
+            event.headers.Host || event.headers.host || process.env.API_GW_HOST;
           if (host) {
-            await fetch(`https://api.telegram.org/bot${botToken}/setWebhook?url=https://${host}/?bot_token=${botToken}`);
+            await fetch(
+              `https://api.telegram.org/bot${botToken}/setWebhook?url=https://${host}/?bot_token=${botToken}`,
+            );
           }
 
           const pBot = new Telegraf(botToken);
@@ -654,10 +771,16 @@ export function registerTelegramActions(bot, ctx) {
 
           u.saved_state = "";
 
-          if (isMainBot && ctx.from.id.toString() === process.env.ADMIN_TELEGRAM_ID) {
+          if (
+            isMainBot &&
+            ctx.from.id.toString() === process.env.ADMIN_TELEGRAM_ID
+          ) {
             u.state = "Module_3_Offline";
             await ydb.saveUser(u);
-            await ctx.reply(`🎉 Твой системный бот @${res.result.username} готов!`, { protect_content: true });
+            await ctx.reply(
+              `🎉 Твой системный бот @${res.result.username} готов!`,
+              { protect_content: true },
+            );
             return renderStep(ctx, "Module_3_Offline", botToken);
           } else {
             u.bot_token = botToken;
@@ -672,10 +795,16 @@ export function registerTelegramActions(bot, ctx) {
                   `Мы успешно вшили твою PRO-ссылку (50% комиссии) во все кнопки твоего клона.\n` +
                   `Теперь давай запустим на него трафик 👇`,
                 {
-                  parse_mode: "HTML", protect_content: true,
+                  parse_mode: "HTML",
+                  protect_content: true,
                   reply_markup: {
                     inline_keyboard: [
-                      [{ text: "➡️ ПРОДОЛЖИТЬ PRO-ОБУЧЕНИЕ", callback_data: "Training_Pro_P1_1" }],
+                      [
+                        {
+                          text: "➡️ ПРОДОЛЖИТЬ PRO-ОБУЧЕНИЕ",
+                          callback_data: "Training_Pro_P1_1",
+                        },
+                      ],
                       [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
                     ],
                   },
@@ -686,8 +815,12 @@ export function registerTelegramActions(bot, ctx) {
               await ydb.saveUser(u);
 
               const botName = res.result.username;
-              const apiGw = process.env.API_GW_HOST || "d5dsbah1d4ju0glmp9d0.3zvepvee.apigw.yandexcloud.net";
-              const promoKitUrl = process.env.PROMO_KIT_URL || "https://novokreschennih.github.io/neurogen-promo-kit/";
+              const apiGw =
+                process.env.API_GW_HOST ||
+                "d5dsbah1d4ju0glmp9d0.3zvepvee.apigw.yandexcloud.net";
+              const promoKitUrl =
+                process.env.PROMO_KIT_URL ||
+                "https://novokreschennih.github.io/neurogen-promo-kit/";
 
               await ctx.reply(
                 `🎉 <b>ТВОЙ ИИ-КЛОН УСПЕШНО ЗАПУЩЕН!</b>\n\n` +
@@ -699,11 +832,24 @@ export function registerTelegramActions(bot, ctx) {
                   `Нажми кнопку <b>«📲 ОТКРЫТЬ PROMO-KIT»</b> ниже, чтобы увидеть свою готовую империю своими глазами!\n\n` +
                   `<i>💡 Как посмотришь — возвращайся сюда и переходи к Модулю 3 👇</i>`,
                 {
-                  parse_mode: "HTML", protect_content: true,
+                  parse_mode: "HTML",
+                  protect_content: true,
                   reply_markup: {
                     inline_keyboard: [
-                      [{ text: "📲 ОТКРЫТЬ PROMO-KIT (ВАШ САЙТ)", web_app: { url: `${promoKitUrl}?bot=${botName}&api=https://${apiGw}` } }],
-                      [{ text: "➡️ ПЕРЕЙТИ К МОДУЛЮ 3", callback_data: "GO_TO_MODULE_3" }],
+                      [
+                        {
+                          text: "📲 ОТКРЫТЬ PROMO-KIT (ВАШ САЙТ)",
+                          web_app: {
+                            url: `${promoKitUrl}?bot=${botName}&api=https://${apiGw}`,
+                          },
+                        },
+                      ],
+                      [
+                        {
+                          text: "➡️ ПЕРЕЙТИ К МОДУЛЮ 3",
+                          callback_data: "GO_TO_MODULE_3",
+                        },
+                      ],
                     ],
                   },
                 },
@@ -715,7 +861,9 @@ export function registerTelegramActions(bot, ctx) {
           return ctx.reply("❌ Неверный токен.", { protect_content: true });
         }
       } catch (e) {
-        return ctx.reply("❌ Ошибка при регистрации бота.", { protect_content: true });
+        return ctx.reply("❌ Ошибка при регистрации бота.", {
+          protect_content: true,
+        });
       }
     }
 
@@ -737,10 +885,18 @@ export function registerTelegramActions(bot, ctx) {
           : `📚 <b>Лимит вопросов консультанту.</b>\n\nТы использовал ${AI_FREE_LIMIT} бесплатных вопроса. Если нужно больше - активируй PRO-статус.`;
 
         return ctx.reply(limitMsg, {
-          parse_mode: "HTML", protect_content: true,
+          parse_mode: "HTML",
+          protect_content: true,
           reply_markup: {
             inline_keyboard: [
-              u.bought_tripwire ? [] : [{ text: "💎 АКТИВИРОВАТЬ PRO", callback_data: "Offer_Tripwire" }],
+              u.bought_tripwire
+                ? []
+                : [
+                    {
+                      text: "💎 АКТИВИРОВАТЬ PRO",
+                      callback_data: "Offer_Tripwire",
+                    },
+                  ],
               [{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }],
             ].filter((row) => row.length > 0),
           },
@@ -751,22 +907,28 @@ export function registerTelegramActions(bot, ctx) {
       await ydb.saveUser(u);
 
       log.info("[AI HANDLER] Processing request", {
-        userId: u.user_id, aiCount: u.session.ai_count,
-        limit: currentLimit, hasPro: u.bought_tripwire,
+        userId: u.user_id,
+        aiCount: u.session.ai_count,
+        limit: currentLimit,
+        hasPro: u.bought_tripwire,
       });
 
       await ctx.telegram.sendChatAction(ctx.from.id, "typing").catch(() => {});
       const aiResponse = await askNeuroGenAI(txt, u);
 
       log.info("[AI HANDLER] Response status", {
-        hasResponse: !!aiResponse, responseLength: aiResponse?.length || 0,
+        hasResponse: !!aiResponse,
+        responseLength: aiResponse?.length || 0,
       });
 
       if (aiResponse) {
         return ctx.reply(aiResponse, {
-          parse_mode: "HTML", protect_content: true,
+          parse_mode: "HTML",
+          protect_content: true,
           reply_markup: {
-            inline_keyboard: [[{ text: "⚡️ ВЕРНУТЬСЯ К РАБОТЕ", callback_data: "MAIN_MENU" }]],
+            inline_keyboard: [
+              [{ text: "⚡️ ВЕРНУТЬСЯ К РАБОТЕ", callback_data: "MAIN_MENU" }],
+            ],
           },
         });
       }
@@ -774,15 +936,20 @@ export function registerTelegramActions(bot, ctx) {
       console.error("[AI REPLY ERROR]", e);
     }
 
-    return ctx.reply(
-      `🤖 <b>Связь с нейроядром прервана.</b>\n\nВоспользуйся меню навигации 👇`,
-      {
-        parse_mode: "HTML", protect_content: true,
-        reply_markup: {
-          inline_keyboard: [[{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }]],
+    return ctx
+      .reply(
+        `🤖 <b>Связь с нейроядром прервана.</b>\n\nВоспользуйся меню навигации 👇`,
+        {
+          parse_mode: "HTML",
+          protect_content: true,
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }],
+            ],
+          },
         },
-      },
-    ).catch(() => {});
+      )
+      .catch(() => {});
   });
 
   // ============================================================
@@ -790,10 +957,17 @@ export function registerTelegramActions(bot, ctx) {
   // ============================================================
   bot.start(async (ctx) => {
     const waitStates = [
-      "WAIT_REG_ID", "WAIT_REG_TAIL", "WAIT_BOT_TOKEN",
-      "WAIT_SH_ID_P", "WAIT_SH_TAIL_P", "WAIT_BROADCAST",
-      "WAIT_TRIPWIRE_LINK", "WAIT_SECRET_1", "WAIT_SECRET_2",
-      "WAIT_SECRET_3", "CONFIRM_BOT_DATA",
+      "WAIT_REG_ID",
+      "WAIT_REG_TAIL",
+      "WAIT_BOT_TOKEN",
+      "WAIT_SH_ID_P",
+      "WAIT_SH_TAIL_P",
+      "WAIT_BROADCAST",
+      "WAIT_TRIPWIRE_LINK",
+      "WAIT_SECRET_1",
+      "WAIT_SECRET_2",
+      "WAIT_SECRET_3",
+      "CONFIRM_BOT_DATA",
     ];
 
     if (waitStates.includes(ctx.dbUser.state)) {
@@ -828,10 +1002,12 @@ export function registerTelegramActions(bot, ctx) {
       ctx.dbUser.state = `WAIT_SECRET_${level}`;
       await ydb.saveUser(ctx.dbUser);
       await ctx.answerCbQuery().catch(() => {});
-      return ctx.reply(
-        `✍️ <b>ВВОД КОДА: МОДУЛЬ ${level}</b>\n\nОтправь мне секретное слово из статьи ответным сообщением:`,
-        { parse_mode: "HTML", protect_content: true },
-      ).catch(() => {});
+      return ctx
+        .reply(
+          `✍️ <b>ВВОД КОДА: МОДУЛЬ ${level}</b>\n\nОтправь мне секретное слово из статьи ответным сообщением:`,
+          { parse_mode: "HTML", protect_content: true },
+        )
+        .catch(() => {});
     }
 
     // === PRO APPS ===
@@ -841,10 +1017,14 @@ export function registerTelegramActions(bot, ctx) {
     }
 
     // === ПЕРЕХОД К МОДУЛЯМ ===
-    if (action === "GO_TO_MODULE_2") return renderStep(ctx, "Module_2_Online", token);
-    if (action === "GO_TO_MODULE_3") return renderStep(ctx, "Module_3_Offline", token);
-    if (action === "Module_3_Offline") return renderStep(ctx, "Module_3_Offline", token);
-    if (action === "GO_TO_FINAL") return renderStep(ctx, "Lesson_Final_Comparison", token);
+    if (action === "GO_TO_MODULE_2")
+      return renderStep(ctx, "Module_2_Online", token);
+    if (action === "GO_TO_MODULE_3")
+      return renderStep(ctx, "Module_3_Offline", token);
+    if (action === "Module_3_Offline")
+      return renderStep(ctx, "Module_3_Offline", token);
+    if (action === "GO_TO_FINAL")
+      return renderStep(ctx, "Lesson_Final_Comparison", token);
 
     // === ТЕОРЕТИЧЕСКИЙ КУРС ===
     if (action === "THEORY_COURSE_COMPLETE") {
@@ -896,22 +1076,34 @@ export function registerTelegramActions(bot, ctx) {
 
       if (action === "GET_REWARD_1") {
         if (!ctx.dbUser.session?.bot_username)
-          return ctx.answerCbQuery("❌ Сначала создай бота-клона!", { show_alert: true });
+          return ctx.answerCbQuery("❌ Сначала создай бота-клона!", {
+            show_alert: true,
+          });
         productType = "viral_video";
         appName = "NeuroGen: Viral Video";
-        appUrl = process.env.NEUROGEN_VIRAL_VIDEO_URL || "https://neurogen-viral-video.vercel.app";
+        appUrl =
+          process.env.NEUROGEN_VIRAL_VIDEO_URL ||
+          "https://neurogen-viral-video.vercel.app";
       } else if (action === "GET_REWARD_2") {
         if (ctx.dbUser.session.xp < 100)
-          return ctx.answerCbQuery("❌ Не хватает монет! Пройди все уроки.", { show_alert: true });
+          return ctx.answerCbQuery("❌ Не хватает монет! Пройди все уроки.", {
+            show_alert: true,
+          });
         productType = "bot_scenarios";
         appName = "NeuroGen: Bot Scenarios";
-        appUrl = process.env.NEUROGEN_BOT_SCENARIOS_URL || "https://telegram-bot-script-factory.vercel.app";
+        appUrl =
+          process.env.NEUROGEN_BOT_SCENARIOS_URL ||
+          "https://telegram-bot-script-factory.vercel.app";
       } else if (action === "GET_REWARD_3") {
         if (!ctx.dbUser.bought_tripwire)
-          return ctx.answerCbQuery("❌ Доступно только на тарифе PRO!", { show_alert: true });
+          return ctx.answerCbQuery("❌ Доступно только на тарифе PRO!", {
+            show_alert: true,
+          });
         productType = "master_architect";
         appName = "NeuroGen: Master Architect";
-        appUrl = process.env.NEUROGEN_MASTER_ARCHITECT_URL || "https://funnel-ai-rho.vercel.app";
+        appUrl =
+          process.env.NEUROGEN_MASTER_ARCHITECT_URL ||
+          "https://funnel-ai-rho.vercel.app";
       }
 
       const pin = await getOrCreatePin(productType, ctx.from.id);
@@ -923,7 +1115,8 @@ export function registerTelegramActions(bot, ctx) {
             `Из-за высокой нагрузки на нейросеть не удалось сгенерировать твой личный PIN-код.\n` +
             `Твоя награда никуда не пропадет. Пожалуйста, повтори попытку через минуту.`,
           {
-            parse_mode: "HTML", protect_content: true,
+            parse_mode: "HTML",
+            protect_content: true,
             reply_markup: {
               inline_keyboard: [
                 [{ text: "🔄 ПОВТОРИТЬ ЗАПРОС", callback_data: action }],
@@ -946,7 +1139,10 @@ export function registerTelegramActions(bot, ctx) {
     }
 
     // === ПОДТВЕРЖДЕНИЕ СТАРЫХ ДАННЫХ ===
-    if (action === "USE_EXISTING_DATA" && ctx.dbUser.state === "CONFIRM_BOT_DATA") {
+    if (
+      action === "USE_EXISTING_DATA" &&
+      ctx.dbUser.state === "CONFIRM_BOT_DATA"
+    ) {
       ctx.dbUser.session.tmp_shui = ctx.dbUser.sh_user_id;
       ctx.dbUser.session.tmp_shrt = ctx.dbUser.sh_ref_tail;
 
@@ -964,48 +1160,75 @@ export function registerTelegramActions(bot, ctx) {
       ctx.dbUser.state = "WAIT_PARTNER_REG";
       await ydb.saveUser(ctx.dbUser);
 
-      return ctx.editMessageText(
-        `✅ <b>ДАННЫЕ ПОДТВЕРЖДЕНЫ</b>\n\n` +
-          `🎯 <b>ШАГ 3: СТАНЬ ПАРТНЁРОМ PROДУКТА</b>\n\n` +
-          `Чтобы ты мог получать деньги с продаж, тебе нужно добавить этот продукт в свой личный кабинет SetHubble.\n\n` +
-          `<b>ЧТО ДЕЛАТЬ:</b>\n` +
-          `1. Перейди по ссылке своего пригласителя:\n` +
-          `<a href="${regLink}">${regLink}</a>\n\n` +
-          `2. Зарегистрируйся/войди в свой аккаунт\n` +
-          `3. Продукт автоматически добавится в твой кабинет\n\n` +
-          `<i>💡 После регистрации напиши мне любое слово (например, "готов"):</i>`,
-        { parse_mode: "HTML", disable_web_page_preview: true },
-      ).catch(() => {});
+      return ctx
+        .editMessageText(
+          `✅ <b>ДАННЫЕ ПОДТВЕРЖДЕНЫ</b>\n\n` +
+            `🎯 <b>ШАГ 3: СТАНЬ ПАРТНЁРОМ PROДУКТА</b>\n\n` +
+            `Чтобы ты мог получать деньги с продаж, тебе нужно добавить этот продукт в свой личный кабинет SetHubble.\n\n` +
+            `<b>ЧТО ДЕЛАТЬ:</b>\n` +
+            `1. Перейди по ссылке своего пригласителя:\n` +
+            `<a href="${regLink}">${regLink}</a>\n\n` +
+            `2. Зарегистрируйся/войди в свой аккаунт\n` +
+            `3. Продукт автоматически добавится в твой кабинет\n\n` +
+            `<i>💡 После регистрации напиши мне любое слово (например, "готов"):</i>`,
+          { parse_mode: "HTML", disable_web_page_preview: true },
+        )
+        .catch(() => {});
     }
 
     // === ВВОД НОВЫХ ДАННЫХ ===
-    if (action === "ENTER_NEW_DATA" && ctx.dbUser.state === "CONFIRM_BOT_DATA") {
+    if (
+      action === "ENTER_NEW_DATA" &&
+      ctx.dbUser.state === "CONFIRM_BOT_DATA"
+    ) {
       ctx.dbUser.state = "WAIT_SH_ID_P";
       await ydb.saveUser(ctx.dbUser);
-      return ctx.editMessageText("✏️ Понял. Пришли НОВЫЙ цифровой ID для этого бота:").catch(() => {});
+      return ctx
+        .editMessageText("✏️ Понял. Пришли НОВЫЙ цифровой ID для этого бота:")
+        .catch(() => {});
     }
 
     // === УМНЫЕ ЗАМКИ ===
-    const lockedActions = ["LOCKED_CRM", "LOCKED_PROMO", "LOCKED_KNOWLEDGE", "LOCKED_AI_APPS"];
+    const lockedActions = [
+      "LOCKED_CRM",
+      "LOCKED_PROMO",
+      "LOCKED_KNOWLEDGE",
+      "LOCKED_AI_APPS",
+    ];
 
     if (lockedActions.includes(action)) {
       const isPro = ctx.dbUser.bought_tripwire;
       const hasMod3 = ctx.dbUser.session?.mod3_done || isPro;
 
-      if ((action === "LOCKED_PROMO" || action === "LOCKED_KNOWLEDGE") && hasMod3) {
-        await ctx.answerCbQuery("✨ Уровень пройден! Доступ уже открыт. Обновляю меню...", { show_alert: true });
+      if (
+        (action === "LOCKED_PROMO" || action === "LOCKED_KNOWLEDGE") &&
+        hasMod3
+      ) {
+        await ctx.answerCbQuery(
+          "✨ Уровень пройден! Доступ уже открыт. Обновляю меню...",
+          { show_alert: true },
+        );
         return renderStep(ctx, "TOOLS_MENU", token);
       }
 
       if ((action === "LOCKED_CRM" || action === "LOCKED_AI_APPS") && isPro) {
-        await ctx.answerCbQuery("💎 У тебя PRO-статус! Замки сняты. Обновляю меню...", { show_alert: true });
+        await ctx.answerCbQuery(
+          "💎 У тебя PRO-статус! Замки сняты. Обновляю меню...",
+          { show_alert: true },
+        );
         return renderStep(ctx, "TOOLS_MENU", token);
       }
     }
 
     try {
       if (scenario.steps[action]) {
-        const navSteps = ["START", "RESUME_GATE", "MAIN_MENU", "Pre_Training_Logic", "EDIT_PROFILE"];
+        const navSteps = [
+          "START",
+          "RESUME_GATE",
+          "MAIN_MENU",
+          "Pre_Training_Logic",
+          "EDIT_PROFILE",
+        ];
         if (!navSteps.includes(ctx.dbUser.state)) {
           ctx.dbUser.saved_state = ctx.dbUser.state;
         }

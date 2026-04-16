@@ -200,63 +200,84 @@ export async function saveUser(user) {
     tgId = Number(user.user_id);
   }
 
-  try {
-    return await driver.tableClient.withSession(async (session) => {
-      const newVersion = (user.session_version || 0) + 1;
-      const now = Date.now();
+  // Retry logic for RESOURCE_EXHAUSTED errors
+  const maxRetries = 3;
+  const baseDelayMs = 500;
 
-      const params = {
-        $id: TypedValues.utf8(String(userId)),
-        $email: TypedValues.utf8(String(user.email || "").toLowerCase()),
-        $tg_id: TypedValues.uint64(String(tgId || "0")),
-        $vk_id: TypedValues.uint64(String(user.vk_id || "0")),
-        $web_id: TypedValues.utf8(String(user.web_id || "")),
-        $pid: TypedValues.utf8(String(user.partner_id || "p_qdr")),
-        $st: TypedValues.utf8(String(user.state || "START")),
-        $br: TypedValues.bool(Boolean(user.bought_tripwire)),
-        $js: TypedValues.json(JSON.stringify(user.session || { tags: [] })),
-        $ls: TypedValues.uint64(String(user.last_seen || now)),
-        $sv: TypedValues.utf8(String(user.saved_state || "")),
-        $bt: TypedValues.utf8(String(user.bot_token || "")),
-        $tr: TypedValues.utf8(String(user.tariff || "")),
-        $shui: TypedValues.utf8(String(user.sh_user_id || "")),
-        $shrt: TypedValues.utf8(String(user.sh_ref_tail || "")),
-        $pur: TypedValues.json(JSON.stringify(user.purchases || [])),
-        $fn: TypedValues.utf8(String(user.first_name || "Друг")),
-        $lrt: TypedValues.uint64(String(user.last_reminder_time || 0)),
-        $rc: TypedValues.uint64(String(user.reminders_count || 0)),
-        $pc: TypedValues.utf8(String(user.pin_code || "")),
-        $newVer: TypedValues.uint64(String(newVersion)),
-        $cat: TypedValues.uint64(String(user.created_at || now)),
-      };
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await driver.tableClient.withSession(async (session) => {
+        const newVersion = (user.session_version || 0) + 1;
+        const now = Date.now();
 
-      const query = `
-        DECLARE $id AS Utf8; DECLARE $email AS Utf8;
-        DECLARE $tg_id AS Uint64; DECLARE $vk_id AS Uint64; DECLARE $web_id AS Utf8;
-        DECLARE $pid AS Utf8; DECLARE $st AS Utf8; DECLARE $br AS Bool;
-        DECLARE $js AS Json; DECLARE $ls AS Uint64; DECLARE $sv AS Utf8; DECLARE $bt AS Utf8;
-        DECLARE $tr AS Utf8; DECLARE $shui AS Utf8; DECLARE $shrt AS Utf8; DECLARE $pur AS Json;
-        DECLARE $fn AS Utf8; DECLARE $lrt AS Uint64; DECLARE $rc AS Uint64; DECLARE $pc AS Utf8;
-        DECLARE $newVer AS Uint64; DECLARE $cat AS Uint64;
+        const params = {
+          $id: TypedValues.utf8(String(userId)),
+          $email: TypedValues.utf8(String(user.email || "").toLowerCase()),
+          $tg_id: TypedValues.uint64(String(tgId || "0")),
+          $vk_id: TypedValues.uint64(String(user.vk_id || "0")),
+          $web_id: TypedValues.utf8(String(user.web_id || "")),
+          $pid: TypedValues.utf8(String(user.partner_id || "p_qdr")),
+          $st: TypedValues.utf8(String(user.state || "START")),
+          $br: TypedValues.bool(Boolean(user.bought_tripwire)),
+          $js: TypedValues.json(JSON.stringify(user.session || { tags: [] })),
+          $ls: TypedValues.uint64(String(user.last_seen || now)),
+          $sv: TypedValues.utf8(String(user.saved_state || "")),
+          $bt: TypedValues.utf8(String(user.bot_token || "")),
+          $tr: TypedValues.utf8(String(user.tariff || "")),
+          $shui: TypedValues.utf8(String(user.sh_user_id || "")),
+          $shrt: TypedValues.utf8(String(user.sh_ref_tail || "")),
+          $pur: TypedValues.json(JSON.stringify(user.purchases || [])),
+          $fn: TypedValues.utf8(String(user.first_name || "Друг")),
+          $lrt: TypedValues.uint64(String(user.last_reminder_time || 0)),
+          $rc: TypedValues.uint64(String(user.reminders_count || 0)),
+          $pc: TypedValues.utf8(String(user.pin_code || "")),
+          $newVer: TypedValues.uint64(String(newVersion)),
+          $cat: TypedValues.uint64(String(user.created_at || now)),
+        };
 
-        UPSERT INTO users (
-          id, email, tg_id, vk_id, web_id,
-          partner_id, state, bought_tripwire, session,
-          last_seen, saved_state, bot_token, tariff, sh_user_id, sh_ref_tail, purchases,
-          first_name, last_reminder_time, reminders_count, pin_code, session_version, created_at
-        ) VALUES (
-          $id, $email, $tg_id, $vk_id, $web_id,
-          $pid, $st, $br, $js, $ls, $sv, $bt, $tr, $shui, $shrt, $pur, $fn, $lrt, $rc, $pc, $newVer, $cat
+        const query = `
+          DECLARE $id AS Utf8; DECLARE $email AS Utf8;
+          DECLARE $tg_id AS Uint64; DECLARE $vk_id AS Uint64; DECLARE $web_id AS Utf8;
+          DECLARE $pid AS Utf8; DECLARE $st AS Utf8; DECLARE $br AS Bool;
+          DECLARE $js AS Json; DECLARE $ls AS Uint64; DECLARE $sv AS Utf8; DECLARE $bt AS Utf8;
+          DECLARE $tr AS Utf8; DECLARE $shui AS Utf8; DECLARE $shrt AS Utf8; DECLARE $pur AS Json;
+          DECLARE $fn AS Utf8; DECLARE $lrt AS Uint64; DECLARE $rc AS Uint64; DECLARE $pc AS Utf8;
+          DECLARE $newVer AS Uint64; DECLARE $cat AS Uint64;
+
+          UPSERT INTO users (
+            id, email, tg_id, vk_id, web_id,
+            partner_id, state, bought_tripwire, session,
+            last_seen, saved_state, bot_token, tariff, sh_user_id, sh_ref_tail, purchases,
+            first_name, last_reminder_time, reminders_count, pin_code, session_version, created_at
+          ) VALUES (
+            $id, $email, $tg_id, $vk_id, $web_id,
+            $pid, $st, $br, $js, $ls, $sv, $bt, $tr, $shui, $shrt, $pur, $fn, $lrt, $rc, $pc, $newVer, $cat
+          );
+        `;
+        await session.executeQuery(query, params);
+
+        return { success: true, id: userId, version: newVersion };
+      });
+    } catch (e) {
+      const errMsg = e.message || String(e);
+      const isResourceExhausted = errMsg.includes("RESOURCE_EXHAUSTED");
+
+      if (isResourceExhausted && attempt < maxRetries) {
+        const delay = baseDelayMs * Math.pow(2, attempt);
+        log.warn(
+          `[saveUser] RESOURCE_EXHAUSTED, retry ${attempt + 1}/${maxRetries} in ${delay}ms`,
+          { userId },
         );
-      `;
-      await session.executeQuery(query, params);
+        await new Promise((res) => setTimeout(res, delay));
+        continue;
+      }
 
-      return { success: true, id: userId, version: newVersion };
-    });
-  } catch (e) {
-    log.error(`Failed to save user`, e.message || String(e), { userId });
-    return { success: false };
+      log.error(`Failed to save user`, errMsg, { userId, attempt });
+      return { success: false };
+    }
   }
+
+  return { success: false };
 }
 
 export async function mergeUsers(
