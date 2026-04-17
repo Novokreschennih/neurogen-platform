@@ -2,14 +2,14 @@
 # Dependencies
 node_modules/
 
-# Logs and temp files
-*.log
-*.tmp
-
 # Environment
 .env
 .env.local
 .env.*
+
+# Logs and temp files
+*.log
+*.tmp
 
 # Editors
 .vscode/
@@ -39,21 +39,14 @@ coverage.xml
 .pytest_cache/
 .hypothesis/
 
-# Build and distribution artifacts
-dist/
+# Build results
 build/
-*.egg
-*.egg-info/
+.sass-cache/
+connect.lock
+coverage/
+lib/
+lib64/
 *.so
-.libs/
-.deps/
-
-# IDE
-.vs~
-*.swp
-*.swo
-
-# OS
 .DS_Store
 Thumbs.db
 
