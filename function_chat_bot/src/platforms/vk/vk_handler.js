@@ -721,7 +721,8 @@ export async function handleVkWebhook(event, context) {
 
       if (payload.type === "message_new") {
         const message = payload.object.message;
-        const vkUserId = `vk:${message.from_id}`;
+        // v6.1: Используем чистое число vk_id (без префикса "vk:")
+        const vkUserId = message.from_id;
 
         const vkUpdateId = `${message.from_id}_${message.conversation_message_id || message.id || message.date}`;
         if (processedUpdates.has(vkUpdateId)) {
@@ -781,7 +782,7 @@ export async function handleVkWebhook(event, context) {
           }
 
           vkUser = {
-            vk_id: vkUserId,
+            vk_id: Number(vkUserId),
             partner_id: partnerId,
             state: "START",
             bought_tripwire: false,
@@ -1689,8 +1690,8 @@ export async function handleVkWebhook(event, context) {
                   emailRecordId: emailRecord.id,
                 });
 
-                // Обновляем основной профиль: добавляем vk_id
-                emailRecord.vk_id = vkUserId;
+                // Обновляем основной профиль: добавляем vk_id (число, без префикса)
+                emailRecord.vk_id = Number(message.from_id);
                 emailRecord.session.channels = emailRecord.session.channels || {};
                 emailRecord.session.channels.vk = {
                   enabled: true,
