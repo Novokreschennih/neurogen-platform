@@ -1,1 +1,2 @@
 Nothing should be ignored based on the provided file changes. The only modified file is a JavaScript source file (`function_chat_bot/src/platforms/vk/vk_handler.js`), which should not be added to .gitignore.
+node_modules/
