@@ -661,6 +661,32 @@ export async function handleVkWebhook(event, context) {
           return await renderStep(vkCtx, "Module_3_Offline", vkToken);
         if (callbackData === "GO_TO_FINAL")
           return await renderStep(vkCtx, "Lesson_Final_Comparison", vkToken);
+        if (callbackData === "PARTNER_STATS") {
+          // Показываем статистику партнёра
+          const refTail = vkUser.sh_ref_tail || vkUser.partner_id || "p_qdr";
+          try {
+            const statsQuery = `
+              DECLARE $refTail AS Utf8;
+              SELECT COUNT(*) as referred_count 
+              FROM users 
+              WHERE partner_id = $refTail;
+            `;
+            const result = await ydb.ydb.executeQuery(statsQuery, {
+              refTail: ydb.createPrimitiveValue(refTail),
+            });
+            const count = result.resultSets[0]?.rows[0]?.referred_count ?? 0;
+            await vkCtx.reply(
+              `📊 <b>ВАША ПАРТНЁРСКАЯ СТАТИСТИКА</b>\\n\\n` +
+              `🔗 Ваш реф. хвост: <code>${refTail}</code>\\n` +
+              `👥 Приглашённых пользователей: <b>${count}</b>\\n\\n` +
+              `💰 Выплаты автоматически начисляются при покупках.`,
+            );
+          } catch (e) {
+            log.error(`[VK PARTNER_STATS] Error:`, e);
+            await vkCtx.reply(`⚠️ Ошибка получения статистики. Попробуйте позже.`);
+          }
+          return { statusCode: 200, body: "ok" };
+        }
 
         if (scenarioVK.steps[callbackData]) {
           log.info(`[VK] renderStep via scenarioVK.steps`, {

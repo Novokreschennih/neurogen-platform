@@ -191,6 +191,37 @@ export function registerTelegramActions(bot, ctx) {
     );
   });
 
+  // === ОБРАБОТЧИК PARTNER_STATS ===
+  bot.action("PARTNER_STATS", async (ctx) => {
+    await ctx.answerCbQuery();
+    
+    const refTail = ctx.dbUser.sh_ref_tail || ctx.dbUser.partner_id || "p_qdr";
+    
+    try {
+      const statsQuery = `
+        DECLARE $refTail AS Utf8;
+        SELECT COUNT(*) as referred_count 
+        FROM users 
+        WHERE partner_id = $refTail;
+      `;
+      const result = await ydb.ydb.executeQuery(statsQuery, {
+        refTail: ydb.createPrimitiveValue(refTail),
+      });
+      const count = result.resultSets[0]?.rows[0]?.referred_count ?? 0;
+      
+      await ctx.reply(
+        `📊 <b>ВАША ПАРТНЁРСКАЯ СТАТИСТИКА</b>\n\n` +
+        `🔗 Ваш реф. хвост: <code>${refTail}</code>\n` +
+        `👥 Приглашённых пользователей: <b>${count}</b>\n\n` +
+        `💰 Выплаты автоматически начисляются при покупках.`,
+        { parse_mode: "HTML" }
+      );
+    } catch (e) {
+      log.error(`[TG PARTNER_STATS] Error:`, e);
+      await ctx.reply(`⚠️ Ошибка получения статистики. Попробуйте позже.`);
+    }
+  });
+
   // ============================================================
   // 6. COMMANDS (bot.command)
   // ============================================================

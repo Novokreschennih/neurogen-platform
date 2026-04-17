@@ -759,6 +759,14 @@ export const vkButtons = {
   // === MY_AI_BOT ===
   MY_AI_BOT: (links, user) => {
     const r = [];
+    
+    // Генерируем реферальную ссылку с ID пользователя
+    const myRefTail = user.sh_ref_tail || user.partner_id || process.env.MY_PARTNER_ID || "p_qdr";
+    const vkGroupId = process.env.VK_CENTRAL_GROUP || "237421168";
+    const refLink = `https://vk.me/club${vkGroupId}?ref=${myRefTail}`;
+    
+    r.push([{ text: "📢 ПРИГЛАСИТЬ ДРУГА (+БОНУСЫ)", url: refLink }]);
+    r.push([{ text: "💰 МОИ ВЫПЛАТЫ", callback: "PARTNER_STATS" }]);
     r.push([{ text: "🔙 В ГЛАВНОЕ МЕНЮ", callback: "MAIN_MENU" }]);
     return r;
   },
