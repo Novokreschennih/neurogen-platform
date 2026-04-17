@@ -983,6 +983,12 @@ export const vkButtons = {
         callback: "Module_3_Offline",
       },
     ],
+    [
+      {
+        text: "📱 НАСТРОИТЬ БОТА В TELEGRAM",
+        callback: "MULTI_CHANNEL_TG",
+      },
+    ],
   ],
 
   // === Rocket_Limits ===

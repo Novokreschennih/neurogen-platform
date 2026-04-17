@@ -1014,6 +1014,12 @@ export const telegramButtons = {
             callback_data: "Module_3_Offline",
           },
         ],
+        [
+          {
+            text: "💬 НАСТРОИТЬ БОТА В VK",
+            callback_data: "MULTI_CHANNEL_VK",
+          },
+        ],
       ],
 
   // === Rocket_Limits ===
