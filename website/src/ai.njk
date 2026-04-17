@@ -504,6 +504,14 @@ body {
   let trainingStep = 1;
   let neuroCoins = 0;
 
+  // === 0. СТАБИЛЬНЫЙ SESSION ID ДЛЯ WEB-ЧАТА ===
+  // Генерируем или достаем стабильный sessionId из localStorage
+  let currentSessionId = localStorage.getItem("neurogen_web_session");
+  if (!currentSessionId) {
+    currentSessionId = `web_${crypto.randomUUID ? crypto.randomUUID() : Date.now()}`;
+    localStorage.setItem("neurogen_web_session", currentSessionId);
+  }
+
   // === 1. ПЕРЕХВАТ РЕФЕРАЛА (v5.0 — partner_id) ===
   function captureReferral() {
     const params = new URLSearchParams(window.location.search);
@@ -951,7 +959,7 @@ body {
           partner_id: referrer, // v5.0
           referrer: referrer, // backward compat
           history: chatHistory.slice(-20),
-          sessionId: `web_funnel_${Date.now()}`,
+          sessionId: currentSessionId, // Используем стабильный ID из localStorage
         }),
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);

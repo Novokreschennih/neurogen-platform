@@ -90,14 +90,29 @@ export function validateBotToken(raw) {
  * Валидировать start payload
  * Поддерживаемые форматы:
  *  - partnerId
- *  - partnerId|email@example.com
+ *  - partnerId|email@example.com (старый формат с "|")
+ *  - partnerId-email@example.com (новый формат с "-" для VK)
  *  - partnerId|web:webSessionId  (v6.0: web_id с сайта)
  * @returns {{ partnerId: string, email?: string, webId?: string } | null}
  */
 export function validateStartPayload(raw) {
   if (!raw || typeof raw !== "string") return null;
   const trimmed = raw.trim();
-  const parts = trimmed.split("|");
+  
+  // v6.0: Поддерживаем оба разделителя: "|" (старый) и "-" (новый для VK)
+  let parts;
+  if (trimmed.includes("|")) {
+    // Старый формат с "|"
+    parts = trimmed.split("|");
+  } else {
+    // Новый формат с "-" — делим по последнему дефису (т.к. partner_id может содержать дефисы, напр. p-qdr)
+    const lastDashIndex = trimmed.lastIndexOf("-");
+    if (lastDashIndex !== -1) {
+      parts = [trimmed.substring(0, lastDashIndex), trimmed.substring(lastDashIndex + 1)];
+    } else {
+      parts = [trimmed];
+    }
+  }
 
   const partnerId = validatePartnerId(parts[0]);
   if (!partnerId) return null;

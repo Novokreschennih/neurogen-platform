@@ -271,14 +271,17 @@ export function autoDetectChannels(user) {
     user.session.channel_states.telegram = user.session.channel_states.telegram || "START";
   }
 
-  // VK — если есть vk_id
+  // VK — если есть vk_id (но group_id может быть неизвестен на этом этапе)
+  // Если group_id уже установлен в session.channels.vk, сохраняем его
+  // Иначе используем заглушку — реальный group_id будет установлен при первом сообщении через vk_handler.js
   if (user.vk_id && !user.session.channels.vk?.configured) {
+    const existingGroupId = user.session.channels.vk?.group_id;
     user.session.channels.vk = {
       ...user.session.channels.vk,
       enabled: true,
       configured: true,
       configured_at: Date.now(),
-      group_id: String(user.vk_id),
+      group_id: existingGroupId || "pending", // v6.2: Оставляем pending, если group_id ещё не установлен
     };
     user.session.channel_states.vk = user.session.channel_states.vk || "START";
   }

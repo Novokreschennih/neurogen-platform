@@ -344,13 +344,20 @@ export function setupTelegramHandlers(bot, context) {
         if (info?.sh_ref_tail) pid = info.sh_ref_tail;
       }
 
-      // v6.0: Парсим start payload — может содержать web_id или partnerId|email
+      // v6.0: Парсим start payload — может содержать web_id или email для склейки профилей
       if (ctx.message?.text?.startsWith("/start ")) {
         const rawRef = ctx.message.text.split(" ")[1];
-        if (rawRef && isMainBot) {
+        if (rawRef) {
           const parsed = validateStartPayload(rawRef);
           if (parsed) {
-            pid = parsed.partnerId;
+            // Если бот НЕ главный, партнер ID берем от владельца бота,
+            // но EMAIL сохраняем из payload для склейки!
+            if (!isMainBot) {
+              const info = await ydb.getBotInfo(token);
+              if (info?.sh_ref_tail) pid = info.sh_ref_tail;
+            } else {
+              pid = parsed.partnerId;
+            }
             emailFromJoin = parsed.email || null;
             webIdFromStart = parsed.webId || null;
             await ydb.recordLinkClick(pid, String(tgId), token);
