@@ -773,6 +773,15 @@ export const telegramButtons = {
   // === MY_AI_BOT ===
   MY_AI_BOT: (links, user) => {
         const r = [];
+        
+        // Генерируем реферальную ссылку с ID пользователя для Telegram
+        const myRefTail = user.sh_ref_tail || user.partner_id || process.env.MY_PARTNER_ID || "p_qdr";
+        const tgBotUsername = process.env.TELEGRAM_BOT_USERNAME || "neurogen_support_bot";
+        const refLink = `https://t.me/${tgBotUsername}?start=${myRefTail}`;
+        
+        r.push([{ text: "📢 ПРИГЛАСИТЬ ДРУГА (+БОНУСЫ)", url: refLink }]);
+        r.push([{ text: "💰 МОИ ВЫПЛАТЫ", callback_data: "PARTNER_STATS" }]);
+        
         if (user.session?.bot_username) {
           // Если бот настроен — кнопки управления
           r.push([
@@ -1012,6 +1021,12 @@ export const telegramButtons = {
           {
             text: "⚙️ ПРОДОЛЖИТЬ НАСТРОЙКУ (МОДУЛЬ 3)",
             callback_data: "Module_3_Offline",
+          },
+        ],
+        [
+          {
+            text: "💬 НАСТРОИТЬ БОТА В VK",
+            callback_data: "MULTI_CHANNEL_VK",
           },
         ],
       ],
