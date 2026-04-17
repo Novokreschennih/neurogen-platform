@@ -723,6 +723,8 @@ export async function handleVkWebhook(event, context) {
         const message = payload.object.message;
         // v6.1: Используем чистое число vk_id (без префикса "vk:")
         const vkUserId = message.from_id;
+        // v6.2: Извлекаем ID группы сообщества, через которое пришло сообщение
+        const vkGroupId = payload.group_id;
 
         const vkUpdateId = `${message.from_id}_${message.conversation_message_id || message.id || message.date}`;
         if (processedUpdates.has(vkUpdateId)) {
@@ -802,13 +804,13 @@ export async function handleVkWebhook(event, context) {
               enabled: true,
               configured: true,
               linked_at: Date.now(),
-              group_id: String(vkUserId)
+              group_id: String(vkGroupId) // v6.2: Сохраняем ID группы, а не пользователя
             };
             vkUser.session.channel_states = vkUser.session.channel_states || {};
             vkUser.session.channel_states.vk = "START";
             await ydb.saveUser(vkUser);
             
-            log.info("[VK] Merged VK ID into existing email user", { vkId: vkUserId, userId: vkUser.id, email: emailFromJoin });
+            log.info("[VK] Merged VK ID into existing email user", { vkId: vkUserId, groupId: vkGroupId, userId: vkUser.id, email: emailFromJoin });
           } else {
             // НОВЫЙ ПОЛЬЗОВАТЕЛЬ
             vkUser = {
@@ -822,7 +824,7 @@ export async function handleVkWebhook(event, context) {
                 last_activity: Date.now(),
                 tags: [],
                 channels: {
-                  vk: { enabled: true, configured: true, group_id: String(vkUserId) }
+                  vk: { enabled: true, configured: true, group_id: String(vkGroupId) } // v6.2: Сохраняем ID группы
                 },
                 channel_states: { vk: "START" }
               },
@@ -840,6 +842,7 @@ export async function handleVkWebhook(event, context) {
             vkUser.id = result.id;
             log.info(`[VK] New user created`, {
               vkId: vkUserId,
+              groupId: vkGroupId,
               userId: result.id,
               partnerId,
               hasEmail: !!emailFromJoin,
