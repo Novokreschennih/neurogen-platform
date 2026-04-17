@@ -745,29 +745,39 @@ export async function handleVkWebhook(event, context) {
 
         if (!vkUser || typeof vkUser !== "object" || !vkUser.id) {
           let partnerId = process.env.MY_PARTNER_ID || "p_qdr";
+          let emailFromJoin = null;
+          let rawRef = null;
 
           // v5.0: Поддержка partner_id из разных источников
           // 0. Из VK deep link (message.ref при переходе по ссылке vk.me/club?ref=xxx)
           if (message.ref) {
-            partnerId = message.ref;
-            log.info(`[VK REF] Caught referral from deep link:`, { partnerId });
+            rawRef = message.ref;
           }
           // 1. Из message.payload (JSON с command или ref)
           else if (message.payload) {
             try {
               const parsedPayload = JSON.parse(message.payload);
-              if (parsedPayload.command) {
-                partnerId = parsedPayload.command;
-              } else if (parsedPayload.ref) {
-                partnerId = parsedPayload.ref;
-              }
+              rawRef = parsedPayload.command || parsedPayload.ref;
             } catch (e) {}
           }
 
-          // 2. Из текста сообщения (если пользователь ввёл ref-хвост вручную)
-          if (partnerId === (process.env.MY_PARTNER_ID || "p_qdr")) {
-            const refMatch = text.match(/^([a-zA-Z0-9_]+)$/);
-            if (refMatch && refMatch[1].length > 1) partnerId = refMatch[1];
+          // === v6.1: ПАРСИНГ PAYLOAD ДЛЯ СКЛЕЙКИ С EMAIL ===
+          if (rawRef) {
+            const { validateStartPayload } = await import("../../utils/validator.js");
+            const parsed = validateStartPayload(rawRef);
+            if (parsed) {
+              partnerId = parsed.partnerId;
+              emailFromJoin = parsed.email || null;
+              log.info(`[VK REF] Parsed referral with email`, { partnerId, hasEmail: !!emailFromJoin });
+            } else {
+              partnerId = rawRef;
+            }
+          }
+
+          // === v6.1: СКЛЕЙКА ПРОФИЛЕЙ ПО EMAIL ===
+          let existingEmailUser = null;
+          if (emailFromJoin) {
+            existingEmailUser = await ydb.findUser({ email: emailFromJoin });
           }
 
           let firstName = "VK Lead";
@@ -781,33 +791,60 @@ export async function handleVkWebhook(event, context) {
             } catch (e) {}
           }
 
-          vkUser = {
-            vk_id: Number(vkUserId),
-            partner_id: partnerId,
-            state: "START",
-            bought_tripwire: false,
-            session: {
-              source: "vkontakte",
-              last_activity: Date.now(),
-              tags: [],
-            },
-            last_seen: Date.now(),
-            bot_token: "VK_CENTRAL_GROUP",
-            tariff: "",
-            sh_user_id: "",
-            sh_ref_tail: "",
-            purchases: [],
-            first_name: firstName,
-            reminders_count: 0,
-            last_reminder_time: 0,
-          };
-          const result = await ydb.saveUser(vkUser);
-          vkUser.id = result.id;
-          log.info(`[VK] New user created`, {
-            vkId: vkUserId,
-            userId: result.id,
-            partnerId,
-          });
+          if (existingEmailUser) {
+            // МЕРДЖ! Нашли пользователя по email — добавляем vk_id
+            vkUser = existingEmailUser;
+            vkUser.vk_id = Number(vkUserId);
+            vkUser.bot_token = "VK_CENTRAL_GROUP";
+            vkUser.first_name = firstName !== "VK Lead" ? firstName : (vkUser.first_name || "VK Lead");
+            vkUser.session.channels = vkUser.session.channels || {};
+            vkUser.session.channels.vk = {
+              enabled: true,
+              configured: true,
+              linked_at: Date.now(),
+              group_id: String(vkUserId)
+            };
+            vkUser.session.channel_states = vkUser.session.channel_states || {};
+            vkUser.session.channel_states.vk = "START";
+            await ydb.saveUser(vkUser);
+            
+            log.info("[VK] Merged VK ID into existing email user", { vkId: vkUserId, userId: vkUser.id, email: emailFromJoin });
+          } else {
+            // НОВЫЙ ПОЛЬЗОВАТЕЛЬ
+            vkUser = {
+              vk_id: Number(vkUserId),
+              email: emailFromJoin || "",
+              partner_id: partnerId,
+              state: "START",
+              bought_tripwire: false,
+              session: {
+                source: "vkontakte",
+                last_activity: Date.now(),
+                tags: [],
+                channels: {
+                  vk: { enabled: true, configured: true, group_id: String(vkUserId) }
+                },
+                channel_states: { vk: "START" }
+              },
+              last_seen: Date.now(),
+              bot_token: "VK_CENTRAL_GROUP",
+              tariff: "",
+              sh_user_id: "",
+              sh_ref_tail: "",
+              purchases: [],
+              first_name: firstName,
+              reminders_count: 0,
+              last_reminder_time: 0,
+            };
+            const result = await ydb.saveUser(vkUser);
+            vkUser.id = result.id;
+            log.info(`[VK] New user created`, {
+              vkId: vkUserId,
+              userId: result.id,
+              partnerId,
+              hasEmail: !!emailFromJoin,
+            });
+          }
         }
 
         if (!vkUser.session || typeof vkUser.session !== "object")

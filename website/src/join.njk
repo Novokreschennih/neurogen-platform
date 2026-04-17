@@ -727,7 +727,8 @@ body {
   const API_URL =
     "https://d5dsbah1d4ju0glmp9d0.3zvepvee.apigw.yandexcloud.net/?action=web-chat";
   const WEB_CHAT_URL = "/ai/";
-  const VK_COMMUNITY_URL = "https://vk.com/sethubble";
+  // Прямая ссылка на диалог VK для корректной передачи ref
+  const VK_COMMUNITY_URL = "https://vk.me/club237421168";
 
   // === ПЕРЕМЕННЫЕ ===
   let partnerId = null;
@@ -873,20 +874,16 @@ body {
     stepChoice.classList.remove("hidden");
   });
 
-  // === МАРШРУТИЗАЦИЯ ПО КАНАЛАМ (v5.0) ===
+  // === МАРШРУТИЗАЦИЯ ПО КАНАЛАМ (v6.0) ===
 
-  // Кодирование email для передачи через URL (безопасное)
+  // Кодирование email для передачи через URL (Base64Url - безопасно для Telegram и VK)
   function encodeEmailForUrl(email) {
     if (!email) return "";
-    return btoa(email).replace(/\+/g, "-").replace(/\//g, "_").replace(
-      /=/g,
-      "",
-    );
+    return btoa(email).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
   }
 
   // 1. Telegram — deep link с partner_id + email в start payload
   btnTelegram.addEventListener("click", () => {
-    // Сохраняем email для бота
     const email = emailInput.value.trim();
     if (email) {
       try {
@@ -894,14 +891,14 @@ body {
         localStorage.setItem("neurogen_email_submitted", "true");
       } catch (e) {}
     }
-    // Передаём email через start payload: partnerId|encodedEmail
+    // Используем дефис "-" вместо "|" как разделитель (безопасно для всех платформ)
     const startPayload = email
-      ? `${partnerId}|${encodeEmailForUrl(email)}`
+      ? `${partnerId}-${encodeEmailForUrl(email)}`
       : partnerId;
     window.location.href = `https://t.me/${refBot}?start=${startPayload}`;
   });
 
-  // 2. VK — сообщество SetHubble с partner_id
+  // 2. VKontakte — прямая ссылка на диалог с ref payload
   btnVK.addEventListener("click", () => {
     const email = emailInput.value.trim();
     if (email) {
@@ -910,12 +907,15 @@ body {
         localStorage.setItem("neurogen_email_submitted", "true");
       } catch (e) {}
     }
-    window.location.href = `${VK_COMMUNITY_URL}?ref=${partnerId}`;
+    // Передаём partner_id и email через ref: partnerId-encodedEmail
+    const startPayload = email
+      ? `${partnerId}-${encodeEmailForUrl(email)}`
+      : partnerId;
+    window.location.href = `${VK_COMMUNITY_URL}?ref=${startPayload}`;
   });
 
-  // 3. Web-чат — partner_id как параметр
+  // 3. Web-чат — передаем partner_id и email через localStorage
   btnWeb.addEventListener("click", () => {
-    // Сохраняем email чтобы /ai/ не спрашивал повторно
     const email = emailInput.value.trim();
     if (email) {
       try {
