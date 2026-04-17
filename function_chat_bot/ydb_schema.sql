@@ -18,7 +18,7 @@ CREATE TABLE users (
     id Utf8,                        -- 🔑 Primary Key: UUID v4
     email Utf8,                     -- ⚡ Email (клей для объединения каналов)
     tg_id Uint64,                   -- ⚡ Telegram ID (только цифры)
-    vk_id Uint64,                   -- ⚡ VK ID (только цифры)
+    vk_id Utf8,                   -- ⚡ VK ID (только цифры)
     web_id Utf8,                    -- ⚡ Web session ID (cookie с лендинга)
     partner_id Utf8,                -- Реферальный хвост
     state Utf8,                     -- Текущий шаг воронки
