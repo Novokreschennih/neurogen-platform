@@ -21,9 +21,37 @@ export async function handleWebChat(event, context) {
     // === 0. ЛОГИКА ШАГОВ ВОРОНКИ ===
     if (payload.action === "get-web-step" || payload.action === "click-button") {
       const webSessionId = payload.sessionId;
+      const partnerId = payload.partner_id || payload.referrer || "p_qdr";
+      
       let webUser = await ydb?.findUser({ web_id: webSessionId });
 
-      if (!webUser) return { statusCode: 404, headers: corsHeaders, body: JSON.stringify({ error: "Session not found" }) };
+      // ИСПРАВЛЕНИЕ: Если пользователя нет, создаем его (вместо 404)
+      if (!webUser && ydb) {
+        log.info(`[WEB] Creating auto-session for step: ${webSessionId}`);
+        webUser = {
+          web_id: webSessionId,
+          partner_id: partnerId,
+          state: "START",
+          first_name: "Web User",
+          last_seen: Date.now(),
+          session: {
+            source: "web",
+            channels: { web: { enabled: true, configured: true } },
+            channel_states: { web: "START" },
+            tags: [],
+            dialog_history: [],
+            xp: 0
+          }
+        };
+        const res = await ydb.saveUser(webUser);
+        webUser.id = res.id;
+      }
+
+      if (!webUser) return { statusCode: 500, headers: corsHeaders, body: JSON.stringify({ error: "Database error" }) };
+
+      // Защита структуры сессии
+      if (!webUser.session) webUser.session = {};
+      if (!Array.isArray(webUser.session.tags)) webUser.session.tags = [];
 
       // ПЕРЕХВАТ ТЕХНИЧЕСКИХ КНОПОК (Секретные слова)
       let targetCallback = payload.callback_data;
@@ -50,6 +78,7 @@ export async function handleWebChat(event, context) {
       if (payload.action === "click-button" && targetCallback) {
         webUser.state = targetCallback;
         webUser.saved_state = targetCallback;
+        webUser.session.last_activity = Date.now();
         await ydb.saveUser(webUser);
       }
 
@@ -57,10 +86,19 @@ export async function handleWebChat(event, context) {
       const step = scenario.steps[stepKey];
 
       if (!step) {
+        log.warn(`[WEB] Step not found: ${stepKey}, falling back to START`);
+        // Вместо 404 возвращаем START шаг, чтобы воронка не ломалась
         return {
-          statusCode: 404,
+          statusCode: 200,
           headers: corsHeaders,
-          body: JSON.stringify({ error: "Step not found" }),
+          body: JSON.stringify({
+            success: true,
+            stepKey: "START",
+            text: scenario.steps.START?.text || "Добро пожаловать!",
+            image: scenario.steps.START?.image,
+            buttons: scenario.steps.START?.buttons || [],
+            neuroCoins: webUser.session?.xp || 0,
+          }),
         };
       }
 

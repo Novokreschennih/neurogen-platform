@@ -5,6 +5,11 @@
  * Формат: callback_data, url, web_app
  */
 
+import jwt from "jsonwebtoken";
+import { getJwtSecret } from "../../utils/jwt_utils.js";
+
+const JWT_SECRET = getJwtSecret();
+
 import {
   PROMO_KIT_URL,
   CRM_DEMO_URL,
