@@ -227,7 +227,7 @@ export async function handleWebChat(event, context) {
     // ============================================================
     if (payload.message) {
       const txt = payload.message.trim();
-      const u = webUser;
+      const u = webUser; // Используем полную модель юзера, загруженную из базы
 
       // --- А. Состояние ожидания ID ---
       if (u.state === "WAIT_REG_ID") {
@@ -241,7 +241,7 @@ export async function handleWebChat(event, context) {
           };
         u.sh_user_id = txt;
         u.state = "WAIT_REG_TAIL";
-        await ydb.saveUser(u);
+        await ydb.saveUser(u); // <-- Здесь u уже содержит tg_id и vk_id из БД, так что они не затрутся
         return {
           statusCode: 200,
           headers: corsHeaders,
@@ -354,6 +354,8 @@ export async function handleWebChat(event, context) {
         u.session.verification_question = randomQ.q;
         u.session.verification_answers = randomQ.a;
         u.state = "WAIT_VERIFICATION";
+
+        // ВАЖНО: Сохраняем пользователя (все старые данные + новые)
         await ydb.saveUser(u);
 
         return {
@@ -361,6 +363,7 @@ export async function handleWebChat(event, context) {
           headers: corsHeaders,
           body: JSON.stringify({
             answer: `🔐 <b>ПОДТВЕРЖДЕНИЕ ВЛАДЕНИЯ АККАУНТОМ</b>\n\nЧтобы убедиться, что у тебя есть доступ к личному кабинету SetHubble, ответь на вопрос:\n\n<b>${randomQ.q}</b>\n\n<i>(Подсказка: эти данные есть в таблице тарифов в твоем личном кабинете)</i>`,
+            sessionId: webSessionId,
           }),
         };
       }
@@ -381,6 +384,9 @@ export async function handleWebChat(event, context) {
           };
 
         u.state = "Training_Main";
+        // Чистим временные данные, не трогая старые
+        delete u.session.verification_question;
+        delete u.session.verification_answers;
         await ydb.saveUser(u);
         return {
           statusCode: 200,
@@ -388,59 +394,147 @@ export async function handleWebChat(event, context) {
           body: JSON.stringify({
             answer: "✅ Аккаунт подтвержден! Открываю доступ к обучению...",
             loadNextStep: true,
+            sessionId: webSessionId,
           }),
         };
       }
 
-      // --- Г. Чат с ИИ (OpenRouter) ---
+      // --- Г. СЕКРЕТНЫЕ СЛОВА (ИЗ СТАТЕЙ) ---
+      const secretsConfig = {
+        WAIT_SECRET_1: {
+          word: "гибрид",
+          xp: 20,
+          next: "Module_2_Online",
+          flag: "mod1_done",
+          awardKey: "mod1_awarded",
+        },
+        WAIT_SECRET_2: {
+          word: "облако",
+          xp: 30,
+          next: "WAIT_BOT_TOKEN",
+          flag: "mod2_done",
+          awardKey: "mod2",
+        },
+        WAIT_SECRET_3: {
+          word: "сарафан",
+          xp: 40,
+          next: "Lesson_Final_Comparison",
+          flag: "mod3_done",
+          awardKey: "mod3_awarded",
+        },
+      };
+
+      if (secretsConfig[u.state]) {
+        const config = secretsConfig[u.state];
+        if (txt.toLowerCase() === config.word.toLowerCase()) {
+          if (!u.session.xp_awarded) u.session.xp_awarded = {};
+
+          if (!u.session.xp_awarded[config.awardKey]) {
+            u.session.xp = (u.session.xp || 0) + config.xp;
+            u.session.xp_awarded[config.awardKey] = true;
+            u.session[config.flag] = true;
+            u.state = config.next;
+            await ydb.saveUser(u);
+            return {
+              statusCode: 200,
+              headers: corsHeaders,
+              body: JSON.stringify({
+                answer: `✅ <b>КОД ПРИНЯТ!</b>\n\n🪙 Тебе начислено +${config.xp} NeuroCoins! Твой баланс: ${u.session.xp}\n\nПродолжаем путь 👇`,
+                loadNextStep: true,
+                sessionId: webSessionId,
+              }),
+            };
+          } else {
+            u.state = config.next;
+            await ydb.saveUser(u);
+            return {
+              statusCode: 200,
+              headers: corsHeaders,
+              body: JSON.stringify({
+                answer: `✅ <b>ТЫ УЖЕ ПРОШЁЛ ЭТОТ МОДУЛЬ!</b>\n\nПродолжаем путь 👇`,
+                loadNextStep: true,
+                sessionId: webSessionId,
+              }),
+            };
+          }
+        } else {
+          return {
+            statusCode: 200,
+            headers: corsHeaders,
+            body: JSON.stringify({
+              answer:
+                "❌ <b>Неверное слово.</b>\n\nЗагляни в конец статьи еще раз, найди правильное слово и пришли его мне.",
+              sessionId: webSessionId,
+            }),
+          };
+        }
+      }
+
+      // --- Д. Чат с ИИ (OpenRouter) ---
       const webSystemPrompt = `Ты — NeuroGen, харизматичный ИИ-архитектор экосистемы SetHubble. Эксперт по IT-бизнесу и пассивному доходу. Отвечай кратко (2-4 предложения), используй эмодзи. Форматируй HTML: <b>, <i>.`;
 
       const messages = [{ role: "system", content: webSystemPrompt }];
-      if (u.session.dialog_history.length > 0) {
-        u.session.dialog_history.forEach((m) =>
+      if (
+        webUser.session.dialog_history &&
+        webUser.session.dialog_history.length > 0
+      ) {
+        webUser.session.dialog_history.forEach((m) =>
           messages.push({ role: m.role, content: m.content }),
         );
       }
       messages.push({ role: "user", content: txt });
 
-      const apiKey = process.env.OPENROUTER_API_KEY;
-      const aiResponse = await fetch(
-        "https://openrouter.ai/api/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
+      try {
+        const apiKey = process.env.OPENROUTER_API_KEY;
+        const aiResponse = await fetch(
+          "https://openrouter.ai/api/v1/chat/completions",
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: process.env.WEB_CHAT_MODEL || "deepseek/deepseek-v3.2",
+              messages,
+              max_tokens: 500,
+              temperature: 0.75,
+            }),
           },
+        );
+
+        const aiData = await aiResponse.json();
+        const aiAnswer =
+          aiData.choices?.[0]?.message?.content ||
+          "🤖 Я немного задумался. Повтори еще раз!";
+
+        webUser.session.dialog_history.push(
+          { role: "user", content: txt, timestamp: Date.now() },
+          { role: "assistant", content: aiAnswer, timestamp: Date.now() },
+        );
+        webUser.session.dialog_history =
+          webUser.session.dialog_history.slice(-20);
+        await ydb.saveUser(webUser);
+
+        return {
+          statusCode: 200,
+          headers: corsHeaders,
+          body: JSON.stringify({ answer: aiAnswer, sessionId: webSessionId }),
+        };
+      } catch (aiErr) {
+        log.error("[AI FETCH ERROR]", aiErr);
+        return {
+          statusCode: 200,
+          headers: corsHeaders,
           body: JSON.stringify({
-            model: process.env.WEB_CHAT_MODEL || "deepseek/deepseek-v3.2",
-            messages,
-            max_tokens: 500,
-            temperature: 0.75,
+            answer: "⚠️ Нейроядро временно недоступно.",
+            sessionId: webSessionId,
           }),
-        },
-      );
-
-      const aiData = await aiResponse.json();
-      const aiAnswer =
-        aiData.choices?.[0]?.message?.content ||
-        "🤖 Я немного задумался. Повтори еще раз!";
-
-      // Сохранение истории
-      u.session.dialog_history.push(
-        { role: "user", content: txt, timestamp: Date.now() },
-        { role: "assistant", content: aiAnswer, timestamp: Date.now() },
-      );
-      u.session.dialog_history = u.session.dialog_history.slice(-20);
-      await ydb.saveUser(u);
-
-      return {
-        statusCode: 200,
-        headers: corsHeaders,
-        body: JSON.stringify({ answer: aiAnswer, sessionId: webSessionId }),
-      };
-    }
+        };
+      }
+    } // Закрывает if (payload.message)
   } catch (err) {
+    // Закрывает основной try в начале файла
     log.error("[WEB CHAT ERROR]", err);
     return {
       statusCode: 500,
@@ -448,4 +542,4 @@ export async function handleWebChat(event, context) {
       body: JSON.stringify({ error: "Server error" }),
     };
   }
-}
+} // Закрывает функцию handleWebChat
