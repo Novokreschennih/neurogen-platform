@@ -18,33 +18,38 @@ export async function handleWebChat(event, context) {
       : event.body || "{}";
     const payload = JSON.parse(payloadStr);
 
-    // ============================================================
-    // 0. ЛОГИКА ШАГОВ ВОРОНКИ (Для кнопок на сайте)
-    // ============================================================
-    if (
-      payload.action === "get-web-step" ||
-      payload.action === "click-button"
-    ) {
+    // === 0. ЛОГИКА ШАГОВ ВОРОНКИ ===
+    if (payload.action === "get-web-step" || payload.action === "click-button") {
       const webSessionId = payload.sessionId;
       let webUser = await ydb?.findUser({ web_id: webSessionId });
 
-      if (!webUser) {
+      if (!webUser) return { statusCode: 404, headers: corsHeaders, body: JSON.stringify({ error: "Session not found" }) };
+
+      // ПЕРЕХВАТ ТЕХНИЧЕСКИХ КНОПОК (Секретные слова)
+      let targetCallback = payload.callback_data;
+      if (targetCallback && targetCallback.startsWith("ENTER_SECRET_")) {
+        const level = targetCallback.split("_")[2];
+        webUser.state = `WAIT_SECRET_${level}`;
+        webUser.saved_state = webUser.state;
+        await ydb.saveUser(webUser);
+        
+        // Возвращаем виртуальный шаг "Ввод слова"
         return {
-          statusCode: 404,
+          statusCode: 200,
           headers: corsHeaders,
-          body: JSON.stringify({ error: "Session not found" }),
+          body: JSON.stringify({
+            success: true,
+            stepKey: webUser.state,
+            text: `✍️ <b>ВВОД КОДА: МОДУЛЬ ${level}</b>\n\nОтправь мне секретное слово из статьи ответным сообщением:`,
+            buttons: [[{ text: "🔙 ОТМЕНА", callback_data: "MAIN_MENU" }]]
+          })
         };
       }
 
-      // Защита структуры сессии
-      if (!webUser.session) webUser.session = {};
-      if (!Array.isArray(webUser.session.tags)) webUser.session.tags = [];
-
-      // Если кликнули по кнопке — меняем состояние
-      if (payload.action === "click-button" && payload.callback_data) {
-        webUser.state = payload.callback_data;
-        webUser.saved_state = payload.callback_data;
-        webUser.session.last_activity = Date.now();
+      // Обычная логика кнопок
+      if (payload.action === "click-button" && targetCallback) {
+        webUser.state = targetCallback;
+        webUser.saved_state = targetCallback;
         await ydb.saveUser(webUser);
       }
 
