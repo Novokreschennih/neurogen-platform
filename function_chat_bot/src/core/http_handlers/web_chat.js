@@ -19,19 +19,23 @@ export async function handleWebChat(event, context) {
     const payload = JSON.parse(payloadStr);
 
     // === 0. ЛОГИКА ШАГОВ ВОРОНКИ ===
-    if (payload.action === "get-web-step" || payload.action === "click-button") {
+    if (
+      payload.action === "get-web-step" ||
+      payload.action === "click-button"
+    ) {
       const webSessionId = payload.sessionId;
       const partnerId = payload.partner_id || payload.referrer || "p_qdr";
-      
+
       let webUser = await ydb?.findUser({ web_id: webSessionId });
 
+      // ИСПРАВЛЕНИЕ: Если пользователя нет, создаем его (вместо 404)
       if (!webUser && ydb) {
         log.info(`[WEB] Creating auto-session for step: ${webSessionId}`);
         webUser = {
           web_id: webSessionId,
           partner_id: partnerId,
           state: "START",
-          first_name: "Web User", // ИСПРАВЛЕНИЕ: Обязательно передаем дефолтное имя
+          first_name: "Web User",
           last_seen: Date.now(),
           session: {
             source: "web",
@@ -39,96 +43,70 @@ export async function handleWebChat(event, context) {
             channel_states: { web: "START" },
             tags: [],
             dialog_history: [],
-            xp: 0
-          }
+            xp: 0,
+          },
         };
         const res = await ydb.saveUser(webUser);
         webUser.id = res.id;
       }
 
-      if (!webUser) return { statusCode: 500, headers: corsHeaders, body: JSON.stringify({ error: "Database error" }) };
+      if (!webUser)
+        return {
+          statusCode: 500,
+          headers: corsHeaders,
+          body: JSON.stringify({ error: "Database error" }),
+        };
 
-      // Гарантируем, что first_name всегда строка
-      webUser.first_name = webUser.first_name || "друг";
-      
       // Защита структуры сессии
       if (!webUser.session) webUser.session = {};
       if (!Array.isArray(webUser.session.tags)) webUser.session.tags = [];
 
+      // ПЕРЕХВАТ ТЕХНИЧЕСКИХ КНОПОК (Секретные слова)
       let targetCallback = payload.callback_data;
+      if (targetCallback && targetCallback.startsWith("ENTER_SECRET_")) {
+        const level = targetCallback.split("_")[2];
+        webUser.state = `WAIT_SECRET_${level}`;
+        webUser.saved_state = webUser.state;
+        await ydb.saveUser(webUser);
 
-      // =========================================================
-      // ПЕРЕХВАТ ТЕХНИЧЕСКИХ КНОПОК (которые не являются шагами)
-      // =========================================================
-      if (targetCallback) {
-        if (targetCallback.startsWith("ENTER_SECRET_")) {
-          const level = targetCallback.split("_")[2];
-          webUser.state = `WAIT_SECRET_${level}`;
-          webUser.saved_state = webUser.state;
-          await ydb.saveUser(webUser);
-          
-          return {
-            statusCode: 200,
-            headers: corsHeaders,
-            body: JSON.stringify({
-              success: true,
-              stepKey: webUser.state,
-              text: `✍️ <b>ВВОД КОДА: МОДУЛЬ ${level}</b>\n\nОтправь мне секретное слово из статьи ответным сообщением (прямо в этот чат):`,
-              buttons: [[{ text: "🔙 ОТМЕНА", callback_data: "MAIN_MENU" }]]
-            })
-          };
-        }
-
-        if (targetCallback === "CLICK_REG_ID" || targetCallback === "FORCE_REG_UPDATE") {
-          webUser.state = "WAIT_REG_ID";
-          await ydb.saveUser(webUser);
-          return {
-            statusCode: 200, headers: corsHeaders,
-            body: JSON.stringify({
-              success: true, stepKey: webUser.state,
-              text: "✍️ <b>Введи ТВОЙ цифровой ID</b>\n\nПришли мне номер, который ты получил в личном кабинете SetHubble после регистрации (прямо в этот чат).",
-              buttons: [[{ text: "🔙 ОТМЕНА", callback_data: "MAIN_MENU" }]]
-            })
-          };
-        }
-
-        if (targetCallback === "SETUP_BOT_START") {
-          webUser.state = "WAIT_BOT_TOKEN";
-          await ydb.saveUser(webUser);
-          return {
-            statusCode: 200, headers: corsHeaders,
-            body: JSON.stringify({
-              success: true, stepKey: webUser.state,
-              text: "🚀 <b>НАСТРОЙКА БОТА-КЛОНА</b>\n\nПришли мне <b>API TOKEN</b> твоего бота из @BotFather.",
-              buttons: [[{ text: "🔙 ОТМЕНА", callback_data: "MAIN_MENU" }]]
-            })
-          };
-        }
-
-        // Обычная логика кнопок (смена статуса на следующий шаг)
-        if (payload.action === "click-button") {
-          webUser.state = targetCallback;
-          webUser.saved_state = targetCallback;
-          webUser.session.last_activity = Date.now();
-          await ydb.saveUser(webUser);
-        }
+        // Возвращаем виртуальный шаг "Ввод слова"
+        return {
+          statusCode: 200,
+          headers: corsHeaders,
+          body: JSON.stringify({
+            success: true,
+            stepKey: webUser.state,
+            text: `✍️ <b>ВВОД КОДА: МОДУЛЬ ${level}</b>\n\nОтправь мне секретное слово из статьи ответным сообщением:`,
+            buttons: [[{ text: "🔙 ОТМЕНА", callback_data: "MAIN_MENU" }]],
+          }),
+        };
       }
-      // =========================================================
+
+      // Обычная логика кнопок
+      if (payload.action === "click-button" && targetCallback) {
+        webUser.state = targetCallback;
+        webUser.saved_state = targetCallback;
+        webUser.session.last_activity = Date.now();
+        await ydb.saveUser(webUser);
+      }
 
       const stepKey = webUser.state || "START";
       const step = scenario.steps[stepKey];
 
       if (!step) {
         log.warn(`[WEB] Step not found: ${stepKey}, falling back to START`);
+        // Вместо 404 возвращаем START шаг, чтобы воронка не ломалась
         return {
-          statusCode: 200, headers: corsHeaders,
+          statusCode: 200,
+          headers: corsHeaders,
           body: JSON.stringify({
-            success: true, stepKey: "START",
-            text: scenario.steps.START?.text(scenario.getLinks("p_qdr", "", ""), webUser, {}) || "Добро пожаловать!",
+            success: true,
+            stepKey: "START",
+            text: scenario.steps.START?.text || "Добро пожаловать!",
             image: scenario.steps.START?.image,
             buttons: scenario.steps.START?.buttons || [],
             neuroCoins: webUser.session?.xp || 0,
-          })
+          }),
         };
       }
 
@@ -146,8 +124,14 @@ export async function handleWebChat(event, context) {
         webUser.bought_tripwire,
       );
 
-      const messageText = typeof step.text === "function" ? step.text(links, webUser, info) : step.text;
-      const buttons = typeof step.buttons === "function" ? step.buttons(links, webUser, info) : step.buttons;
+      const messageText =
+        typeof step.text === "function"
+          ? step.text(links, webUser, info)
+          : step.text;
+      const buttons =
+        typeof step.buttons === "function"
+          ? step.buttons(links, webUser, info)
+          : step.buttons;
 
       return {
         statusCode: 200,
@@ -277,7 +261,187 @@ export async function handleWebChat(event, context) {
       webUser.session.last_activity = Date.now();
     }
 
-    // --- ИНТЕРЦЕПТОР EMAIL В ТЕКСТЕ ---
+    // ============================================================
+    // 2.5. ПЕРЕХВАТ ВВОДА ДАННЫХ (WAIT STATES)
+    // ============================================================
+    const txt = payload.message.trim();
+    const u = webUser; // Для совместимости с кодом Телеграма
+
+    // 1. Сбор цифрового ID
+    if (u && u.state === "WAIT_REG_ID") {
+      if (isNaN(txt)) {
+        return {
+          statusCode: 200,
+          headers: corsHeaders,
+          body: JSON.stringify({
+            answer: "❌ Пришли только цифры.",
+            sessionId: webSessionId,
+          }),
+        };
+      }
+      u.sh_user_id = txt;
+      u.state = "WAIT_REG_TAIL";
+      await ydb.saveUser(u);
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          answer:
+            "✅ Принято! Теперь скопируй и пришли свою <b>Ссылку для приглашений</b> полностью (например: https://sethubble.com/ru/p_xyt ):",
+          sessionId: webSessionId,
+        }),
+      };
+    }
+
+    // 2. Сбор реферальной ссылки
+    if (u && u.state === "WAIT_REG_TAIL") {
+      let tail = txt;
+      if (tail.includes("sethubble.com")) {
+        tail = tail.split("?")[0].replace(/\/$/, "").split("/").pop();
+      }
+      u.sh_ref_tail = tail;
+
+      // Возвращаем верификацию
+      const tariffQuestions = [
+        {
+          q: "Сколько компаний можно создать на тарифе 'Самолет'?",
+          a: ["1", "один"],
+        },
+        {
+          q: "Максимальная цена товара ($) на тарифе 'Ракета'?",
+          a: ["5000", "5000$"],
+        },
+        {
+          q: "Сколько уровней партнерских программ доступно на тарифе 'Шаттл'?",
+          a: ["10", "десять"],
+        },
+        {
+          q: "Какая комиссия (%) на тарифе 'Самолет'?",
+          a: ["5", "5%", "пять"],
+        },
+        { q: "Какая комиссия (%) на тарифе 'Ракета'?", a: ["3", "3%", "три"] },
+        { q: "Какая комиссия (%) на тарифе 'Шаттл'?", a: ["1", "1%", "один"] },
+        {
+          q: "Максимальный доход от партнерских программ ($/год) на тарифе 'Самолет'?",
+          a: ["10k", "10000", "10 000"],
+        },
+        {
+          q: "Максимальный доход от партнерских программ ($/год) на тарифе 'Ракета'?",
+          a: ["100k", "100000", "100 000"],
+        },
+        {
+          q: "Максимальный доход от партнерских программ ($/год) на тарифе 'Шаттл'?",
+          a: ["12m", "12000000", "12 000 000"],
+        },
+        {
+          q: "Доступна ли бинарная система на тарифе 'Самолет'?",
+          a: ["нет", "недоступна", "no"],
+        },
+        {
+          q: "Включена ли бинарная система на тарифе 'Ракета'?",
+          a: ["да", "только включена", "yes"],
+        },
+        {
+          q: "Есть ли полный доступ к бинарной системе на тарифе 'Шаттл'?",
+          a: ["да", "полный доступ", "yes"],
+        },
+        {
+          q: "Макс. количество продуктов /месяц на тарифе 'Самолет'?",
+          a: ["5", "пять"],
+        },
+        {
+          q: "Макс. количество продуктов /месяц на тарифе 'Ракета'?",
+          a: ["50", "пятьдесят"],
+        },
+        {
+          q: "Макс. количество продуктов /месяц на тарифе 'Шаттл'?",
+          a: ["100", "сто"],
+        },
+        {
+          q: "Авто-вывод средств на тарифе 'Самолет'?",
+          a: ["нет", "отключён", "no", "disabled"],
+        },
+        {
+          q: "Авто-вывод средств на тарифе 'Ракета'?",
+          a: ["да", "доступно", "yes", "available"],
+        },
+        {
+          q: "Авто-вывод средств на тарифе 'Шаттл'?",
+          a: ["да", "доступно", "yes", "available"],
+        },
+        { q: "Получение баллов на тарифе 'Самолет'?", a: ["нет", "no"] },
+        { q: "Получение баллов на тарифе 'Ракета'?", a: ["нет", "no"] },
+        { q: "Получение баллов на тарифе 'Шаттл'?", a: ["да", "yes"] },
+        {
+          q: "Макс. сумма пожертвования ($) на тарифе 'Самолет'?",
+          a: ["500", "500$"],
+        },
+        {
+          q: "Макс. сумма пожертвования ($) на тарифе 'Ракета'?",
+          a: ["5000", "5000$"],
+        },
+        {
+          q: "Макс. сумма пожертвования ($) на тарифе 'Шаттл'?",
+          a: ["300k", "300000", "300 000"],
+        },
+      ];
+
+      const randomQ =
+        tariffQuestions[Math.floor(Math.random() * tariffQuestions.length)];
+      u.session.verification_question = randomQ.q;
+      u.session.verification_answers = randomQ.a;
+      u.state = "WAIT_VERIFICATION";
+      await ydb.saveUser(u);
+
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          answer: `🔐 <b>ПОДТВЕРЖДЕНИЕ ВЛАДЕНИЯ АККАУНТОМ</b>\n\nЧтобы убедиться, что у тебя есть доступ к личному кабинету SetHubble, ответь на вопрос:\n\n<b>${randomQ.q}</b>\n\n<i>(Подсказка: эти данные есть в таблице тарифов в твоем личном кабинете)</i>`,
+          sessionId: webSessionId,
+        }),
+      };
+    }
+
+    // 3. Проверка ответа верификации
+    if (u && u.state === "WAIT_VERIFICATION") {
+      const expectedAnswers = u.session.verification_answers || [];
+      const userAnswer = txt.toLowerCase().trim();
+
+      const isCorrect = expectedAnswers.some(
+        (ans) => userAnswer.includes(ans) || ans.includes(userAnswer),
+      );
+
+      if (!isCorrect) {
+        return {
+          statusCode: 200,
+          headers: corsHeaders,
+          body: JSON.stringify({
+            answer: `❌ <b>Неверный ответ.</b>\n\nЗагляни в таблицу тарифов в личном кабинете SetHubble и попробуй еще раз.\n\n<b>Вопрос:</b> ${u.session.verification_question}`,
+            sessionId: webSessionId,
+          }),
+        };
+      }
+
+      // Очистка и перевод на обучение
+      delete u.session.verification_question;
+      delete u.session.verification_answers;
+      u.state = "Training_Main";
+      await ydb.saveUser(u);
+
+      // ВАЖНО: Возвращаем не просто текст ответа, а флаг, чтобы фронтенд загрузил следующий шаг с кнопками!
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          answer: `✅ <b>Аккаунт подтверждён!</b>\n\nЯ открыл для тебя доступ к материалам.`,
+          loadNextStep: true,
+          sessionId: webSessionId,
+        }),
+      };
+    }
+
+    // --- ИНТЕРЦЕПТОР EMAIL В ТЕКСТЕ СООБЩЕНИЯ (Оставляем как было) ---
     const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
     const emailMatch = payload.message.match(emailRegex);
 
