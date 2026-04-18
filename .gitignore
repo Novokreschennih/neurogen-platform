@@ -1,4 +1,3 @@
-```
 # Dependencies
 node_modules/
 
@@ -36,4 +35,5 @@ htmlcov/
 dist/
 build/
 target/
-```
+
+*.zip
