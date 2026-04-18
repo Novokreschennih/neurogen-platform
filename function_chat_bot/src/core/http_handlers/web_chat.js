@@ -20,103 +20,81 @@ export async function handleWebChat(event, context) {
       : event.body || "{}";
     const payload = JSON.parse(payloadStr);
 
-    // Обработка лидов (сбор email)
+    // === ОБРАБОТКА ЛИДОВ (сбор email из формы на первом экране) ===
     if (payload.isEmail) {
-      // v5.0: DEBUG — логируем входящий запрос
-      log.info(`[WEB LEAD] Received payload`, {
-        hasPartnerId: !!payload.partner_id,
-        partnerId: payload.partner_id,
-        hasReferrer: !!payload.referrer,
-        referrer: payload.referrer,
-        hasEmail: !!payload.email,
-        email: payload.email,
-        hasYdb: !!context.ydb,
-      });
-
-      // v5.0: Валидируем partner_id — защита от инъекций
-      const partnerId =
-        validatePartnerId(payload.partner_id) ||
-        validatePartnerId(payload.referrer) ||
-        "p_qdr";
-
-      // Валидируем email
       const email = validateEmail(payload.email);
-      if (!email) {
-        log.warn("[WEB LEAD] Invalid email", { email: payload.email });
-        return {
-          statusCode: 400,
-          headers: corsHeaders,
-          body: JSON.stringify({ error: "Invalid email" }),
-        };
-      }
+      const partnerId = validatePartnerId(payload.partner_id) || "p_qdr";
+      const webId = payload.sessionId; // ID текущей сессии с фронтенда
 
-      log.info(`[WEB LEAD] ${email}`, { partnerId });
+      if (!email) return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ error: "Invalid email" }) };
 
-      // Сохраняем email-пользователя в YDB
       if (context.ydb) {
-        log.info(`[WEB LEAD] YDB available, attempting save`, {
-          email,
-          partnerId,
-        });
+        // 1. Ищем, существует ли уже профиль с таким Email (например, из Telegram)
+        let existingEmailUser = await context.ydb.findUser({ email });
+        
+        // 2. Ищем текущую временную запись, которую бэкенд мог создать при открытии страницы
+        let currentWebUser = webId ? await context.ydb.findUser({ web_id: webId }) : null;
 
-        // v6.0: Ищем по email (без префиксов)
-        let emailUser = await context.ydb.findUser({ email });
-        log.info(`[WEB LEAD] findUser result`, {
-          email,
-          found: !!emailUser,
-          userId: emailUser?.id,
-        });
+        if (existingEmailUser) {
+          // СЛУЧАЙ А: Пользователь с таким Email уже есть.
+          if (currentWebUser && currentWebUser.id !== existingEmailUser.id) {
+            // МЕРДЖ: Приклеиваем web_id к существующему профилю и удаляем временный
+            existingEmailUser.web_id = webId;
+            existingEmailUser.session.channels = existingEmailUser.session.channels || {};
+            existingEmailUser.session.channels.web = { 
+              enabled: true, 
+              configured: true, 
+              linked_at: Date.now() 
+            };
+            existingEmailUser.session.channel_states = existingEmailUser.session.channel_states || {};
+            existingEmailUser.session.channel_states.web = "START";
 
-        if (!emailUser) {
-          emailUser = {
+            await context.ydb.mergeUsers(existingEmailUser, currentWebUser.id, "web_form_merge");
+            log.info(`[WEB MERGE] Form email link success`, { email, webId });
+          } else {
+            // Просто обновляем Email-профиль (если временного юзера еще не было)
+            existingEmailUser.web_id = webId || existingEmailUser.web_id;
+            await context.ydb.saveUser(existingEmailUser);
+          }
+        } else if (currentWebUser) {
+          // СЛУЧАЙ Б: Такого Email нет, но есть временный веб-юзер. Просто приписываем ему почту.
+          currentWebUser.email = email;
+          currentWebUser.session.channels = currentWebUser.session.channels || {};
+          currentWebUser.session.channels.email = { enabled: true, configured: true, subscribed: true };
+          currentWebUser.session.channel_states = currentWebUser.session.channel_states || {};
+          currentWebUser.session.channel_states.email = "START";
+          
+          await context.ydb.saveUser(currentWebUser);
+          log.info(`[WEB] Email added to current web session`, { email, webId });
+        } else {
+          // СЛУЧАЙ В: Полностью новый пользователь
+          const newUser = {
             email: email,
+            web_id: webId,
             partner_id: partnerId,
             state: "START",
-            bought_tripwire: false,
-            session: {
-              source: "email",
-              channels: {
-                email: { enabled: true, configured: true, subscribed: true },
-              },
-              channel_states: { email: "START" },
-              last_activity: Date.now(),
-              tags: [],
-              dialog_history: [],
-            },
+            first_name: email.split('@')[0],
             last_seen: Date.now(),
-            bot_token: "",
-            tariff: "",
-            sh_user_id: "",
-            sh_ref_tail: "",
-            purchases: [],
-            first_name: email.split("@")[0],
-            reminders_count: 0,
-            last_reminder_time: 0,
+            session: { 
+              source: "web", 
+              channels: { 
+                email: { enabled: true, configured: true, subscribed: true },
+                web: { enabled: true, configured: true }
+              },
+              channel_states: { email: "START", web: "START" },
+              tags: [],
+              dialog_history: []
+            }
           };
-          log.info(`[WEB LEAD] Calling saveUser`, { email });
-          const result = await context.ydb.saveUser(emailUser);
-          emailUser.id = result.id;
-          log.info(`[WEB LEAD] Saved email user to YDB`, {
-            userId: result.id,
-            email,
-            partnerId,
-          });
-        } else {
-          log.info(`[WEB LEAD] Email user already exists`, { userId: emailUser.id });
+          await context.ydb.saveUser(newUser);
+          log.info(`[WEB] New user created via form`, { email, webId });
         }
-      } else {
-        // ⚠️ КРИТИЧЕСКИЙ ЛОГ — YDB не передан!
-        log.error(`[WEB LEAD] YDB NOT AVAILABLE — email will NOT be saved!`, {
-          email,
-          hasYdb: !!context.ydb,
-          contextKeys: Object.keys(context),
-        });
       }
 
       return {
         statusCode: 200,
         headers: corsHeaders,
-        body: JSON.stringify({ success: true }),
+        body: JSON.stringify({ success: true })
       };
     }
 
