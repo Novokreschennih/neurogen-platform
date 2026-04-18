@@ -140,6 +140,10 @@ export function setupTelegramHandlers(bot, context) {
       return;
     }
 
+    if (!user.session) user.session = {};
+    if (!Array.isArray(user.session.tags)) user.session.tags = [];
+    if (!user.session.channel_states) user.session.channel_states = {};
+
     // Перехват в регистрацию, если нет данных
     if (stepKey.startsWith("Training_") && !user.sh_ref_tail) {
       return renderStep(ctx, "Pre_Training_Logic", token, isAuto);
@@ -482,9 +486,13 @@ export function setupTelegramHandlers(bot, context) {
     ctx.dbUser.first_name = ctx.from.first_name || "Друг";
     ctx.dbUser.last_seen = Date.now();
 
-    if (!ctx.dbUser.session || typeof ctx.dbUser.session !== "object") {
-      ctx.dbUser.session = { tags: [] };
-    }
+    // Гарантируем наличие всех важных полей сессии
+    if (!ctx.dbUser.session) ctx.dbUser.session = {};
+    if (!Array.isArray(ctx.dbUser.session.tags)) ctx.dbUser.session.tags = [];
+    if (!Array.isArray(ctx.dbUser.session.dialog_history))
+      ctx.dbUser.session.dialog_history = [];
+    if (!ctx.dbUser.session.channel_states)
+      ctx.dbUser.session.channel_states = {};
 
     ctx.dbUser.session.last_activity = Date.now();
 
