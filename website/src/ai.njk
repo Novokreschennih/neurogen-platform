@@ -347,9 +347,9 @@ body {
     <!-- ============================================ -->
     <!-- ЭКРАН 4: ОБУЧЕНИЕ + AI-ЧАТ -->
     <!-- ============================================ -->
-    <div id="screenTraining" class="funnel-screen flex-col min-h-screen">
+    <div id="screenTraining" class="funnel-screen flex-col min-h-screen bg-[#050505]">
       <!-- HEADER -->
-      <header class="flex items-center justify-between px-5 py-3 border-b border-white/5 bg-[#050505]/60 backdrop-blur-md shrink-0">
+      <header class="w-full max-w-2xl mx-auto flex items-center justify-between px-5 py-3 border-b border-white/5 bg-[#050505]/60 backdrop-blur-md shrink-0">
         <div class="flex items-center gap-3">
           <div class="w-9 h-9 rounded-full bg-gradient-to-br from-cyan-500 to-purple-600 flex items-center justify-center text-sm font-bold shadow-lg shadow-purple-500/20">
             N
@@ -376,41 +376,43 @@ body {
       <!-- TRAINING CONTENT -->
       <div
         id="trainingContent"
-        class="flex-1 overflow-y-auto chat-scroll px-4 py-6"
+        class="flex-1 overflow-y-auto chat-scroll px-4 py-6 w-full max-w-2xl mx-auto"
       >
         <!-- Генерируется динамически -->
       </div>
 
       <!-- CHAT INPUT -->
       <div class="border-t border-white/5 bg-[#050505]/40 backdrop-blur-xl px-4 py-3 shrink-0">
-        <form id="chatForm" class="flex items-end gap-3 max-w-3xl mx-auto">
-          <div class="flex-1 relative">
-            <textarea
-              id="messageInput"
-              rows="1"
-              placeholder="Спроси что-то у NeuroGen..."
-              class="w-full resize-none rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 text-white placeholder-gray-500 px-5 py-3.5 pr-12 text-sm leading-relaxed focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 transition-all"
-            ></textarea>
-            <button
-              type="submit"
-              id="sendBtn"
-              class="absolute right-2 bottom-2 w-9 h-9 rounded-xl bg-gradient-to-r from-cyan-500 to-purple-500 flex items-center justify-center hover:opacity-90 active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              <svg
-                class="w-4 h-4 text-white"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
+        <div class="w-full max-w-2xl mx-auto">
+          <form id="chatForm" class="flex items-end gap-3">
+            <div class="flex-1 relative">
+              <textarea
+                id="messageInput"
+                rows="1"
+                placeholder="Спроси что-то у NeuroGen..."
+                class="w-full resize-none rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 text-white placeholder-gray-500 px-5 py-3.5 pr-12 text-sm leading-relaxed focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 transition-all"
+              ></textarea>
+              <button
+                type="submit"
+                id="sendBtn"
+                class="absolute right-2 bottom-2 w-9 h-9 rounded-xl bg-gradient-to-r from-cyan-500 to-purple-500 flex items-center justify-center hover:opacity-90 active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
               >
-                <line x1="22" y1="2" x2="11" y2="13"></line>
-                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-              </svg>
-            </button>
-          </div>
-        </form>
+                <svg
+                  class="w-4 h-4 text-white"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+              </button>
+            </div>
+          </form>
+        </div>
         <div class="text-center mt-2 text-[10px] text-gray-600">
           NeuroGen AI может допускать неточности. Проверяйте важную информацию.
         </div>
@@ -909,6 +911,60 @@ body {
     if (!chatArea) return;
     const el = createMessageBubble(text, isUser, isHTML);
     chatArea.appendChild(el);
+    scrollToBottom();
+  }
+
+  /**
+   * Отображает данные шага обучения (текст + картинка + кнопки)
+   * @param {Object} data - { text, image?, buttons? }
+   */
+  function renderStepData(data) {
+    const chatArea = document.getElementById("trainingContent");
+    const oldBtns = document.getElementById("active-buttons");
+    if (oldBtns) oldBtns.remove();
+
+    // Картинка: делаем её аккуратной
+    if (data.image) {
+      const imgContainer = document.createElement("div");
+      imgContainer.className = "w-full mb-4 msg-animate";
+      imgContainer.innerHTML = `
+        <div class="relative w-full pt-[56.25%] overflow-hidden rounded-2xl border border-white/10 shadow-2xl">
+          <img src="${data.image}" class="absolute top-0 left-0 w-full h-full object-cover">
+        </div>`;
+      chatArea.appendChild(imgContainer);
+    }
+
+    // Текст
+    if (data.text) {
+      addMessage(data.text, false, true);
+    }
+
+    // Кнопки (если есть)
+    if (data.buttons && Array.isArray(data.buttons)) {
+      setTimeout(() => {
+        const wrapper = document.createElement("div");
+        wrapper.className = "flex w-full justify-start msg-animate";
+        wrapper.id = "active-buttons";
+
+        const container = document.createElement("div");
+        container.className =
+          "bg-gray-800/80 rounded-2xl rounded-bl-md px-4 py-3 space-y-2";
+
+        data.buttons.forEach(btn => {
+          const button = document.createElement("button");
+          button.className =
+            "w-full text-left px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-sm text-white transition-all";
+          button.textContent = btn.label;
+          button.onclick = btn.action;
+          container.appendChild(button);
+        });
+
+        wrapper.appendChild(container);
+        chatArea.appendChild(wrapper);
+        scrollToBottom();
+      }, 400);
+    }
+
     scrollToBottom();
   }
 
