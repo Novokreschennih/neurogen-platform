@@ -25,14 +25,13 @@ export async function handleWebChat(event, context) {
       
       let webUser = await ydb?.findUser({ web_id: webSessionId });
 
-      // ИСПРАВЛЕНИЕ: Если пользователя нет, создаем его (вместо 404)
       if (!webUser && ydb) {
         log.info(`[WEB] Creating auto-session for step: ${webSessionId}`);
         webUser = {
           web_id: webSessionId,
           partner_id: partnerId,
           state: "START",
-          first_name: "Web User",
+          first_name: "Web User", // ИСПРАВЛЕНИЕ: Обязательно передаем дефолтное имя
           last_seen: Date.now(),
           session: {
             source: "web",
@@ -49,56 +48,87 @@ export async function handleWebChat(event, context) {
 
       if (!webUser) return { statusCode: 500, headers: corsHeaders, body: JSON.stringify({ error: "Database error" }) };
 
+      // Гарантируем, что first_name всегда строка
+      webUser.first_name = webUser.first_name || "друг";
+      
       // Защита структуры сессии
       if (!webUser.session) webUser.session = {};
       if (!Array.isArray(webUser.session.tags)) webUser.session.tags = [];
 
-      // ПЕРЕХВАТ ТЕХНИЧЕСКИХ КНОПОК (Секретные слова)
       let targetCallback = payload.callback_data;
-      if (targetCallback && targetCallback.startsWith("ENTER_SECRET_")) {
-        const level = targetCallback.split("_")[2];
-        webUser.state = `WAIT_SECRET_${level}`;
-        webUser.saved_state = webUser.state;
-        await ydb.saveUser(webUser);
-        
-        // Возвращаем виртуальный шаг "Ввод слова"
-        return {
-          statusCode: 200,
-          headers: corsHeaders,
-          body: JSON.stringify({
-            success: true,
-            stepKey: webUser.state,
-            text: `✍️ <b>ВВОД КОДА: МОДУЛЬ ${level}</b>\n\nОтправь мне секретное слово из статьи ответным сообщением:`,
-            buttons: [[{ text: "🔙 ОТМЕНА", callback_data: "MAIN_MENU" }]]
-          })
-        };
-      }
 
-      // Обычная логика кнопок
-      if (payload.action === "click-button" && targetCallback) {
-        webUser.state = targetCallback;
-        webUser.saved_state = targetCallback;
-        webUser.session.last_activity = Date.now();
-        await ydb.saveUser(webUser);
+      // =========================================================
+      // ПЕРЕХВАТ ТЕХНИЧЕСКИХ КНОПОК (которые не являются шагами)
+      // =========================================================
+      if (targetCallback) {
+        if (targetCallback.startsWith("ENTER_SECRET_")) {
+          const level = targetCallback.split("_")[2];
+          webUser.state = `WAIT_SECRET_${level}`;
+          webUser.saved_state = webUser.state;
+          await ydb.saveUser(webUser);
+          
+          return {
+            statusCode: 200,
+            headers: corsHeaders,
+            body: JSON.stringify({
+              success: true,
+              stepKey: webUser.state,
+              text: `✍️ <b>ВВОД КОДА: МОДУЛЬ ${level}</b>\n\nОтправь мне секретное слово из статьи ответным сообщением (прямо в этот чат):`,
+              buttons: [[{ text: "🔙 ОТМЕНА", callback_data: "MAIN_MENU" }]]
+            })
+          };
+        }
+
+        if (targetCallback === "CLICK_REG_ID" || targetCallback === "FORCE_REG_UPDATE") {
+          webUser.state = "WAIT_REG_ID";
+          await ydb.saveUser(webUser);
+          return {
+            statusCode: 200, headers: corsHeaders,
+            body: JSON.stringify({
+              success: true, stepKey: webUser.state,
+              text: "✍️ <b>Введи ТВОЙ цифровой ID</b>\n\nПришли мне номер, который ты получил в личном кабинете SetHubble после регистрации (прямо в этот чат).",
+              buttons: [[{ text: "🔙 ОТМЕНА", callback_data: "MAIN_MENU" }]]
+            })
+          };
+        }
+
+        if (targetCallback === "SETUP_BOT_START") {
+          webUser.state = "WAIT_BOT_TOKEN";
+          await ydb.saveUser(webUser);
+          return {
+            statusCode: 200, headers: corsHeaders,
+            body: JSON.stringify({
+              success: true, stepKey: webUser.state,
+              text: "🚀 <b>НАСТРОЙКА БОТА-КЛОНА</b>\n\nПришли мне <b>API TOKEN</b> твоего бота из @BotFather.",
+              buttons: [[{ text: "🔙 ОТМЕНА", callback_data: "MAIN_MENU" }]]
+            })
+          };
+        }
+
+        // Обычная логика кнопок (смена статуса на следующий шаг)
+        if (payload.action === "click-button") {
+          webUser.state = targetCallback;
+          webUser.saved_state = targetCallback;
+          webUser.session.last_activity = Date.now();
+          await ydb.saveUser(webUser);
+        }
       }
+      // =========================================================
 
       const stepKey = webUser.state || "START";
       const step = scenario.steps[stepKey];
 
       if (!step) {
         log.warn(`[WEB] Step not found: ${stepKey}, falling back to START`);
-        // Вместо 404 возвращаем START шаг, чтобы воронка не ломалась
         return {
-          statusCode: 200,
-          headers: corsHeaders,
+          statusCode: 200, headers: corsHeaders,
           body: JSON.stringify({
-            success: true,
-            stepKey: "START",
-            text: scenario.steps.START?.text || "Добро пожаловать!",
+            success: true, stepKey: "START",
+            text: scenario.steps.START?.text(scenario.getLinks("p_qdr", "", ""), webUser, {}) || "Добро пожаловать!",
             image: scenario.steps.START?.image,
             buttons: scenario.steps.START?.buttons || [],
             neuroCoins: webUser.session?.xp || 0,
-          }),
+          })
         };
       }
 
@@ -116,14 +146,8 @@ export async function handleWebChat(event, context) {
         webUser.bought_tripwire,
       );
 
-      const messageText =
-        typeof step.text === "function"
-          ? step.text(links, webUser, info)
-          : step.text;
-      const buttons =
-        typeof step.buttons === "function"
-          ? step.buttons(links, webUser, info)
-          : step.buttons;
+      const messageText = typeof step.text === "function" ? step.text(links, webUser, info) : step.text;
+      const buttons = typeof step.buttons === "function" ? step.buttons(links, webUser, info) : step.buttons;
 
       return {
         statusCode: 200,
