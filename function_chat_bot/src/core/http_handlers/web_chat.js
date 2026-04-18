@@ -29,102 +29,79 @@ export async function handleWebChat(event, context) {
       const partnerId = validatePartnerId(payload.partner_id) || "p_qdr";
       const webId = payload.sessionId;
 
-      if (!email) {
+      if (!email)
         return {
           statusCode: 400,
           headers: corsHeaders,
           body: JSON.stringify({ error: "Invalid email" }),
         };
-      }
 
       if (ydb) {
-        log.info(`[WEB FORM] Processing email: ${email}`, { webId, partnerId });
-
-        // Ищем, есть ли уже такой юзер (например, из Telegram)
         let existingEmailUser = await ydb.findUser({ email });
-        // Ищем текущую веб-сессию (если бэкенд её уже создал)
         let currentWebUser = webId
           ? await ydb.findUser({ web_id: webId })
           : null;
 
         if (existingEmailUser) {
-          // СЛУЧАЙ А: Пользователь с таким Email уже есть в базе
-          if (currentWebUser && currentWebUser.id !== existingEmailUser.id) {
-            // МЕРДЖ: Приклеиваем текущий web_id к существующему профилю
-            existingEmailUser.web_id = webId;
-            existingEmailUser.session.channels =
-              existingEmailUser.session.channels || {};
+          // Если нашли юзера по Email - привязываем ему текущий webId
+          existingEmailUser.web_id = webId || existingEmailUser.web_id;
+
+          // Активируем веб-канал в сессии, если его еще нет
+          existingEmailUser.session.channels =
+            existingEmailUser.session.channels || {};
+          if (!existingEmailUser.session.channels.web) {
             existingEmailUser.session.channels.web = {
               enabled: true,
               configured: true,
               linked_at: Date.now(),
             };
-            existingEmailUser.session.channel_states =
-              existingEmailUser.session.channel_states || {};
-            existingEmailUser.session.channel_states.web =
-              existingEmailUser.session.channel_states.web || "START";
+          }
 
+          if (currentWebUser && currentWebUser.id !== existingEmailUser.id) {
+            // Если была временная сессия - мержим
             await ydb.mergeUsers(
               existingEmailUser,
               currentWebUser.id,
               "web_form_merge",
             );
-            log.info(
-              `[WEB MERGE] Form link success: ${email} -> ${existingEmailUser.id}`,
-            );
           } else {
-            // Просто обновляем (если сессии еще не было или это тот же юзер)
-            existingEmailUser.web_id = webId || existingEmailUser.web_id;
             await ydb.saveUser(existingEmailUser);
           }
+          log.info(`[WEB LINK] Linked webId to existing email: ${email}`);
         } else if (currentWebUser) {
-          // СЛУЧАЙ Б: Такого Email нет, но есть веб-сессия. Привязываем Email к ней.
+          // Если юзера нет, но есть сессия - просто добавляем email
           currentWebUser.email = email;
-          currentWebUser.session.channels =
-            currentWebUser.session.channels || {};
           currentWebUser.session.channels.email = {
             enabled: true,
             configured: true,
             subscribed: true,
           };
-          currentWebUser.session.channel_states =
-            currentWebUser.session.channel_states || {};
-          currentWebUser.session.channel_states.email = "START";
-
           await ydb.saveUser(currentWebUser);
-          log.info(`[WEB] Email attached to current session: ${email}`);
         } else {
-          // СЛУЧАЙ В: Полностью новый пользователь
+          // Полностью новый
           const newUser = {
-            email: email,
+            email,
             web_id: webId,
             partner_id: partnerId,
             state: "START",
             first_name: email.split("@")[0],
-            last_seen: Date.now(),
             session: {
               source: "web",
               channels: {
-                email: { enabled: true, configured: true, subscribed: true },
+                email: { enabled: true, configured: true },
                 web: { enabled: true, configured: true },
               },
-              channel_states: { email: "START", web: "START" },
-              tags: [],
-              dialog_history: [],
             },
           };
           await ydb.saveUser(newUser);
-          log.info(`[WEB] New user created: ${email}`);
         }
       }
-
       return {
         statusCode: 200,
         headers: corsHeaders,
         body: JSON.stringify({ success: true }),
       };
     }
-
     // ============================================================
     // 2. ОБРАБОТКА СООБЩЕНИЙ ЧАТА
     // ============================================================
