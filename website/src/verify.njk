@@ -1,0 +1,167 @@
+---
+title: "Подтверждение email — SetHubble"
+permalink: /verify/
+eleventyExcludeFromCollections: true
+---
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ title }}</title>
+  <meta name="description" content="Подтвердите ваш email для доступа к SetHubble">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0f0f1a;
+    }
+    .verify-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 48px;
+      max-width: 480px;
+      width: 100%;
+      text-align: center;
+    }
+    .success-icon {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+    }
+    .error-icon {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: #fff;
+    }
+    p {
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+    .btn-primary {
+      display: inline-block;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: #fff;
+      padding: 14px 32px;
+      border-radius: 10px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+    .btn-primary:hover {
+      opacity: 0.9;
+    }
+    .hidden { display: none; }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .animate-spin {
+      animation: spin 1s linear infinite;
+    }
+  </style>
+</head>
+<body>
+  <div class="verify-card">
+    <div id="loading">
+      <div class="success-icon">
+        <svg width="40" height="40" class="animate-spin" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.3)" stroke-width="4"/>
+          <path d="M12 2a10 10 0 0 1 10 10" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h1>Проверяем...</h1>
+      <p>Подтверждаем ваш email. Пожалуйста, подождите.</p>
+    </div>
+
+    <div id="success" class="hidden">
+      <div class="success-icon">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+          <path d="M20 6L9 17l-5-5" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <h1>Email подтверждён!</h1>
+      <p>Ваш email успешно подтверждён. Теперь вы можете продолжить настройку вашей ИИ-системы.</p>
+      <a href="/ai/" class="btn-primary">Продолжить →</a>
+    </div>
+
+    <div id="error" class="hidden">
+      <div class="error-icon">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+          <path d="M18 6L6 18M6 6l12 12" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h1>Ошибка верификации</h1>
+      <p id="errorMessage">Ссылка недействительна или срок её действия истёк.</p>
+      <a href="/join/" class="btn-primary">Попробовать снова</a>
+    </div>
+  </div>
+
+  <script>
+  // ⚠️ ЗАМЕНИ на реальный URL твоего API Gateway из Яндекса! ⚠️
+  const API_URL =
+    "https://d5dsbah1d4ju0glmp9d0.3zvepvee.apigw.yandexcloud.net/?action=verify-email";
+    const loadingEl = document.getElementById("loading");
+    const successEl = document.getElementById("success");
+    const errorEl = document.getElementById("error");
+    const errorMessageEl = document.getElementById("errorMessage");
+
+    async function verify() {
+      const params = new URLSearchParams(window.location.search);
+      const email = params.get("email");
+      const code = params.get("code");
+
+      if (!email || !code) {
+        showError("Отсутствует email или код подтверждения.");
+        return;
+      }
+
+      try {
+        const res = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, code }),
+        });
+        const data = await res.json();
+
+        if (data.valid) {
+          loadingEl.classList.add("hidden");
+          successEl.classList.remove("hidden");
+        } else {
+          showError(data.error || "Неизвестная ошибка.");
+        }
+      } catch (e) {
+        showError("Не удалось выполнить проверку. Попробуйте позже.");
+      }
+    }
+
+    function showError(msg) {
+      loadingEl.classList.add("hidden");
+      errorEl.classList.remove("hidden");
+      errorMessageEl.textContent = msg;
+    }
+
+    verify();
+  </script>
+</body>
+</html>

@@ -1024,6 +1024,18 @@ export const handler = async (event) => {
     };
   }
 
+  // === VERIFY-EMAIL (email verification via link) ===
+  if (action === "verify-email") {
+    const payload = JSON.parse(event.body || "{}");
+    const { email, code } = payload;
+    const result = await ydb.verifyEmailCode(email, code);
+    return {
+      statusCode: result.valid ? 200 : 400,
+      headers: corsHeaders,
+      body: JSON.stringify(result),
+    };
+  }
+
   // === WEB-CHAT (делегировано в модуль) ===
   const webChatResponse = await handleWebChat(event, {
     action,

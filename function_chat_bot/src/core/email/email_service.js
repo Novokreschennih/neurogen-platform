@@ -413,6 +413,30 @@ export const templates = {
   /**
    * Welcome — после ввода email на /join/
    */
+  emailVerification(user, code) {
+    const name = getName(user);
+    const verifyUrl = `${WEB_BASE_URL}verify?email=${encodeURIComponent(user.email)}&code=${encodeURIComponent(code)}`;
+
+    return {
+      subject: "Подтвердите ваш email — NeuroGen",
+      text:
+        `Привет, ${name}!\n\n` +
+        `Для подтверждения email перейди по ссылке:\n${verifyUrl}\n\n` +
+        `Ссылка действительна 24 часа.\n\n` +
+        `Если это были не вы — просто игнорируйте это письмо.\n\n` +
+        `— Команда NeuroGen`,
+      html:
+        `<p>Привет, <b>${name}</b>!</p>` +
+        `<p>Для подтверждения email нажмите кнопку:</p>` +
+        `<p style="margin: 24px 0"><a href="${verifyUrl}" style="background: #6366f1; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Подтвердить email</a></p>` +
+        `<p style="margin-bottom: 8px">Или скопируйте ссылку в браузер:</p>` +
+        `<p style="word-break: break-all; color: #6366f1; font-size: 13px">${verifyUrl}</p>` +
+        `<p style="margin-top: 20px; color: #6b7280; font-size: 13px">Ссылка действительна 24 часа.</p>` +
+        `<p style="color: #6b7280; font-size: 13px">Если это были не вы — просто игнорируйте это письмо.</p>` +
+        `<p style="margin-top: 20px; color: #6b7280; font-size: 13px"><i>— Команда NeuroGen</i></p>`,
+    };
+  },
+
   welcome(user) {
     const name = getName(user);
     const links = generateChannelLinks(user);

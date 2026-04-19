@@ -155,13 +155,74 @@ export async function findUser(criteria) {
       return mapUser(resultSets[0].rows[0]);
     });
   } catch (e) {
-    log.error(
-      `Failed to find user by criteria`,
-      e.message || String(e),
-      criteria,
-    );
-    return null;
+      log.error(
+        `Failed to find user by criteria`,
+        e.message || String(e),
+        criteria,
+      );
+      return null;
+    }
   }
+}
+
+export async function verifyEmailCode(email, code) {
+  if (!email || !code) return { valid: false, error: "Missing email or code" };
+
+  try {
+    return await driver.tableClient.withSession(async (session) => {
+      const query = `
+        DECLARE $email AS Utf8;
+        DECLARE $code AS Utf8;
+        SELECT ${USER_FIELDS} FROM users WHERE email = $email LIMIT 1;
+      `;
+      const { resultSets } = await session.executeQuery(query, {
+        $email: TypedValues.utf8(email.toLowerCase()),
+      });
+
+      if (!resultSets[0] || resultSets[0].rows.length === 0) {
+        return { valid: false, error: "User not found" };
+      }
+
+      const user = mapUser(resultSets[0].rows[0]);
+      const sessionData = user.session || {};
+      const storedCode = sessionData.email_verification_code;
+      const codeExpiry = sessionData.email_verification_expires;
+
+      if (!storedCode || storedCode !== code) {
+        return { valid: false, error: "Invalid code" };
+      }
+
+      if (codeExpiry && Date.now() > codeExpiry) {
+        return { valid: false, error: "Code expired" };
+      }
+
+      sessionData.email_verified = true;
+      sessionData.email_verification_code = null;
+      sessionData.email_verification_expires = null;
+      if (!sessionData.channels) sessionData.channels = {};
+      if (!sessionData.channels.email) sessionData.channels.email = {};
+      sessionData.channels.email.subscribed = true;
+      sessionData.channels.email.verified = true;
+
+      const updateQuery = `
+        DECLARE $uid AS Utf8;
+        DECLARE $js AS Json;
+        DECLARE $sv AS Uint64;
+        UPSERT INTO users (id, session, session_version) VALUES ($uid, $js, $sv);
+      `;
+      await session.executeQuery(updateQuery, {
+        $uid: TypedValues.utf8(user.id),
+        $js: TypedValues.json(JSON.stringify(sessionData)),
+        $sv: TypedValues.uint64(String((user.session_version || 0) + 1)),
+      });
+
+      return { valid: true, user };
+    });
+  } catch (e) {
+    log.error(`[VERIFY EMAIL] Failed`, e.message || String(e), { email });
+    return { valid: false, error: "Verification failed" };
+  }
+}
 }
 
 export async function getUser(userId) {

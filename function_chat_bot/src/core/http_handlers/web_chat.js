@@ -194,6 +194,9 @@ export async function handleWebChat(event, context) {
           body: JSON.stringify({ error: "Invalid email" }),
         };
 
+      const verificationCode = crypto.randomUUID().split("-")[0].toUpperCase();
+      const codeExpires = Date.now() + 24 * 60 * 60 * 1000;
+
       let existingEmailUser = await ydb.findUser({ email });
       if (existingEmailUser) {
         existingEmailUser.web_id = webSessionId;
@@ -204,21 +207,32 @@ export async function handleWebChat(event, context) {
           configured: true,
           linked_at: Date.now(),
         };
+        existingEmailUser.session.email_verification_code = verificationCode;
+        existingEmailUser.session.email_verification_expires = codeExpires;
         await ydb.mergeUsers(existingEmailUser, webUser.id, "web_form_merge");
+        const { sendEmail, templates } = await import("../../email/email_service.js");
+        await sendEmail({ to: email, ...templates.emailVerification(existingEmailUser, verificationCode) });
       } else {
         webUser.email = email;
         webUser.first_name = email.split("@")[0];
-        webUser.session.channels.email = {
-          enabled: true,
-          configured: true,
-          subscribed: true,
+        webUser.session.channels = {
+          email: {
+            enabled: true,
+            configured: true,
+            subscribed: false,
+            verified: false,
+          },
         };
+        webUser.session.email_verification_code = verificationCode;
+        webUser.session.email_verification_expires = codeExpires;
         await ydb.saveUser(webUser);
+        const { sendEmail, templates } = await import("../../email/email_service.js");
+        await sendEmail({ to: email, ...templates.emailVerification(webUser, verificationCode) });
       }
       return {
         statusCode: 200,
         headers: corsHeaders,
-        body: JSON.stringify({ success: true }),
+        body: JSON.stringify({ success: true, emailSent: true }),
       };
     }
 
