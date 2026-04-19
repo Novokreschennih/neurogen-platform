@@ -14,67 +14,7 @@ eleventyExcludeFromCollections: true
       name="description"
       content="Построй атомный реактор пассивного дохода за 1 минуту без программирования и вложений."
     >
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-@keyframes blob {
-  0% {
-    transform: translate(0px, 0px) scale(1);
-  }
-  33% {
-    transform: translate(30px, -50px) scale(1.1);
-  }
-  66% {
-    transform: translate(-20px, 20px) scale(0.9);
-  }
-  100% {
-    transform: translate(0px, 0px) scale(1);
-  }
-}
-.animate-blob {
-  animation: blob 7s infinite;
-}
-.animation-delay-2000 {
-  animation-delay: 2s;
-}
-.animation-delay-4000 {
-  animation-delay: 4s;
-}
-
-body {
-  background-color: #050505;
-  color: #fff;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  overflow-x: hidden;
-}
-.glass-panel {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-.gradient-text {
-  background: linear-gradient(to right, #a855f7, #06b6d4);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-.feature-card:hover {
-  transform: translateY(-5px);
-  border-color: rgba(168, 85, 247, 0.4);
-  box-shadow: 0 10px 30px -10px rgba(168, 85, 247, 0.2);
-}
-
-/* Модальное окно */
-.modal-enter {
-  opacity: 0;
-  transform: scale(0.95);
-  transition: all 0.3s ease-out;
-}
-.modal-enter-active {
-  opacity: 1;
-  transform: scale(1);
-}
-
-</style>
+    <link rel="stylesheet" href="/css/style.css">
   </head>
   <body class="relative min-h-screen flex flex-col items-center p-4">
     <div class="fixed top-0 left-0 w-full h-full overflow-hidden -z-10">
@@ -734,14 +674,21 @@ body {
   let partnerId = null;
   let refBot = null;
 
+  // === СТАБИЛЬНЫЙ SESSION ID ДЛЯ WEB-КАНАЛА ===
+  let currentSessionId = localStorage.getItem("neurogen_web_session");
+  if (!currentSessionId) {
+    currentSessionId = `web_${
+      Math.random().toString(36).substring(2, 15)
+    }_${Date.now()}`;
+    localStorage.setItem("neurogen_web_session", currentSessionId);
+  }
+
   // === ИНИЦИАЛИЗАЦИЯ РЕФЕРАЛА (МУЛЬТИКАНАЛ v5.0) ===
-  // ?page= может быть hex-encoded partner_id ИЛИ уже сам partner_id
   const urlParams = new URLSearchParams(window.location.search);
   let encodedId = urlParams.get("page");
 
   const fromHex = (hex) => {
     try {
-      // Проверяем что строка содержит только hex-символы
       if (!/^[0-9a-fA-F]+$/.test(hex)) return null;
       if (hex.length % 2 !== 0) return null;
       let str = "";
@@ -755,32 +702,23 @@ body {
   };
 
   if (encodedId) {
-    // Сначала пробуем декодировать как hex
     const decoded = fromHex(encodedId);
-    if (decoded && decoded.length > 1) {
-      partnerId = decoded.trim();
-    } else {
-      // Уже partner_id (не hex) — используем как есть
-      partnerId = encodedId.trim();
-    }
-    if (partnerId) {
-      localStorage.setItem("neurogen_partner_id", partnerId);
-    }
+    partnerId = (decoded && decoded.length > 1)
+      ? decoded.trim()
+      : encodedId.trim();
+    if (partnerId) localStorage.setItem("neurogen_partner_id", partnerId);
   }
 
-  // Фолбэк: читаем из localStorage
   if (!partnerId) {
     partnerId = localStorage.getItem("neurogen_partner_id")
       || DEFAULT_PARTNER_ID;
   }
 
-  // Очищаем старый bot_username из localStorage (используем DEFAULT_BOT)
   const storedBot = localStorage.getItem("neurogen_partner_bot");
   refBot = (storedBot && storedBot !== "sethubble_bot")
     ? storedBot
     : DEFAULT_BOT;
 
-  // Обновляем плашку партнера
   const badge = document.getElementById("partner-badge");
   const nameEl = document.getElementById("partner-name");
   if (badge && nameEl && partnerId !== DEFAULT_PARTNER_ID) {
@@ -825,15 +763,8 @@ body {
 
   btnOpenList.forEach(btn => btn.addEventListener("click", openModal));
   btnClose.addEventListener("click", closeModal);
-
-  // Закрытие по клику вне окна
   modal.addEventListener("click", (e) => {
     if (e.target === modal) closeModal();
-  });
-
-  // Закрытие по Escape
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && !modal.classList.contains("hidden")) closeModal();
   });
 
   // === ОБРАБОТКА EMAIL ===
@@ -852,8 +783,6 @@ body {
       "<span class=\"animate-pulse\">ОТПРАВКА...</span>";
     submitEmailBtn.disabled = true;
 
-    // Фоновая отправка Email на Yandex Cloud API
-    // Сохраняем partner_id вместе с email
     try {
       await fetch(API_URL, {
         method: "POST",
@@ -862,107 +791,60 @@ body {
           isEmail: true,
           email: email,
           partner_id: partnerId,
-          referrer: partnerId, // Backward compat
+          sessionId: currentSessionId, // ТЕПЕРЬ ПЕРЕДАЕМ ID СЕССИИ ДЛЯ МЕРДЖА!
         }),
       });
+      // Сохраняем в память для автоматического узнавания на /ai/
+      localStorage.setItem("neurogen_email", email);
+      localStorage.setItem("neurogen_email_submitted", "true");
     } catch (err) {
-      console.log("Email сохранён локально. API недоступен.");
+      console.log("API error, but proceeding local storage save.");
     }
 
-    // Мгновенный переход к выбору (не ждём ответ сервера)
     stepEmail.classList.add("hidden");
     stepChoice.classList.remove("hidden");
   });
 
   // === МАРШРУТИЗАЦИЯ ПО КАНАЛАМ (v6.0) ===
 
-  // Кодирование email для передачи через URL (Base64Url - безопасно для Telegram и VK)
   function encodeEmailForUrl(email) {
     if (!email) return "";
-    return btoa(email).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+    return btoa(email).replace(/\+/g, "-").replace(/\//g, "_").replace(
+      /=/g,
+      "",
+    );
   }
 
-  // 1. Telegram — deep link с partner_id + email в start payload
   btnTelegram.addEventListener("click", () => {
     const email = emailInput.value.trim();
-    if (email) {
-      try {
-        localStorage.setItem("neurogen_email", email);
-        localStorage.setItem("neurogen_email_submitted", "true");
-      } catch (e) {}
-    }
-    // Используем дефис "-" вместо "|" как разделитель (безопасно для всех платформ)
     const startPayload = email
       ? `${partnerId}-${encodeEmailForUrl(email)}`
       : partnerId;
     window.location.href = `https://t.me/${refBot}?start=${startPayload}`;
   });
 
-  // 2. VKontakte — прямая ссылка на диалог с ref payload
   btnVK.addEventListener("click", () => {
     const email = emailInput.value.trim();
-    if (email) {
-      try {
-        localStorage.setItem("neurogen_email", email);
-        localStorage.setItem("neurogen_email_submitted", "true");
-      } catch (e) {}
-    }
-    // Передаём partner_id и email через ref: partnerId-encodedEmail
     const startPayload = email
       ? `${partnerId}-${encodeEmailForUrl(email)}`
       : partnerId;
     window.location.href = `${VK_COMMUNITY_URL}?ref=${startPayload}`;
   });
 
-  // 3. Web-чат — передаем partner_id и email через localStorage
   btnWeb.addEventListener("click", () => {
-    const email = emailInput.value.trim();
-    if (email) {
-      try {
-        localStorage.setItem("neurogen_email", email);
-        localStorage.setItem("neurogen_email_submitted", "true");
-      } catch (e) {}
-    }
     window.location.href = `${WEB_CHAT_URL}?ref=${partnerId}`;
   });
 
-  // 4. Email — сохраняем email и показываем инструкцию
   btnEmail.addEventListener("click", () => {
     const email = emailInput.value.trim();
-    if (email) {
-      // Если email уже введён — сохраняем и показываем благодарность
-      stepChoice.innerHTML = `
-        <div class="text-center">
-          <div class="w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center text-2xl mx-auto mb-4 shadow-lg shadow-green-500/20">
-            📧
-          </div>
-          <h3 class="text-2xl font-bold text-white mb-2">Письмо уже в пути!</h3>
-          <p class="text-sm text-gray-400 mb-4">
-            Мы отправим пошаговую инструкцию на <b>${email}</b>.<br>
-            Проверь почту через пару минут.
-          </p>
-          <p class="text-xs text-gray-500">
-            Если письма нет — загляни в папку «Спам».
-          </p>
-        </div>
-      `;
-    } else {
-      stepChoice.innerHTML = `
-        <div class="text-center">
-          <div class="w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center text-2xl mx-auto mb-4 shadow-lg shadow-green-500/20">
-            📧
-          </div>
-          <h3 class="text-2xl font-bold text-white mb-2">Инструкция отправлена!</h3>
-          <p class="text-sm text-gray-400 mb-4">
-            Пошаговая инструкция по настройке уже у тебя на почте.<br>
-            Следуй шагам из письма.
-          </p>
-          <p class="text-xs text-gray-500">
-            Не получил письмо? Напиши нам: <a href="https://t.me/sethubble_support" class="text-cyan-400 hover:underline">@sethubble_support</a>
-          </p>
-        </div>
-      `;
-    }
+    stepChoice.innerHTML = `
+      <div class="text-center">
+        <div class="w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center text-2xl mx-auto mb-4 shadow-lg shadow-green-500/20">📧</div>
+        <h3 class="text-2xl font-bold text-white mb-2">Письмо уже в пути!</h3>
+        <p class="text-sm text-gray-400 mb-4">Мы отправим пошаговую инструкцию на <b>${
+      email || "твой email"
+    }</b>.</p>
+      </div>`;
   });
 });
     </script>
