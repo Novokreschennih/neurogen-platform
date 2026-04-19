@@ -9,6 +9,15 @@ export { log };
 
 const isValidBotToken = (token) => /^\d+:[A-Za-z0-9_-]+$/.test(token);
 
+export function isValidUserId(userId) {
+  if (!userId || typeof userId !== "string") return false;
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) return true;
+  if (/^\d{3,20}$/.test(userId)) return true;
+  if (/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(userId)) return true;
+  if (/^(email:|vk:|web:|telegram:)/.test(userId)) return true;
+  return false;
+}
+
 export const driver = new Driver({
   endpoint: process.env.YDB_ENDPOINT,
   database: process.env.YDB_DATABASE,
