@@ -163,7 +163,6 @@ export async function findUser(criteria) {
       return null;
     }
   }
-}
 
 export async function verifyEmailCode(email, code) {
   if (!email || !code) return { valid: false, error: "Missing email or code" };
@@ -222,7 +221,6 @@ export async function verifyEmailCode(email, code) {
     log.error(`[VERIFY EMAIL] Failed`, e.message || String(e), { email });
     return { valid: false, error: "Verification failed" };
   }
-}
 }
 
 export async function getUser(userId) {
