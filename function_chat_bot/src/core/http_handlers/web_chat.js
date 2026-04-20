@@ -210,7 +210,7 @@ export async function handleWebChat(event, context) {
         existingEmailUser.session.email_verification_code = verificationCode;
         existingEmailUser.session.email_verification_expires = codeExpires;
         await ydb.mergeUsers(existingEmailUser, webUser.id, "web_form_merge");
-        const { sendEmail, templates } = await import("../../email/email_service.js");
+        const { sendEmail, templates } = await import("../email/email_service.js");
         await sendEmail({ to: email, ...templates.emailVerification(existingEmailUser, verificationCode) });
       } else {
         webUser.email = email;
@@ -226,7 +226,7 @@ export async function handleWebChat(event, context) {
         webUser.session.email_verification_code = verificationCode;
         webUser.session.email_verification_expires = codeExpires;
         await ydb.saveUser(webUser);
-        const { sendEmail, templates } = await import("../../email/email_service.js");
+        const { sendEmail, templates } = await import("../email/email_service.js");
         await sendEmail({ to: email, ...templates.emailVerification(webUser, verificationCode) });
       }
       return {
