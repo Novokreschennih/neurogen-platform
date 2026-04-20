@@ -24,7 +24,19 @@ eleventyExcludeFromCollections: true
     >
     <link rel="stylesheet" href="/css/style.css">
   </head>
-  <body class="relative">
+  <body class="relative" style="padding-top: 56px;">
+    <!-- HEADER НАВИГАЦИИ -->
+    <header class="fixed top-0 left-0 right-0 z-50 bg-[#0f0f1a]/90 backdrop-blur-md border-b border-white/5" style="padding-top: 0 !important; margin-top: 0 !important;">
+      <div class="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
+        <a href="/join/" class="text-gray-400 hover:text-white transition-colors flex items-center gap-1 text-sm">
+          ← Назад
+        </a>
+        <a href="/join/?step=channels" class="text-gray-400 hover:text-white transition-colors flex items-center gap-1 text-sm">
+          📺 Выбрать канал
+        </a>
+      </div>
+    </header>
+
     <!-- Фоновые градиентные пятна -->
     <div class="fixed inset-0 overflow-hidden pointer-events-none -z-10">
       <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-purple-600 rounded-full mix-blend-screen filter blur-[128px] opacity-[0.15] animate-blob">
@@ -236,7 +248,7 @@ eleventyExcludeFromCollections: true
               <span
                 class="inline-block w-2 h-2 rounded-full bg-green-400 animate-pulse"
               ></span>
-              Шаг <span id="trainingStep">1</span> из 3
+              Онлайн
             </div>
           </div>
         </div>
