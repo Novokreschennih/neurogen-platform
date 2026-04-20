@@ -639,6 +639,23 @@ eleventyExcludeFromCollections: true
             </button>
           </div>
         </div>
+
+        <!-- ШАГ 3: Email отправлен — проверь почту -->
+        <div id="email-submitted" class="hidden">
+          <div class="text-center mb-6">
+            <div class="w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center text-2xl mx-auto mb-4 shadow-lg shadow-green-500/20">
+              ✉️
+            </div>
+            <h3 class="text-2xl font-bold text-white mb-2">Проверь свою почту!</h3>
+            <p class="text-sm text-gray-400 mb-2">
+              Мы отправили ссылку для подтверждения на:
+            </p>
+            <p id="email-submitted-msg" class="text-lg font-bold text-green-400 mb-4"></p>
+            <p class="text-xs text-gray-500">
+              Перейди по ссылке в письме, чтобы подтвердить email и продолжить настройку.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -784,25 +801,37 @@ eleventyExcludeFromCollections: true
     submitEmailBtn.disabled = true;
 
     try {
-      await fetch(API_URL, {
+      const res = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           isEmail: true,
           email: email,
           partner_id: partnerId,
-          sessionId: currentSessionId, // ТЕПЕРЬ ПЕРЕДАЕМ ID СЕССИИ ДЛЯ МЕРДЖА!
+          sessionId: currentSessionId,
         }),
       });
-      // Сохраняем в память для автоматического узнавания на /ai/
+      const data = await res.json();
       localStorage.setItem("neurogen_email", email);
       localStorage.setItem("neurogen_email_submitted", "true");
+
+      stepEmail.classList.add("hidden");
+      stepChoice.classList.add("hidden");
+      const emailSubmittedEl = document.getElementById("email-submitted");
+      if (emailSubmittedEl) {
+        emailSubmittedEl.classList.remove("hidden");
+        const emailMsgEl = document.getElementById("email-submitted-msg");
+        if (emailMsgEl) emailMsgEl.textContent = email;
+      }
     } catch (err) {
       console.log("API error, but proceeding local storage save.");
+      localStorage.setItem("neurogen_email", email);
+      localStorage.setItem("neurogen_email_submitted", "true");
+      stepEmail.classList.add("hidden");
+      stepChoice.classList.add("hidden");
+      const emailSubmittedEl = document.getElementById("email-submitted");
+      if (emailSubmittedEl) emailSubmittedEl.classList.remove("hidden");
     }
-
-    stepEmail.classList.add("hidden");
-    stepChoice.classList.remove("hidden");
   });
 
   // === МАРШРУТИЗАЦИЯ ПО КАНАЛАМ (v6.0) ===

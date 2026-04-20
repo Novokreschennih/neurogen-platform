@@ -199,17 +199,9 @@ export async function handleWebChat(event, context) {
 
       let existingEmailUser = await ydb.findUser({ email });
       if (existingEmailUser) {
-        existingEmailUser.web_id = webSessionId;
-        existingEmailUser.session.channels =
-          existingEmailUser.session.channels || {};
-        existingEmailUser.session.channels.web = {
-          enabled: true,
-          configured: true,
-          linked_at: Date.now(),
-        };
         existingEmailUser.session.email_verification_code = verificationCode;
         existingEmailUser.session.email_verification_expires = codeExpires;
-        await ydb.mergeUsers(existingEmailUser, webUser.id, "web_form_merge");
+        await ydb.saveUser(existingEmailUser);
         const { sendEmail, templates } = await import("../email/email_service.js");
         await sendEmail({ to: email, ...templates.emailVerification(existingEmailUser, verificationCode) });
       } else {
