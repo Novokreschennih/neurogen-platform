@@ -224,7 +224,7 @@ export async function handleWebChat(event, context) {
       return {
         statusCode: 200,
         headers: corsHeaders,
-        body: JSON.stringify({ success: true, emailSent: true }),
+        body: JSON.stringify({ success: true, emailSent: true, emailAlreadyRegistered: !!existingEmailUser }),
       };
     }
 

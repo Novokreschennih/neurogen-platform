@@ -100,9 +100,8 @@ eleventyExcludeFromCollections: true
           <path d="M20 6L9 17l-5-5" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </div>
-      <h1>Email подтверждён!</h1>
-      <p>Ваш email успешно подтверждён. Теперь вы можете продолжить настройку вашей ИИ-системы.</p>
-      <a href="/ai/" class="btn-primary">Продолжить →</a>
+        <h1>Email подтверждён!</h1>
+        <p>Сейчас мы направим вас к выбору канала настройки...</p>
     </div>
 
     <div id="error" class="hidden">
@@ -145,8 +144,14 @@ eleventyExcludeFromCollections: true
         const data = await res.json();
 
         if (data.valid) {
+          localStorage.setItem("neurogen_email", email);
+          localStorage.setItem("neurogen_email_verified", "true");
+          localStorage.setItem("neurogen_email_submitted", "true");
           loadingEl.classList.add("hidden");
           successEl.classList.remove("hidden");
+          setTimeout(() => {
+            window.location.href = "/join/?step=channels";
+          }, 1500);
         } else {
           showError(data.error || "Неизвестная ошибка.");
         }

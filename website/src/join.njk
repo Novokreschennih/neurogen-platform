@@ -656,6 +656,26 @@ eleventyExcludeFromCollections: true
             </p>
           </div>
         </div>
+
+        <!-- ШАГ 4: С возвращением! Я вспомнил тебя -->
+        <div id="stepRemembered" class="hidden">
+          <div class="text-center mb-6">
+            <div class="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 shadow-lg shadow-purple-500/20 animate-bounce">
+              👋
+            </div>
+            <h3 class="text-2xl font-bold text-white mb-2">С возвращением!</h3>
+            <p class="text-sm text-gray-400 mb-2">
+              Я вспомнил тебя
+            </p>
+            <p id="remembered-email-msg" class="text-lg font-semibold text-purple-400 mb-6"></p>
+            <button
+              id="btnProceedToChannels"
+              class="w-full bg-gradient-to-r from-cyan-500 to-purple-500 text-white font-bold py-3.5 rounded-xl hover:opacity-90 transition-opacity flex justify-center items-center gap-2"
+            >
+              Выбрать канал для настройки →
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -743,6 +763,12 @@ eleventyExcludeFromCollections: true
     badge.classList.remove("hidden");
   }
 
+  // === ПРОВЕРКА URL И localStorage: восстановление состояния ===
+  const urlStep = urlParams.get("step");
+  const storedEmail = localStorage.getItem("neurogen_email");
+  const emailVerified = localStorage.getItem("neurogen_email_verified") === "true";
+  const emailSubmitted = localStorage.getItem("neurogen_email_submitted") === "true";
+
   // === ЛОГИКА МОДАЛЬНОГО ОКНА ===
   const modal = document.getElementById("leadModal");
   const modalContent = document.getElementById("modalContent");
@@ -751,6 +777,7 @@ eleventyExcludeFromCollections: true
 
   const stepEmail = document.getElementById("stepEmail");
   const stepChoice = document.getElementById("stepChoice");
+  const stepRemembered = document.getElementById("stepRemembered");
   const emailForm = document.getElementById("emailForm");
   const emailInput = document.getElementById("userEmail");
   const emailError = document.getElementById("emailError");
@@ -759,7 +786,18 @@ eleventyExcludeFromCollections: true
   const btnWeb = document.getElementById("btnWeb");
   const btnTelegram = document.getElementById("btnTelegram");
   const btnVK = document.getElementById("btnVK");
-  const btnEmail = document.getElementById("btnEmail");
+  const btnEmailEl = document.getElementById("btnEmail");
+
+  function showStepChoice() {
+    stepEmail.classList.add("hidden");
+    stepChoice.classList.remove("hidden");
+    stepRemembered.classList.add("hidden");
+    document.getElementById("email-submitted").classList.add("hidden");
+    // Скрываем Email-кнопку если email уже верифицирован
+    if (emailVerified && btnEmailEl) {
+      btnEmailEl.classList.add("hidden");
+    }
+  }
 
   function openModal() {
     modal.classList.remove("hidden");
@@ -783,6 +821,28 @@ eleventyExcludeFromCollections: true
   modal.addEventListener("click", (e) => {
     if (e.target === modal) closeModal();
   });
+
+  // === АВТОМАТИЧЕСКОЕ ОТКРЫТИЕ МОДАЛКИ ПРИ ВОССТАНОВЛЕНИИ СОСТОЯНИЯ ===
+  if (emailVerified && storedEmail && urlStep === "channels") {
+    // Верифицированный email + параметр step=channels → сразу окно выбора каналов
+    openModal();
+    showStepChoice();
+    const rememberedEmailEl = document.getElementById("remembered-email-msg");
+    if (rememberedEmailEl) rememberedEmailEl.textContent = storedEmail;
+  } else if (emailVerified && storedEmail) {
+    // Верифицированный email → экран "Я вспомнил тебя"
+    openModal();
+    stepEmail.classList.add("hidden");
+    stepChoice.classList.add("hidden");
+    document.getElementById("email-submitted").classList.add("hidden");
+    stepRemembered.classList.remove("hidden");
+    const rememberedEmailEl = document.getElementById("remembered-email-msg");
+    if (rememberedEmailEl) rememberedEmailEl.textContent = storedEmail;
+  } else if (urlStep === "channels") {
+    // step=channels но email не верифицирован → открываем модалку сchoice
+    openModal();
+    showStepChoice();
+  }
 
   // === ОБРАБОТКА EMAIL ===
   emailForm.addEventListener("submit", async (e) => {
@@ -822,6 +882,13 @@ eleventyExcludeFromCollections: true
         emailSubmittedEl.classList.remove("hidden");
         const emailMsgEl = document.getElementById("email-submitted-msg");
         if (emailMsgEl) emailMsgEl.textContent = email;
+        // Если email уже зарегистрирован — меняем текст
+        if (data.emailAlreadyRegistered) {
+          const h3 = emailSubmittedEl.querySelector("h3");
+          const pBelow = emailSubmittedEl.querySelector("p.text-xs");
+          if (h3) h3.textContent = "Этот email уже зарегистрирован";
+          if (pBelow) pBelow.textContent = "На вашу почту отправлена ссылка для подтверждения доступа. Это для безопасности вашего аккаунта.";
+        }
       }
     } catch (err) {
       console.log("API error, but proceeding local storage save.");
@@ -832,6 +899,12 @@ eleventyExcludeFromCollections: true
       const emailSubmittedEl = document.getElementById("email-submitted");
       if (emailSubmittedEl) emailSubmittedEl.classList.remove("hidden");
     }
+  });
+
+  // === КНОПКА "ВЫБРАТЬ КАНАЛ" ИЗ ШАГА "Я ВСПОМНИЛ" ===
+  document.getElementById("btnProceedToChannels")?.addEventListener("click", () => {
+    stepRemembered.classList.add("hidden");
+    showStepChoice();
   });
 
   // === МАРШРУТИЗАЦИЯ ПО КАНАЛАМ (v6.0) ===
@@ -845,7 +918,7 @@ eleventyExcludeFromCollections: true
   }
 
   btnTelegram.addEventListener("click", () => {
-    const email = emailInput.value.trim();
+    const email = emailInput.value.trim() || storedEmail;
     const startPayload = email
       ? `${partnerId}-${encodeEmailForUrl(email)}`
       : partnerId;
@@ -853,7 +926,7 @@ eleventyExcludeFromCollections: true
   });
 
   btnVK.addEventListener("click", () => {
-    const email = emailInput.value.trim();
+    const email = emailInput.value.trim() || storedEmail;
     const startPayload = email
       ? `${partnerId}-${encodeEmailForUrl(email)}`
       : partnerId;
@@ -864,7 +937,7 @@ eleventyExcludeFromCollections: true
     window.location.href = `${WEB_CHAT_URL}?ref=${partnerId}`;
   });
 
-  btnEmail.addEventListener("click", () => {
+  btnEmailEl.addEventListener("click", () => {
     const email = emailInput.value.trim();
     stepChoice.innerHTML = `
       <div class="text-center">
