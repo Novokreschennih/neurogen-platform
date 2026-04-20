@@ -415,7 +415,7 @@ export const templates = {
    */
   emailVerification(user, code) {
     const name = getName(user);
-    const verifyUrl = `${WEB_BASE_URL}verify?email=${encodeURIComponent(user.email)}&code=${encodeURIComponent(code)}`;
+    const verifyUrl = `https://sethubble.ru/verify/?email=${encodeURIComponent(user.email)}&code=${encodeURIComponent(code)}`;
 
     return {
       subject: "Подтвердите ваш email — NeuroGen",
