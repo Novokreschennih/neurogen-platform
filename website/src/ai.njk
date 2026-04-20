@@ -26,12 +26,12 @@ eleventyExcludeFromCollections: true
   </head>
   <body class="relative" style="padding-top: 56px;">
     <!-- HEADER НАВИГАЦИИ -->
-    <header class="fixed top-0 left-0 right-0 z-50 bg-[#0f0f1a]/90 backdrop-blur-md border-b border-white/5" style="padding-top: 0 !important; margin-top: 0 !important;">
-      <div class="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-        <a href="/join/" class="text-gray-400 hover:text-white transition-colors flex items-center gap-1 text-sm">
+    <header style="position: fixed; top: 0; left: 0; right: 0; z-index: 50; background: rgba(15, 15, 26, 0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.05);">
+      <div style="max-width: 1024px; margin: 0 auto; padding: 0 16px; height: 56px; display: flex; align-items: center; justify-content: space-between;">
+        <a href="/join/" style="display: flex; align-items: center; gap: 6px; color: rgba(156,163,175,1); text-decoration: none; font-size: 14px; transition: color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(156,163,175,1)'">
           ← Назад
         </a>
-        <a href="/join/?step=channels" class="text-gray-400 hover:text-white transition-colors flex items-center gap-1 text-sm">
+        <a href="/join/?step=channels" style="display: flex; align-items: center; gap: 6px; color: rgba(156,163,175,1); text-decoration: none; font-size: 14px; transition: color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(156,163,175,1)'">
           📺 Выбрать канал
         </a>
       </div>
