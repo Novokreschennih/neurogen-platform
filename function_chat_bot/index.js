@@ -87,6 +87,8 @@ const RATE_LIMIT_MAX = parseInt(process.env.RATE_LIMIT_MAX) || 60; // запро
 const RATE_LIMIT_WINDOW_MS =
   parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 60_000; // 1 минута
 const rateLimitMap = new Map(); // { ip: { count, resetTime } }
+const processedUpdates = new Map(); // { updateId: timestamp } — защита от дублей
+const updateCache = new Map(); // { userId: { lastUpdate, data } } — кэш последних обновлений
 
 function checkRateLimit(ip) {
   const now = Date.now();
