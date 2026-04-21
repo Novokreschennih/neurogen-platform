@@ -646,7 +646,7 @@ ${historyContext}
   try {
     // Таймаут 8 секунд
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     const response = await fetch(
       "https://openrouter.ai/api/v1/chat/completions",

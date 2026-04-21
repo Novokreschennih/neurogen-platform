@@ -84,6 +84,21 @@ CREATE TABLE bots (
 );
 
 -- -------------------------------------------------------------
+-- Таблица: processed_updates (защита от дублей webhook/Telegram update)
+-- -------------------------------------------------------------
+-- TTL-based deduplication: записи автоматически удаляются через TTL
+-- TTL задаётся через expire_at timestamp
+
+CREATE TABLE processed_updates (
+    update_id Utf8,                   -- 🔑 Primary Key: update_id (строка)
+    processed_at Uint64,             -- Timestamp обработки (Unix ms)
+    expire_at Uint64,                 -- Timestamp TTL (Unix ms) — автоудаление
+    PRIMARY KEY (update_id),
+
+    INDEX idx_expire_at GLOBAL ON (expire_at)
+);
+
+-- -------------------------------------------------------------
 -- Таблица: link_clicks (аналитика переходов)
 -- -------------------------------------------------------------
 

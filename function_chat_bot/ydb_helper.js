@@ -869,3 +869,71 @@ export async function getPartnerClicks(partnerId) {
     return 0;
   }
 }
+
+/**
+ * Проверить, был ли уже обработан update_id (YDB-based deduplication)
+ * @param {string} updateId - update_id из Telegram
+ * @returns {Promise<boolean>} true если уже обработан
+ */
+export async function isUpdateProcessed(updateId) {
+  try {
+    return await driver.tableClient.withSession(async (session) => {
+      const query = `DECLARE $uid AS Utf8; SELECT update_id FROM processed_updates WHERE update_id = $uid;`;
+      const { resultSets } = await session.executeQuery(query, {
+        $uid: TypedValues.utf8(String(updateId)),
+      });
+      return resultSets[0]?.rows?.length > 0;
+    });
+  } catch (e) {
+    log.warn(`[PROCESSED UPDATES] Check failed, allowing through: ${e.message}`);
+    return false;
+  }
+}
+
+/**
+ * Записать update_id как обработанный (YDB-based deduplication)
+ * @param {string} updateId - update_id из Telegram
+ * @param {number} ttlMs - TTL в миллисекундах (default: 5 минут)
+ * @returns {Promise<boolean>} true если успешно записан
+ */
+export async function markUpdateProcessed(updateId, ttlMs = 5 * 60 * 1000) {
+  try {
+    const now = Date.now();
+    const expireAt = now + ttlMs;
+    return await driver.tableClient.withSession(async (session) => {
+      const query = `
+        DECLARE $uid AS Utf8; DECLARE $processed_at AS Uint64; DECLARE $expire_at AS Uint64;
+        UPSERT INTO processed_updates (update_id, processed_at, expire_at) VALUES ($uid, $processed_at, $expire_at);
+      `;
+      await session.executeQuery(query, {
+        $uid: TypedValues.utf8(String(updateId)),
+        $processed_at: TypedValues.uint64(String(now)),
+        $expire_at: TypedValues.uint64(String(expireAt)),
+      });
+      return true;
+    });
+  } catch (e) {
+    log.warn(`[PROCESSED UPDATES] Mark failed: ${e.message}`);
+    return false;
+  }
+}
+
+/**
+ * Очистить просроченные записи в processed_updates (TTL cleanup)
+ * @returns {Promise<number>} Количество удалённых записей
+ */
+export async function cleanupProcessedUpdates() {
+  try {
+    const now = Date.now();
+    return await driver.tableClient.withSession(async (session) => {
+      const query = `DECLARE $now AS Uint64; DELETE FROM processed_updates WHERE expire_at < $now;`;
+      const result = await session.executeQuery(query, {
+        $now: TypedValues.uint64(String(now)),
+      });
+      return result.status?.affectedRows || 0;
+    });
+  } catch (e) {
+    log.warn(`[PROCESSED UPDATES] Cleanup failed: ${e.message}`);
+    return 0;
+  }
+}
