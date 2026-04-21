@@ -192,7 +192,7 @@ async function notifyBotOwner(targetBotToken, message, mainBotInstance) {
       }
     }
   } catch (err) {
-    log.error(`[NOTIFY ERROR] Ошибка в функции notifyBotOwner`, err.message);
+    log.error(`[NOTIFY ERROR] Ошибка в функции notifyBotOwner`, err);
   }
 }
 
@@ -624,7 +624,7 @@ async function sendVkMessage(userId, text, keyboard) {
 
     return { sent: true, error: null, errorCode: null, channel: "vk" };
   } catch (e) {
-    log.error(`[VK SEND] Network error`, { userId, error: e.message });
+    log.error(`[VK SEND] Network error`, e, { userId });
     return { sent: false, error: e.message, errorCode: null, channel: "vk" };
   }
 }
@@ -1066,9 +1066,7 @@ export const handler = async (event) => {
 
     // === КРИТИЧЕСКИ ВАЖНО: Ловим ошибки Telegraf, иначе они молча убивают функцию ===
     bot.catch((err, ctx) => {
-      log.error(`[TELEGRAF ERROR] Unhandled error in update processing`, {
-        error: err?.message || String(err),
-        stack: err?.stack?.split("\n").slice(0, 5).join(" "),
+      log.error(`[TELEGRAF ERROR] Unhandled error in update processing`, err, {
         userId: ctx?.from?.id,
         updateType: ctx?.updateType,
         state: ctx?.dbUser?.state,
@@ -1277,14 +1275,12 @@ export const handler = async (event) => {
       errorMsg.includes("Unavailable");
 
     if (isTransient) {
-      // Временная ошибка — возвращаем 500, Telegram ретраит
-      log.error("[HANDLER] Transient error (will retry)", {
+      log.error("[HANDLER] Transient error (will retry)", err, {
         error: errorMsg,
       });
       return { statusCode: 500, headers: corsHeaders, body: "retry" };
     } else {
-      // Постоянная ошибка — логируем и возвращаем 200, чтобы остановить ретраи
-      log.error("[HANDLER] Permanent error (stopping retries)", {
+      log.error("[HANDLER] Permanent error (stopping retries)", err, {
         error: errorMsg,
       });
       return {
