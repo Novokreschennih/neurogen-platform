@@ -79,22 +79,8 @@ const CRON_BROADCAST_PAUSE_SEC =
 const CRON_MAX_USERS_PER_RUN =
   parseInt(process.env.CRON_MAX_USERS_PER_RUN) || 200;
 
-// === TTL КЭШ ДЛЯ ОБРАБОТАННЫХ UPDATE (защита от дублей) ===
-const updateCache = createUpdateCache({
-  max: parseInt(process.env.MAX_STORED_UPDATES) || 1000,
-  ttlMs: parseInt(process.env.UPDATE_TTL_MS) || 5 * 60 * 1000,
-  cleanupIntervalMs:
-    parseInt(process.env.UPDATE_CLEANUP_INTERVAL_MS) || 60 * 1000,
-});
-
-// Обратная совместимость — aliases для старого кода
-const processedUpdates = {
-  has: (id) => updateCache.isProcessed(id),
-  set: (id, val) => updateCache.markProcessed(id),
-  get: (id) => null, // больше не используется
-};
-const startUpdateCleanup = () => updateCache.startCleanup();
-const cleanupProcessedUpdates = () => updateCache.cleanup();
+// === YDB DEDUPLICATION (защита от дублей) — используется в handler ===
+// Функции isUpdateProcessed, markUpdateProcessed, cleanupProcessedUpdates импортируются из ydb_helper
 
 // === v5.0: RATE LIMITING для HTTP endpoint (защита от спама) ===
 const RATE_LIMIT_MAX = parseInt(process.env.RATE_LIMIT_MAX) || 60; // запросов
@@ -1238,6 +1224,14 @@ export const handler = async (event) => {
       : {};
 
     if (body.update_id) {
+      // === YDB DEDUPLICATION: проверяем, не обрабатывали ли мы это сообщение ===
+      const isAlreadyProcessed = await ydb.isUpdateProcessed(String(body.update_id));
+      if (isAlreadyProcessed) {
+        log.info(`[DEDUPLICATION] Skipping processed update ${body.update_id}`);
+        return response(200, "ok");
+      }
+      await ydb.markUpdateProcessed(String(body.update_id));
+
       log.info(`[WEBHOOK] Received update`, {
         updateId: body.update_id,
         type: body.callback_query ? "callback" : "message",
