@@ -963,6 +963,23 @@ export function registerTelegramActions(bot, ctx) {
 
     // === ОБРАБОТКА СВОБОДНОГО ТЕКСТА (AI) ===
     try {
+      // Проверка активности ИИ-подписки владельца канала (SaaS)
+      const isAiActive = await ydb.isOwnerAiActive(u, token, null);
+      if (!isAiActive) {
+        return ctx.reply(
+          `🤖 <b>ИИ-консультант временно недоступен</b>\n\nВладелец бота ещё не активировал подписку на ИИ-консультанта.\n\nОбратитесь к владельцу для активации 👇`,
+          {
+            parse_mode: "HTML",
+            protect_content: true,
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }],
+              ],
+            },
+          },
+        );
+      }
+
       const today = new Date().toISOString().split("T")[0];
 
       if (u.session.ai_count === undefined) u.session.ai_count = 0;

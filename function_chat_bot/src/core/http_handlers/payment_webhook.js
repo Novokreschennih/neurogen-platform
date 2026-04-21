@@ -18,6 +18,7 @@ export async function handlePaymentWebhook(event, context) {
     MAIN_TOKEN,
     PRODUCT_ID_PRO,
     PRODUCT_ID_PRO_40,
+    PRODUCT_ID_AI_SUBSCRIPTION,
   } = context;
 
   if (params.action !== "payment") return null;
@@ -142,6 +143,26 @@ export async function handlePaymentWebhook(event, context) {
             ],
           },
         },
+      );
+    } else if (hubProductId === PRODUCT_ID_AI_SUBSCRIPTION) {
+      console.log(`>>> [AI SUBSCRIPTION] Processing payment for user ${u.user_id}`);
+      const currentExpiry = u.ai_active_until || Date.now();
+      u.ai_active_until = Math.max(currentExpiry, Date.now()) + (30 * 24 * 60 * 60 * 1000);
+      await ydb.saveUser(u);
+      console.log(`>>> [AI SUBSCRIPTION] Extended until ${new Date(u.ai_active_until).toISOString()}`);
+
+      const expiryDate = new Date(u.ai_active_until).toLocaleDateString("ru-RU", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+
+      await bot.telegram.sendMessage(
+        u.user_id,
+        `🤖 <b>ИИ-подписка активирована!</b>\n\n` +
+          `Подписка на ИИ-консультанта NeuroGen действует до <b>${expiryDate}</b>.\n\n` +
+          `Доступен в ботах Telegram, VK, а также на Web-платформе (Telegram, VK, Web) сроком 30 дней.`,
+        { parse_mode: "HTML" },
       );
     } else {
       console.log(`>>> [PAYMENT] User ${u.user_id} registered FREE product`);

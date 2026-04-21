@@ -45,6 +45,7 @@ const PRODUCT_ID_FREE = process.env.PRODUCT_ID_FREE || "140_9d5d2";
 const PRODUCT_ID_PRO = process.env.PRODUCT_ID_PRO || "103_97999"; // $20 (со скидкой)
 // === ИСПРАВЛЕНИЕ: Безопасный откат к PRODUCT_ID_PRO, если _40 не задан ===
 const PRODUCT_ID_PRO_40 = process.env.PRODUCT_ID_PRO_40 || PRODUCT_ID_PRO;
+const PRODUCT_ID_AI_SUBSCRIPTION = process.env.PRODUCT_ID_AI_SUBSCRIPTION || "ai_subscription_30days"; // ИИ-подписка на 30 дней
 
 // === JWT SECRET — ВАЛИДАЦИЯ ПРИ ИМПОРТЕ (см. src/utils/jwt_utils.js) ===
 // JWT_SECRET проверяется автоматически при первом вызове getJwtSecret()
@@ -1174,6 +1175,7 @@ export const handler = async (event) => {
       MAIN_TOKEN,
       PRODUCT_ID_PRO,
       PRODUCT_ID_PRO_40,
+      PRODUCT_ID_AI_SUBSCRIPTION,
       querystring,
     });
     if (paymentResponse) return paymentResponse;

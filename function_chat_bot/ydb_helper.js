@@ -43,7 +43,7 @@ export async function init() {
 
 // === v6.0: Омниканальная схема ===
 const USER_FIELDS =
-  "id, email, tg_id, vk_id, web_id, partner_id, state, bought_tripwire, session, last_seen, saved_state, bot_token, tariff, sh_user_id, sh_ref_tail, purchases, first_name, last_reminder_time, reminders_count, pin_code, session_version, created_at";
+  "id, email, tg_id, vk_id, web_id, partner_id, state, bought_tripwire, session, last_seen, saved_state, bot_token, tariff, sh_user_id, sh_ref_tail, purchases, first_name, last_reminder_time, reminders_count, pin_code, session_version, ai_active_until, created_at";
 
 function mapUser(row) {
   if (!row) return null;
@@ -101,8 +101,11 @@ function mapUser(row) {
     session_version: row.items[20]?.uint64Value
       ? Number(row.items[20].uint64Value)
       : 0,
-    created_at: row.items[21]?.uint64Value
+    ai_active_until: row.items[21]?.uint64Value
       ? Number(row.items[21].uint64Value)
+      : 0,
+    created_at: row.items[22]?.uint64Value
+      ? Number(row.items[22].uint64Value)
       : null,
 
     // Обратная совместимость для старого кода (CRM, рассылки)
@@ -301,6 +304,7 @@ export async function saveUser(user) {
           $pc: TypedValues.utf8(String(user.pin_code || "")),
           $newVer: TypedValues.uint64(String(newVersion)),
           $cat: TypedValues.uint64(String(user.created_at || now)),
+          $aiUntil: TypedValues.uint64(String(user.ai_active_until || 0)),
         };
 
         const query = `
@@ -310,16 +314,16 @@ export async function saveUser(user) {
           DECLARE $js AS Json; DECLARE $ls AS Uint64; DECLARE $sv AS Utf8; DECLARE $bt AS Utf8;
           DECLARE $tr AS Utf8; DECLARE $shui AS Utf8; DECLARE $shrt AS Utf8; DECLARE $pur AS Json;
           DECLARE $fn AS Utf8; DECLARE $lrt AS Uint64; DECLARE $rc AS Uint64; DECLARE $pc AS Utf8;
-          DECLARE $newVer AS Uint64; DECLARE $cat AS Uint64;
+          DECLARE $newVer AS Uint64; DECLARE $cat AS Uint64; DECLARE $aiUntil AS Uint64;
 
           UPSERT INTO users (
             id, email, tg_id, vk_id, web_id,
             partner_id, state, bought_tripwire, session,
             last_seen, saved_state, bot_token, tariff, sh_user_id, sh_ref_tail, purchases,
-            first_name, last_reminder_time, reminders_count, pin_code, session_version, created_at
+            first_name, last_reminder_time, reminders_count, pin_code, session_version, ai_active_until, created_at
           ) VALUES (
             $id, $email, $tg_id, $vk_id, $web_id,
-            $pid, $st, $br, $js, $ls, $sv, $bt, $tr, $shui, $shrt, $pur, $fn, $lrt, $rc, $pc, $newVer, $cat
+            $pid, $st, $br, $js, $ls, $sv, $bt, $tr, $shui, $shrt, $pur, $fn, $lrt, $rc, $pc, $newVer, $aiUntil, $cat
           );
         `;
         await session.executeQuery(query, params);
@@ -385,6 +389,7 @@ export async function mergeUsers(
         $pc: TypedValues.utf8(String(surviving.pin_code || "")),
         $newVer: TypedValues.uint64(String(newVersion)),
         $cat: TypedValues.uint64(String(surviving.created_at || now)),
+        $aiUntil: TypedValues.uint64(String(surviving.ai_active_until || 0)),
         $mergeId: TypedValues.utf8(mergeId),
         $survId: TypedValues.utf8(String(surviving.id)),
         $delId: TypedValues.utf8(String(deletedUserId)),
@@ -399,7 +404,7 @@ export async function mergeUsers(
         DECLARE $js AS Json; DECLARE $ls AS Uint64; DECLARE $sv AS Utf8; DECLARE $bt AS Utf8;
         DECLARE $tr AS Utf8; DECLARE $shui AS Utf8; DECLARE $shrt AS Utf8; DECLARE $pur AS Json;
         DECLARE $fn AS Utf8; DECLARE $lrt AS Uint64; DECLARE $rc AS Uint64; DECLARE $pc AS Utf8;
-        DECLARE $newVer AS Uint64; DECLARE $cat AS Uint64;
+        DECLARE $newVer AS Uint64; DECLARE $cat AS Uint64; DECLARE $aiUntil AS Uint64;
         DECLARE $mergeId AS Utf8; DECLARE $survId AS Utf8; DECLARE $delId AS Utf8;
         DECLARE $reason AS Utf8; DECLARE $mergeTs AS Uint64;
 
@@ -407,10 +412,10 @@ export async function mergeUsers(
           id, email, tg_id, vk_id, web_id,
           partner_id, state, bought_tripwire, session,
           last_seen, saved_state, bot_token, tariff, sh_user_id, sh_ref_tail, purchases,
-          first_name, last_reminder_time, reminders_count, pin_code, session_version, created_at
+          first_name, last_reminder_time, reminders_count, pin_code, session_version, ai_active_until, created_at
         ) VALUES (
           $id, $email, $tg_id, $vk_id, $web_id,
-          $pid, $st, $br, $js, $ls, $sv, $bt, $tr, $shui, $shrt, $pur, $fn, $lrt, $rc, $pc, $newVer, $cat
+          $pid, $st, $br, $js, $ls, $sv, $bt, $tr, $shui, $shrt, $pur, $fn, $lrt, $rc, $pc, $newVer, $aiUntil, $cat
         );
 
         UPSERT INTO user_merges (id, surviving_user_id, deleted_user_id, merge_reason, merged_at)
@@ -828,6 +833,68 @@ export function isAdmin(telegramId) {
     .map((id) => id.trim())
     .filter((id) => id);
   return adminIds.includes(String(telegramId));
+}
+
+/**
+ * Проверить, активна ли ИИ-подписка владельца канала (омниканальная проверка)
+ * @param {object} leadUser - пользователь-лид (из любого канала)
+ * @param {string|null} botToken - токен Telegram бота (для TG канала)
+ * @param {string|null} vkGroupId - ID группы VK (для VK канала)
+ * @returns {Promise<boolean>} true если ИИ активен у владельца
+ */
+export async function isOwnerAiActive(leadUser, botToken, vkGroupId) {
+  try {
+    let ownerId = null;
+    const MAIN_TOKEN = process.env.BOT_TOKEN;
+
+    // 1. Пытаемся найти владельца через Telegram бота
+    if (botToken && botToken !== "VK_CENTRAL_GROUP") {
+      const botInfo = await getBotInfo(botToken);
+      if (botInfo) ownerId = botInfo.owner_id;
+    }
+    // 2. Пытаемся найти владельца через VK группу
+    else if (vkGroupId) {
+      const botInfo = await getBotInfoByVkGroup(vkGroupId);
+      if (botInfo) ownerId = botInfo.owner_id;
+    }
+    // 3. Ищем по реферальному хвосту (для Web-чата)
+    else if (leadUser?.partner_id) {
+      const utf8Type = TypedValues.utf8("").type;
+      const ownerRows = await driver.tableClient.withSession(async (session) => {
+        const { resultSets } = await session.executeQuery(
+          `DECLARE $tail AS Utf8; SELECT id, ai_active_until FROM users WHERE sh_ref_tail = $tail LIMIT 1;`,
+          { $tail: TypedValues.utf8(String(leadUser.partner_id)) }
+        );
+        return resultSets[0]?.rows || [];
+      });
+      if (ownerRows.length > 0) {
+        const ownerIdFromRow = ownerRows[0].items[0]?.textValue;
+        const activeUntil = ownerRows[0].items[1]?.uint64Value
+          ? Number(ownerRows[0].items[1].uint64Value)
+          : 0;
+        // Если нашли владельца по partner_id, проверяем его ai_active_until
+        if (ownerIdFromRow) {
+          return activeUntil > Date.now();
+        }
+      }
+    }
+
+    // Если нашли owner_id (для TG/VK), проверяем его подписку
+    if (ownerId) {
+      const owner = await getUser(ownerId);
+      if (owner && owner.ai_active_until) {
+        return owner.ai_active_until > Date.now();
+      }
+    }
+
+    // Если это главный системный бот, ИИ работает всегда
+    if (botToken === MAIN_TOKEN) return true;
+
+    return false;
+  } catch (e) {
+    log.error("[AI SUBSCRIPTION] Error checking owner AI status", e.message || String(e));
+    return false;
+  }
 }
 
 export async function recordLinkClick(partnerId, userId, botToken) {

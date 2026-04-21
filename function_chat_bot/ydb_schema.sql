@@ -36,6 +36,7 @@ CREATE TABLE users (
     reminders_count Uint64,         -- Счётчик отправленных напоминаний
     pin_code Utf8,                  -- 4-значный PIN для ИИ-приложений
     session_version Uint64,         -- Версия сессии (race condition protection)
+    ai_active_until Uint64,         -- Timestamp TTL подписки ИИ-консультанта (0 = неактивна)
     created_at Uint64,              -- Timestamp создания (Unix ms)
     PRIMARY KEY (id),
 

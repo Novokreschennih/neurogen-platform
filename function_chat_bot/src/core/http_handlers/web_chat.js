@@ -477,6 +477,19 @@ export async function handleWebChat(event, context) {
       }
 
       // --- Д. Чат с ИИ (OpenRouter) ---
+      // Проверка активности ИИ-подписки владельца канала (SaaS)
+      const isAiActive = await ydb.isOwnerAiActive(webUser, null, null);
+      if (!isAiActive) {
+        return {
+          statusCode: 200,
+          headers: corsHeaders,
+          body: JSON.stringify({
+            answer: "🤖 <b>ИИ-консультант временно недоступен</b>\n\nВладелец бота ещё не активировал подписку на ИИ-консультанта.\n\nОбратитесь к владельцу для активации 👇",
+            sessionId: webSessionId,
+          }),
+        };
+      }
+
       const webSystemPrompt = `Ты — NeuroGen, харизматичный ИИ-архитектор экосистемы SetHubble. Эксперт по IT-бизнесу и пассивному доходу. Отвечай кратко (2-4 предложения), используй эмодзи. Форматируй HTML: <b>, <i>.`;
 
       const messages = [{ role: "system", content: webSystemPrompt }];
