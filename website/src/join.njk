@@ -1,8 +1,7 @@
 ---
-title: "SetHubble | Твой ИИ-Клон Зарабатывает 24/7"
+title: "NeuroGen | Твоя Мультиканальная SaaS-Империя"
 permalink: /join/
 eleventyExcludeFromCollections: true
-
 ---
 <!DOCTYPE html>
 <html lang="ru" class="scroll-smooth">
@@ -12,448 +11,306 @@ eleventyExcludeFromCollections: true
     <title>{{ title }}</title>
     <meta
       name="description"
-      content="Построй атомный реактор пассивного дохода за 1 минуту без программирования и вложений."
+      content="Получи бесплатно готовую мультиканальную систему с ИИ. Права перепродажи (до 50%) и нейросети для твоих проектов. Запуск за 1 минуту."
     >
     <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      body {
+        background-color: #050505;
+        color: #ffffff;
+      }
+      .glass-panel {
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+      }
+      .gradient-text {
+        color: transparent;
+        background-clip: text;
+        -webkit-background-clip: text;
+        background-image: linear-gradient(to right, #06b6d4, #a855f7);
+      }
+      .animate-blob {
+        animation: blob 7s infinite;
+      }
+      .animation-delay-2000 {
+        animation-delay: 2s;
+      }
+      .animation-delay-4000 {
+        animation-delay: 4s;
+      }
+      @keyframes blob {
+        0% { transform: translate(0px, 0px) scale(1); }
+        33% { transform: translate(30px, -50px) scale(1.1); }
+        66% { transform: translate(-20px, 20px) scale(0.9); }
+        100% { transform: translate(0px, 0px) scale(1); }
+      }
+    </style>
   </head>
-  <body class="relative min-h-screen flex flex-col items-center p-4">
-    <div class="fixed top-0 left-0 w-full h-full overflow-hidden -z-10">
-      <div class="absolute top-0 -left-4 w-72 h-72 bg-purple-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob">
-      </div>
-      <div class="absolute top-0 -right-4 w-72 h-72 bg-cyan-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000">
-      </div>
-      <div class="absolute -bottom-8 left-20 w-72 h-72 bg-blue-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000">
-      </div>
+  <body class="relative min-h-screen flex flex-col items-center p-4 overflow-x-hidden">
+    <!-- Фоновые эффекты -->
+    <div class="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none -z-10">
+      <div class="absolute top-0 -left-4 w-96 h-96 bg-purple-600 rounded-full mix-blend-screen filter blur-[100px] opacity-20 animate-blob"></div>
+      <div class="absolute top-0 -right-4 w-96 h-96 bg-cyan-600 rounded-full mix-blend-screen filter blur-[100px] opacity-20 animate-blob animation-delay-2000"></div>
+      <div class="absolute -bottom-8 left-20 w-96 h-96 bg-blue-600 rounded-full mix-blend-screen filter blur-[100px] opacity-20 animate-blob animation-delay-4000"></div>
     </div>
 
-    <main class="max-w-5xl mx-auto w-full z-10">
+    <main class="max-w-5xl mx-auto w-full z-10 pt-4">
+      
+      <!-- Партнерский бейдж -->
       <div
         id="partner-badge"
         class="hidden inline-flex items-center gap-2 px-4 py-2 rounded-full glass-panel mb-8 shadow-[0_0_15px_rgba(168,85,247,0.3)] mx-auto"
       >
-        <span class="text-xs font-bold text-gray-400 uppercase tracking-wider"
-        >Ваш проводник:</span>
-        <span
-          id="partner-name"
-          class="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400"
-        >@username</span>
+        <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Ваш партнер-пригласитель:</span>
+        <span id="partner-name" class="text-sm font-bold gradient-text">@username</span>
       </div>
 
-      <section class="text-center py-12 md:py-20">
+      <!-- HEADER / HERO -->
+      <section class="text-center py-10 md:py-16">
         <div class="inline-block px-4 py-1.5 rounded-full glass-panel mb-6 text-xs font-bold tracking-wide text-cyan-400 uppercase border-cyan-500/30">
-          SaaS-платформа нового поколения
+          🔥 Платформа SetHubble v6.0 | Мультиканальная версия
         </div>
 
         <h1 class="text-4xl md:text-6xl lg:text-7xl font-black mb-6 tracking-tight leading-tight">
-          ТВОЙ ИИ-КЛОН ЗАРАБАТЫВАЕТ 24/7<br />
-          <span class="gradient-text">ПОКА ТЫ СПИШЬ</span>
+          ГОТОВАЯ ИИ-СИСТЕМА ДЛЯ <br />
+          <span class="gradient-text">ПАССИВНОГО ДОХОДА</span>
         </h1>
 
         <p class="text-lg md:text-xl text-gray-400 mb-10 max-w-3xl mx-auto leading-relaxed">
-          Перестань работать за деньги. Заставь технологии работать на тебя.
-          Оцифруй сарафанное радио и получай пассивный доход со всего мира без
-          программирования.
+          Получи <b>бесплатно</b> готовую SaaS-платформу. Мы настроим твоего ИИ-клона в Telegram, VK и на сайте за 1 минуту. Зарабатывай до 50% с продаж и используй встроенные нейросети для своих проектов.
         </p>
 
-        <div
-          class="js-open-modal cursor-pointer relative inline-flex group"
-          role="button"
-          tabindex="0"
-        >
-          <div class="absolute transition-all duration-1000 opacity-70 -inset-px bg-gradient-to-r from-[#44BCFF] via-[#FF44EC] to-[#FF675E] rounded-xl blur-lg group-hover:opacity-100 group-hover:-inset-1 group-hover:duration-200">
-          </div>
-          <div class="relative inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white transition-all duration-200 bg-gray-900 rounded-xl gap-3">
-            <span>🚀 ПОЛУЧИТЬ СИСТЕМУ</span>
+        <!-- Главная кнопка CTA -->
+        <div class="js-open-modal cursor-pointer relative inline-flex group w-full md:w-auto px-4 md:px-0" role="button" tabindex="0">
+          <div class="absolute transition-all duration-1000 opacity-70 -inset-px bg-gradient-to-r from-cyan-400 via-purple-500 to-blue-500 rounded-xl blur-lg group-hover:opacity-100 group-hover:-inset-1 group-hover:duration-200"></div>
+          <div class="relative w-full md:w-auto inline-flex items-center justify-center px-10 py-5 text-xl font-bold text-white transition-all duration-200 bg-gray-900 rounded-xl gap-3 shadow-2xl">
+            <span>🚀 ПОЛУЧИТЬ СИСТЕМУ БЕСПЛАТНО</span>
           </div>
         </div>
 
-        <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mt-16 max-w-4xl mx-auto">
-          <div class="glass-panel p-4 rounded-xl">
-            <div class="text-2xl md:text-3xl font-bold gradient-text">
-              $15,000+
-            </div>
-            <div class="text-xs text-gray-400 mt-1">
-              Выплачено партнерам (24ч)
-            </div>
-          </div>
-          <div class="glass-panel p-4 rounded-xl">
-            <div class="text-2xl md:text-3xl font-bold gradient-text">
-              2,500+
-            </div>
-            <div class="text-xs text-gray-400 mt-1">
-              Новых ИИ-агентов в сети
-            </div>
-          </div>
-          <div class="glass-panel p-4 rounded-xl hidden md:block">
-            <div class="text-2xl md:text-3xl font-bold gradient-text">22+</div>
-            <div class="text-xs text-gray-400 mt-1">Страны присутствия</div>
-          </div>
+        <!-- Мини-статистика -->
+        <div class="flex flex-wrap justify-center gap-6 mt-12 text-sm text-gray-400 font-medium">
+          <div class="flex items-center gap-2"><span class="text-green-400">✔</span> Старт $0</div>
+          <div class="flex items-center gap-2"><span class="text-green-400">✔</span> Без программирования</div>
+          <div class="flex items-center gap-2"><span class="text-green-400">✔</span> Выплаты в Crypto (USDT)</div>
         </div>
       </section>
 
-      <section class="py-16 relative">
-        <div class="absolute inset-0 bg-red-900/5 blur-3xl rounded-full -z-10">
-        </div>
+      <!-- ЧТО ТЫ ПОЛУЧАЕШЬ (Features) -->
+      <section class="py-16">
         <h2 class="text-3xl md:text-4xl font-bold text-center mb-4">
-          ПОЧЕМУ ТВОЙ ТЕКУЩИЙ ПОДХОД <span class="text-red-400"
-          >ТЕРЯЕТ ДЕНЬГИ?</span>
+          ЧТО ИМЕННО ТЫ <span class="gradient-text">ЗАБИРАЕШЬ СЕЙЧАС?</span>
         </h2>
         <p class="text-gray-400 text-center mb-12 max-w-2xl mx-auto">
-          Старые модели бизнеса больше не работают. Посмотри правде в глаза.
-        </p>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div class="glass-panel p-6 rounded-2xl border-red-500/20 feature-card transition-all">
-            <div class="text-3xl mb-3">🏢</div>
-            <h3 class="text-xl font-bold mb-3 text-gray-200">
-              Если ты Офлайн-бизнес:
-            </h3>
-            <ul class="space-y-3 text-sm text-gray-400">
-              <li class="flex gap-2">
-                <span>❌</span> Ты сжигаешь бюджет на Яндекс/VK ДО того, как
-                клиент зашел в дверь.
-              </li>
-              <li class="flex gap-2">
-                <span>❌</span> Лояльные клиенты не рекомендуют тебя друзьям,
-                потому что у них нет мотивации.
-              </li>
-            </ul>
-          </div>
-          <div class="glass-panel p-6 rounded-2xl border-red-500/20 feature-card transition-all">
-            <div class="text-3xl mb-3">💻</div>
-            <h3 class="text-xl font-bold mb-3 text-gray-200">
-              Если ты Блогер / Эксперт:
-            </h3>
-            <ul class="space-y-3 text-sm text-gray-400">
-              <li class="flex gap-2">
-                <span>❌</span> Подписчик стоит 200₽, а покупают только 5%.
-              </li>
-              <li class="flex gap-2">
-                <span>❌</span> Остальные 95% уходят навсегда. Ты никак не
-                монетизируешь тех, кто сказал «НЕТ».
-              </li>
-            </ul>
-          </div>
-          <div class="glass-panel p-6 rounded-2xl border-red-500/20 feature-card transition-all">
-            <div class="text-3xl mb-3">🚀</div>
-            <h3 class="text-xl font-bold mb-3 text-gray-200">
-              Если ты хочешь пассив:
-            </h3>
-            <ul class="space-y-3 text-sm text-gray-400">
-              <li class="flex gap-2">
-                <span>❌</span> Классические партнерки платят копейки (3-5%) за
-                разовый переход.
-              </li>
-              <li class="flex gap-2">
-                <span>❌</span> MLM-пирамиды требуют втюхивать шампуни друзьям и
-                делать закупки.
-              </li>
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      <section class="py-16 relative">
-        <div class="absolute top-1/2 left-0 w-96 h-96 bg-cyan-900/20 blur-3xl rounded-full -z-10">
-        </div>
-
-        <h2 class="text-3xl md:text-4xl font-bold text-center mb-4">
-          🧬 АНАТОМИЯ ИДЕАЛЬНОГО ПРОДАВЦА: <span class="gradient-text"
-          >БЕЗ НАСТРОЕК</span>
-        </h2>
-        <p class="text-gray-400 text-center mb-12 max-w-2xl mx-auto">
-          Забудь про конструкторы ботов, визуальные схемы и программирование. Ты
-          просто даешь токен от @BotFather — мы отдаем тебе готовую машину по
-          печати денег.
+          Ты получаешь не просто ссылку, а полноценный IT-бизнес под ключ. Мы отдаем тебе нашу инфраструктуру (White-Label).
         </p>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div class="glass-panel p-8 rounded-2xl feature-card border border-gray-800 hover:border-cyan-500/50 relative overflow-hidden group">
-            <div class="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 blur-2xl group-hover:bg-cyan-500/20 transition-all">
-            </div>
-            <div class="text-4xl mb-4">⏱️</div>
-            <h3 class="text-2xl font-bold mb-3 text-white">
-              Plug & Play за 60 секунд
-            </h3>
+          <!-- Карточка 1 -->
+          <div class="glass-panel p-8 rounded-3xl hover:border-cyan-500/30 transition-all">
+            <div class="text-4xl mb-4">🐙</div>
+            <h3 class="text-xl font-bold text-white mb-3">Мультиканальный ИИ-Агент</h3>
             <p class="text-gray-400 text-sm leading-relaxed">
-              Никаких сложных конструкторов, Zennoposter или n8n. Скопируй токен
-              бота, отправь его в чат — и через секунду твой ИИ-клон уже в сети.
-              В него <b>автоматически вшиты твои реферальные ссылки</b>,
-              настроено меню и загружена вся база знаний.
+              Твой цифровой клон запускается одновременно в <b>Telegram, ВКонтакте, и как виджет на твоем сайте</b>. Он сам отвечает на вопросы клиентов, закрывает возражения и ведет их по воронке, используя глубоко обученное нейроядро.
             </p>
           </div>
 
-          <div class="glass-panel p-8 rounded-2xl feature-card border border-gray-800 hover:border-purple-500/50 relative overflow-hidden group">
-            <div class="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 blur-2xl group-hover:bg-purple-500/20 transition-all">
-            </div>
-            <div class="text-4xl mb-4">🎯</div>
-            <h3 class="text-2xl font-bold mb-3 text-white">
-              Безжалостные Авто-Дожимы
-            </h3>
+          <!-- Карточка 2 -->
+          <div class="glass-panel p-8 rounded-3xl hover:border-purple-500/30 transition-all">
+            <div class="text-4xl mb-4">📦</div>
+            <h3 class="text-xl font-bold text-white mb-3">Встроенный Продукт & Права Перепродажи</h3>
             <p class="text-gray-400 text-sm leading-relaxed">
-              Бот помнит каждого лида. Если клиент дошел до оплаты и ушел
-              "думать", система сама запустит прогревочный алгоритм из <b>10
-                умных дожимов</b> (через 1, 24, 48 часов...). Твоя конверсия
-              вырастает в 3 раза абсолютно без твоего участия.
+              Тебе не нужно создавать свой продукт. Бот уже настроен на продажу подписок платформы SetHubble. Ты просто даешь людям бота — он продает — ты мгновенно получаешь USDT на свой кошелек.
             </p>
           </div>
 
-          <div class="glass-panel p-8 rounded-2xl feature-card border border-gray-800 hover:border-pink-500/50 relative overflow-hidden group">
-            <div class="absolute top-0 right-0 w-32 h-32 bg-pink-500/10 blur-2xl group-hover:bg-pink-500/20 transition-all">
-            </div>
-            <div class="text-4xl mb-4">🔄</div>
-            <h3 class="text-2xl font-bold mb-3 text-white">
-              O2O-Экспансия (Офлайн в Онлайн)
-            </h3>
-            <p class="text-gray-400 text-sm leading-relaxed">
-              Оцифруй любой офлайн-бизнес с технологией «Троянский конь».
-              Генерируешь QR-код в 1 клик, ставишь тейбл-тент в любой кофейне
-              или СТО. Их клиенты сканируют код ради скидки и <b>навсегда
-                закрепляются в твоей цифровой сети</b>.
-            </p>
-          </div>
-
-          <div class="glass-panel p-8 rounded-2xl feature-card border border-gray-800 hover:border-blue-500/50 relative overflow-hidden group">
-            <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-2xl group-hover:bg-blue-500/20 transition-all">
-            </div>
+          <!-- Карточка 3 -->
+          <div class="glass-panel p-8 rounded-3xl hover:border-blue-500/30 transition-all">
             <div class="text-4xl mb-4">🧠</div>
-            <h3 class="text-2xl font-bold mb-3 text-white">
-              Продвинутый ИИ-Консультант
-            </h3>
+            <h3 class="text-xl font-bold text-white mb-3">Лаборатория NeuroGen (Для твоих проектов)</h3>
             <p class="text-gray-400 text-sm leading-relaxed">
-              Это не тупой бот с раздражающими кнопками. Под капотом — <b
-              >глубоко обученное нейроядро</b>. Оно анализирует свободный текст,
-              отвечает на любые вопросы клиентов, отрабатывает возражения и
-              нативно закрывает сделки.
+              Ты получаешь доступ к 6 ИИ-комбайнам: генератор продающих сайтов, написание сценариев для вирусных видео (Reels/Shorts), создание скриптов и автоворонок. Используй их для <b>любых своих проектов</b> или оказывай услуги на фрилансе!
+            </p>
+          </div>
+
+          <!-- Карточка 4 -->
+          <div class="glass-panel p-8 rounded-3xl hover:border-pink-500/30 transition-all">
+            <div class="text-4xl mb-4">🔁</div>
+            <h3 class="text-xl font-bold text-white mb-3">Авто-дожимы и Email-маркетинг</h3>
+            <p class="text-gray-400 text-sm leading-relaxed">
+              Если клиент зашел, но не купил, система не бросит его. Она автоматически отправит цепочку из 10 умных дожимов в мессенджеры и на Email через 1, 24 и 48 часов, увеличивая твою конверсию в 3 раза без твоего участия.
             </p>
           </div>
         </div>
       </section>
 
-      <section class="py-16">
-        <div class="glass-panel p-8 md:p-12 rounded-3xl relative overflow-hidden border-purple-500/30">
-          <div class="absolute top-0 right-0 w-64 h-64 bg-purple-500/10 blur-3xl rounded-full">
-          </div>
-          <h2 class="text-3xl md:text-4xl font-bold mb-6">
-            МАГИЯ <span class="gradient-text">САРАФАННОГО РАДИО 2.0</span>
-          </h2>
-          <div class="space-y-6">
-            <div class="flex gap-4">
-              <div class="text-2xl mt-1">📈</div>
-              <div>
-                <h4 class="text-lg font-bold text-white">
-                  До 10 уровней в глубину (Бинар)
-                </h4>
-                <p class="text-sm text-gray-400">
-                  Ты получаешь процент не только с тех, кого привел сам, но и с
-                  тех, кого привели они. Твоя сеть растет в геометрической
-                  прогрессии чужими руками.
-                </p>
-              </div>
-            </div>
-            <div class="flex gap-4">
-              <div class="text-2xl mt-1">🧲</div>
-              <div>
-                <h4 class="text-lg font-bold text-white">Умная Компрессия</h4>
-                <p class="text-sm text-gray-400">
-                  Если кто-то в твоей структуре ленится и сидит на бесплатном
-                  тарифе, часть его денег не сгорает — она пролетает мимо него и
-                  оседает в твоем кошельке.
-                </p>
-              </div>
-            </div>
-            <div class="flex gap-4">
-              <div class="text-2xl mt-1">💸</div>
-              <div>
-                <h4 class="text-lg font-bold text-white">
-                  Комиссия до 50% с первого дня
-                </h4>
-                <p class="text-sm text-gray-400">
-                  Сам управляй своей доходностью. Начни бесплатно с 25% комиссии
-                  или активируй PRO-статус и забирай половину чека с каждой
-                  продажи навсегда.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="py-16">
+      <!-- ТАБЛИЦА ДОХОДОВ (Честная математика) -->
+      <section class="py-16 relative">
+        <div class="absolute inset-0 bg-blue-900/10 blur-3xl -z-10 rounded-[100px]"></div>
         <h2 class="text-3xl md:text-4xl font-bold text-center mb-4">
-          🔄 КАК ЗАПУСТИТЬСЯ ЗА <span class="gradient-text">3 ШАГА</span>
+          МАТЕМАТИКА <span class="gradient-text">ТВОЕГО ДОХОДА</span>
         </h2>
-        <p class="text-gray-400 text-center mb-10">
-          Быстрый путь от регистрации до первых денег
+        <p class="text-gray-400 text-center mb-12 max-w-2xl mx-auto">
+          Ты сам выбираешь свой уровень. Начни без вложений или забирай максимум. Все выплаты идут с <b>реального оборота платформы</b>, никаких серых схем.
         </p>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div class="glass-panel p-6 rounded-2xl relative text-center">
-            <div class="absolute -top-4 left-1/2 transform -translate-x-1/2 w-10 h-10 bg-gray-800 border border-gray-600 rounded-full flex items-center justify-center font-bold text-lg">
-              1
-            </div>
-            <h3 class="text-xl font-bold mb-3 mt-4 text-cyan-400">АКТИВАЦИЯ</h3>
-            <p class="text-sm text-gray-400">
-              Запусти систему по кнопке ниже. Получи свой SetHubble ID и личные
-              реферальные ссылки за пару кликов.
-            </p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          <!-- FREE TIER -->
+          <div class="glass-panel p-8 rounded-3xl border-gray-700 relative overflow-hidden">
+            <div class="text-xs font-bold bg-gray-800 text-gray-300 px-3 py-1 rounded-full inline-block mb-4">БАЗОВЫЙ ДОСТУП</div>
+            <h3 class="text-3xl font-black text-white mb-2">Тариф FREE <span class="text-gray-500 text-lg">$0</span></h3>
+            <p class="text-sm text-gray-400 mb-6 border-b border-gray-800 pb-6">Начни строить бизнес без рисков и вложений. Получи бота и обучайся бесплатно.</p>
+            
+            <ul class="space-y-4 mb-8">
+              <li class="flex items-start gap-3">
+                <span class="text-cyan-400 mt-0.5">✅</span>
+                <div>
+                  <div class="font-bold text-white">25% с личных продаж</div>
+                  <div class="text-xs text-gray-500">С каждой активации по твоей ссылке</div>
+                </div>
+              </li>
+              <li class="flex items-start gap-3">
+                <span class="text-cyan-400 mt-0.5">✅</span>
+                <div>
+                  <div class="font-bold text-white">По 3% пассивного дохода</div>
+                  <div class="text-xs text-gray-500">Со 2-го и 3-го уровня твоей сети</div>
+                </div>
+              </li>
+              <li class="flex items-start gap-3">
+                <span class="text-cyan-400 mt-0.5">✅</span>
+                <div>
+                  <div class="font-bold text-white">Мультиканальный бот</div>
+                  <div class="text-xs text-gray-500">Telegram, VK, Web, Email</div>
+                </div>
+              </li>
+            </ul>
           </div>
-          <div class="glass-panel p-6 rounded-2xl relative text-center">
-            <div class="absolute -top-4 left-1/2 transform -translate-x-1/2 w-10 h-10 bg-gray-800 border border-gray-600 rounded-full flex items-center justify-center font-bold text-lg">
-              2
-            </div>
-            <h3 class="text-xl font-bold mb-3 mt-4 text-purple-400">
-              ДЕПЛОЙ КЛОНА
-            </h3>
-            <p class="text-sm text-gray-400">
-              Отправь боту API-токен. Нейросеть мгновенно развернет твоего
-              клона, привяжет CRM и создаст для тебя сайт-визитку.
-            </p>
-          </div>
-          <div class="glass-panel p-6 rounded-2xl relative text-center">
-            <div class="absolute -top-4 left-1/2 transform -translate-x-1/2 w-10 h-10 bg-gray-800 border border-gray-600 rounded-full flex items-center justify-center font-bold text-lg">
-              3
-            </div>
-            <h3 class="text-xl font-bold mb-3 mt-4 text-pink-400">МАСШТАБ</h3>
-            <p class="text-sm text-gray-400">
-              Запускай трафик из соцсетей или расставляй QR-коды в кафе. Бот
-              продает сам, а ты выводишь крипту на кошелек.
-            </p>
+
+          <!-- PRO TIER -->
+          <div class="glass-panel p-8 rounded-3xl border-purple-500/50 relative overflow-hidden shadow-[0_0_30px_rgba(168,85,247,0.15)]">
+            <div class="absolute top-0 right-0 bg-gradient-to-r from-cyan-400 to-purple-500 text-white text-[10px] font-black px-4 py-1 rounded-bl-xl uppercase tracking-wider">РЕКОМЕНДУЕМ</div>
+            
+            <div class="text-xs font-bold bg-purple-900/40 text-purple-300 px-3 py-1 rounded-full inline-block mb-4 border border-purple-500/30">БИЗНЕС-ПАКЕТ</div>
+            <h3 class="text-3xl font-black text-white mb-2">Статус PRO</h3>
+            <p class="text-sm text-gray-400 mb-6 border-b border-gray-800 pb-6">Активируется внутри бота. Окупается с первой сделки. Максимальная прибыль.</p>
+            
+            <ul class="space-y-4 mb-8">
+              <li class="flex items-start gap-3">
+                <span class="text-purple-400 mt-0.5">🔥</span>
+                <div>
+                  <div class="font-bold text-white">50% с личных продаж (х2)</div>
+                  <div class="text-xs text-gray-400">Забирай половину чека сразу</div>
+                </div>
+              </li>
+              <li class="flex items-start gap-3">
+                <span class="text-purple-400 mt-0.5">🔥</span>
+                <div>
+                  <div class="font-bold text-white">По 5% пассивного дохода</div>
+                  <div class="text-xs text-gray-400">Глубина расширена до 5 уровней!</div>
+                </div>
+              </li>
+              <li class="flex items-start gap-3">
+                <span class="text-purple-400 mt-0.5">🔥</span>
+                <div>
+                  <div class="font-bold text-white">Доступ к CRM Дашборду</div>
+                  <div class="text-xs text-gray-400">Управление лидами и массовые рассылки</div>
+                </div>
+              </li>
+              <li class="flex items-start gap-3">
+                <span class="text-purple-400 mt-0.5">🔥</span>
+                <div>
+                  <div class="font-bold text-white">Все ИИ-приложения NeuroGen</div>
+                  <div class="text-xs text-gray-400">Генераторы лендингов, скриптов, рекламы</div>
+                </div>
+              </li>
+            </ul>
           </div>
         </div>
       </section>
 
-      <section class="py-12">
-        <h2 class="text-3xl md:text-4xl font-bold text-center mb-4">
-          📊 ОНИ УЖЕ ЗАРАБАТЫВАЮТ
+      <!-- КОМУ ЭТО ПОДОЙДЕТ (ЦА) -->
+      <section class="py-16">
+        <h2 class="text-3xl md:text-4xl font-bold text-center mb-12">
+          СИСТЕМА АДАПТИРУЕТСЯ <span class="gradient-text">ПОД ТЕБЯ</span>
         </h2>
-        <p class="text-gray-400 text-center mb-10">
-          Реальные истории успеха партнеров SetHubble
-        </p>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div class="glass-panel p-6 rounded-2xl">
-            <div class="text-sm text-gray-400 mb-2">СТУДЕНТ АНТОН</div>
-            <p class="text-sm text-gray-300 mb-4">
-              Оцифровал кофейню бесплатно. 800 сканирований QR-кода на кассе
-              привели 15 новых бизнесов в его сеть.
+          <div class="glass-panel p-6 rounded-2xl border-gray-800 hover:bg-white/[0.05] transition-all">
+            <div class="text-3xl mb-3">🚀</div>
+            <h3 class="text-xl font-bold mb-2 text-white">Я хочу зарабатывать (Агент)</h3>
+            <p class="text-sm text-gray-400">
+              Идеальный старт без своего продукта. Размещай ссылку на своего бота в соцсетях, скидывай друзьям. Бот сам презентует платформу, обучает людей и закрывает сделки. Ты просто выводишь крипту.
             </p>
-            <div class="text-2xl font-bold gradient-text">$3,000/мес</div>
-            <div class="text-xs text-gray-400">пассивный доход</div>
           </div>
-          <div class="glass-panel p-6 rounded-2xl">
-            <div class="text-sm text-gray-400 mb-2">САЛОН ЕЛЕНЫ</div>
-            <p class="text-sm text-gray-300 mb-4">
-              Сжигала 30,000₽ на таргет. Поставила систему: лояльные клиентки
-              сами привели 15 новых подруг ради скидки.
+          <div class="glass-panel p-6 rounded-2xl border-gray-800 hover:bg-white/[0.05] transition-all">
+            <div class="text-3xl mb-3">💻</div>
+            <h3 class="text-xl font-bold mb-2 text-white">У меня Блог / Курсы (Онлайн)</h3>
+            <p class="text-sm text-gray-400">
+              Хватит терять 95% трафика, который ничего не купил. Интегрируй систему: "отказники" зайдут в платформу SetHubble, купят продукты других авторов, а ты получишь с этого пассивный доход.
             </p>
-            <div class="text-2xl font-bold gradient-text">30,000₽/мес</div>
-            <div class="text-xs text-gray-400">экономия бюджета</div>
           </div>
-          <div class="glass-panel p-6 rounded-2xl">
-            <div class="text-sm text-gray-400 mb-2">БЛОГЕР МАКС (10K)</div>
-            <p class="text-sm text-gray-300 mb-4">
-              Его курс не купили 9,900 человек. Дал им вход в экосистему
-              бесплатно. Они стали покупать у других авторов.
+          <div class="glass-panel p-6 rounded-2xl border-gray-800 hover:bg-white/[0.05] transition-all">
+            <div class="text-3xl mb-3">🏢</div>
+            <h3 class="text-xl font-bold mb-2 text-white">У меня Точка (Офлайн-бизнес)</h3>
+            <p class="text-sm text-gray-400">
+              Распечатай QR-код (генерируется системой) и поставь на кассе. Твои клиенты сканируют его ради скидки и навсегда закрепляются в твоей цифровой сети, принося % от всех их будущих трат в интернете.
             </p>
-            <div class="text-2xl font-bold gradient-text">$4,500</div>
-            <div class="text-xs text-gray-400">пассива с «отказников»</div>
           </div>
         </div>
       </section>
 
+      <!-- FAQ -->
       <section class="py-12">
-        <h2 class="text-3xl md:text-4xl font-bold text-center mb-4">
-          ❓ ЧАСТЫЕ <span class="gradient-text">ВОПРОСЫ</span>
+        <h2 class="text-3xl font-bold text-center mb-8">
+          ЧАСТЫЕ <span class="gradient-text">ВОПРОСЫ</span>
         </h2>
-
-        <div class="max-w-3xl mx-auto space-y-4 mt-10">
+        <div class="max-w-3xl mx-auto space-y-4">
           <div class="glass-panel rounded-xl overflow-hidden border-gray-800">
             <details class="group">
               <summary class="flex justify-between items-center cursor-pointer p-6 font-bold text-lg">
-                Это пирамида или MLM?
-                <span class="transition group-open:rotate-180 text-cyan-400"
-                >▼</span>
+                В чем подвох? Почему система бесплатна?
+                <span class="transition group-open:rotate-180 text-cyan-400">▼</span>
               </summary>
               <div class="px-6 pb-6 text-gray-400 text-sm leading-relaxed">
-                ❌ Нет. SetHubble — это легальная IT-платформа (инфраструктура,
-                эквайринг и SaaS-инструменты). Ты не продаешь воздух или БАДы.
-                Ты получаешь процент с <b>реального оборота</b> реальных
-                бизнесов за то, что предоставил им систему для работы с
-                клиентами.
+                Мы — SaaS платформа (как CRM или эквайринг). Нам выгодно, чтобы ты пользовался нашей инфраструктурой и зарабатывал. Платформа берет крошечный процент только с успешных транзакций внутри сети. Если ты не зарабатываешь — мы тоже. Поэтому мы даем тебе лучшие инструменты бесплатно.
               </div>
             </details>
           </div>
           <div class="glass-panel rounded-xl overflow-hidden border-gray-800">
             <details class="group">
               <summary class="flex justify-between items-center cursor-pointer p-6 font-bold text-lg">
-                Нужно ли уметь программировать или настраивать ботов?
-                <span class="transition group-open:rotate-180 text-cyan-400"
-                >▼</span>
+                Я не умею программировать. Справлюсь?
+                <span class="transition group-open:rotate-180 text-cyan-400">▼</span>
               </summary>
               <div class="px-6 pb-6 text-gray-400 text-sm leading-relaxed">
-                ❌ Абсолютно нет. Все интерфейсы созданы для новичков (No-Code).
-                Ты не рисуешь схемы и не тянешь стрелочки. Ты просто отдаешь
-                боту токен, а система сама прошивает в него логику, тексты
-                дожимов и нейросеть.
+                Да! Тебе понадобится ровно 1 минута. Заходишь в @BotFather в Telegram, берешь ключ (token), отправляешь нам. ВСЁ. Сервера, базы данных, настройка нейросетей, интеграция оплат — всё это поднимается в облаке автоматически.
               </div>
             </details>
           </div>
           <div class="glass-panel rounded-xl overflow-hidden border-gray-800">
             <details class="group">
               <summary class="flex justify-between items-center cursor-pointer p-6 font-bold text-lg">
-                Сколько нужно денег на старт?
-                <span class="transition group-open:rotate-180 text-cyan-400"
-                >▼</span>
+                Обязательно ли покупать PRO-статус?
+                <span class="transition group-open:rotate-180 text-cyan-400">▼</span>
               </summary>
               <div class="px-6 pb-6 text-gray-400 text-sm leading-relaxed">
-                Начать можно с <b>$0</b>. Запуск бота и обучение внутри Академии
-                NeuroGen полностью бесплатны. Апгрейд до PRO-статуса (с
-                комиссией 50% и CRM) — делается по желанию и окупается с первой
-                же сделки.
-              </div>
-            </details>
-          </div>
-          <div class="glass-panel rounded-xl overflow-hidden border-gray-800">
-            <details class="group">
-              <summary class="flex justify-between items-center cursor-pointer p-6 font-bold text-lg">
-                Что если у меня нет своей аудитории?
-                <span class="transition group-open:rotate-180 text-cyan-400"
-                >▼</span>
-              </summary>
-              <div class="px-6 pb-6 text-gray-400 text-sm leading-relaxed">
-                Используй стратегию O2O «Троянский конь». Распечатай QR-код,
-                созданный в 1 клик твоим ботом, и поставь его в любую кофейню.
-                Люди сканируют код, а бот превращает их в твою аудиторию.
-              </div>
-            </details>
-          </div>
-          <div class="glass-panel rounded-xl overflow-hidden border-gray-800">
-            <details class="group">
-              <summary class="flex justify-between items-center cursor-pointer p-6 font-bold text-lg">
-                Как выводятся деньги?
-                <span class="transition group-open:rotate-180 text-cyan-400"
-                >▼</span>
-              </summary>
-              <div class="px-6 pb-6 text-gray-400 text-sm leading-relaxed">
-                Мгновенно на твой личный крипто-кошелек (в USDT, BTC, ETH, TON).
-                Вывод автоматизирован смарт-контрактами платформы. Никаких
-                ручных проверок и задержек бухгалтерией.
+                Нет. Ты можешь оставаться на тарифе FREE сколько угодно. У тебя будет рабочий бот и ты будешь получать 25% комиссии. Но как только пойдет первый трафик, ты сам поймешь, что терять половину прибыли (50% на PRO) и глубину сети просто невыгодно.
               </div>
             </details>
           </div>
         </div>
       </section>
 
+      <!-- CTA ФИНАЛ -->
       <section class="py-20 text-center relative">
-        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl h-64 bg-gradient-to-r from-cyan-500/20 to-purple-500/20 blur-3xl -z-10 rounded-full">
-        </div>
-
-        <div class="glass-panel p-8 md:p-12 rounded-3xl max-w-4xl mx-auto border-t border-white/10 shadow-2xl">
+        <div class="glass-panel p-8 md:p-12 rounded-3xl max-w-3xl mx-auto border-t border-cyan-500/20 shadow-2xl">
           <h2 class="text-3xl md:text-5xl font-black mb-6 uppercase">
             Твой ход. <span class="text-cyan-400">Решай.</span>
           </h2>
-
+          
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10 text-left">
             <div class="p-6 rounded-2xl bg-black/40 border border-gray-800 hover:border-red-500/50 transition-colors">
               <div class="text-red-400 font-bold mb-3 text-lg flex items-center gap-2">
@@ -477,478 +334,343 @@ eleventyExcludeFromCollections: true
             </div>
           </div>
 
-          <div
-            class="js-open-modal cursor-pointer relative inline-flex group mb-6 w-full md:w-auto"
-            role="button"
-            tabindex="0"
-          >
-            <div class="absolute transition-all duration-1000 opacity-70 -inset-px bg-gradient-to-r from-[#44BCFF] via-[#A855F7] to-[#06B6D4] rounded-xl blur-lg group-hover:opacity-100 group-hover:-inset-1 group-hover:duration-200">
-            </div>
+          <div class="js-open-modal cursor-pointer relative inline-flex group w-full md:w-auto" role="button" tabindex="0">
+            <div class="absolute transition-all duration-1000 opacity-70 -inset-px bg-gradient-to-r from-cyan-400 via-purple-500 to-blue-500 rounded-xl blur-lg group-hover:opacity-100 group-hover:-inset-1 group-hover:duration-200"></div>
             <div class="relative w-full md:w-auto inline-flex items-center justify-center px-10 py-5 text-xl font-bold text-white transition-all duration-200 bg-gray-900 rounded-xl gap-3">
-              <span>🚀 АКТИВИРОВАТЬ НЕЙРОСЕТЬ</span>
+              <span>⚡ НАЧАТЬ НАСТРОЙКУ БЕСПЛАТНО</span>
             </div>
           </div>
-
-          <p class="text-sm text-gray-500 italic mt-4">
-            Создание бота абсолютно бесплатно. Ты ничем не рискуешь.
-          </p>
         </div>
       </section>
+
     </main>
 
-    <!-- МОДАЛЬНОЕ ОКНО: Email + Выбор (Web / Telegram) -->
-    <div
-      id="leadModal"
-      class="hidden fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/80 backdrop-blur-sm transition-opacity duration-300 opacity-0"
-    >
-      <div
-        id="modalContent"
-        class="modal-enter w-full max-w-md bg-[#0a0a0a] border border-white/10 rounded-3xl p-6 relative shadow-2xl"
-      >
-        <button
-          id="closeModal"
-          class="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors"
-        >
-          <svg
-            class="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            >
-            </path>
-          </svg>
+    <!-- МОДАЛЬНОЕ ОКНО: Email + Выбор Платформы -->
+    <!-- (Логика и HTML модалки остались без изменений из исходного файла пользователя) -->
+    <div id="leadModal" class="hidden fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/80 backdrop-blur-sm transition-opacity duration-300 opacity-0">
+      <div id="modalContent" class="modal-enter w-full max-w-md bg-[#0a0a0a] border border-white/10 rounded-3xl p-6 relative shadow-2xl">
+        <button id="closeModal" class="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
 
         <!-- ШАГ 1: Сбор Email -->
         <div id="stepEmail" class="block">
           <div class="text-center mb-6">
-            <div class="w-16 h-16 bg-gradient-to-br from-cyan-500 to-purple-600 rounded-full flex items-center justify-center text-2xl mx-auto mb-4 shadow-lg shadow-purple-500/20">
-              📧
-            </div>
-            <h3 class="text-2xl font-bold text-white mb-2">
-              Куда отправить доступы?
-            </h3>
-            <p class="text-sm text-gray-400">
-              Мы пришлем резервную ссылку на твою систему и обучающие материалы.
-            </p>
+            <div class="w-16 h-16 bg-gradient-to-br from-cyan-500 to-purple-600 rounded-full flex items-center justify-center text-2xl mx-auto mb-4 shadow-lg shadow-purple-500/20">📧</div>
+            <h3 class="text-2xl font-bold text-white mb-2">Куда отправить доступы?</h3>
+            <p class="text-sm text-gray-400">Мы пришлем резервную ссылку на твою систему и обучающие материалы.</p>
           </div>
 
           <form id="emailForm" class="space-y-4">
             <div>
-              <input
-                type="email"
-                id="userEmail"
-                required
-                placeholder="твой@email.com"
-                class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all text-center text-lg"
-              >
+              <input type="email" id="userEmail" required placeholder="твой@email.com" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all text-center text-lg">
             </div>
-            <button
-              type="submit"
-              id="submitEmailBtn"
-              class="w-full bg-gradient-to-r from-cyan-500 to-purple-500 text-white font-bold py-3.5 rounded-xl hover:opacity-90 transition-opacity flex justify-center items-center gap-2"
-            >
+            <button type="submit" id="submitEmailBtn" class="w-full bg-gradient-to-r from-cyan-500 to-purple-500 text-white font-bold py-3.5 rounded-xl hover:opacity-90 transition-opacity flex justify-center items-center gap-2">
               ПРОДОЛЖИТЬ
             </button>
-            <p id="emailError" class="text-red-400 text-xs text-center hidden">
-              Пожалуйста, введи корректный email
-            </p>
+            <p id="emailError" class="text-red-400 text-xs text-center hidden">Пожалуйста, введи корректный email</p>
           </form>
-          <p class="text-[10px] text-gray-500 text-center mt-4">
-            Нажимая кнопку, ты соглашаешься с политикой конфиденциальности.
-          </p>
+          <p class="text-[10px] text-gray-500 text-center mt-4">Нажимая кнопку, ты соглашаешься с политикой конфиденциальности.</p>
         </div>
 
         <!-- ШАГ 2: Выбор платформы -->
         <div id="stepChoice" class="hidden">
           <div class="text-center mb-6">
-            <div class="w-16 h-16 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center text-2xl mx-auto mb-4 shadow-lg shadow-blue-500/20">
-              ✅
-            </div>
+            <div class="w-16 h-16 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center text-2xl mx-auto mb-4 shadow-lg shadow-blue-500/20">✅</div>
             <h3 class="text-2xl font-bold text-white mb-2">Отлично!</h3>
-            <p class="text-sm text-gray-400">
-              Где тебе удобнее пройти настройку?
-            </p>
+            <p class="text-sm text-gray-400">Где тебе удобнее пройти настройку?</p>
           </div>
 
           <div class="space-y-3">
-            <button
-              id="btnTelegram"
-              class="w-full relative group overflow-hidden bg-[#2AABEE]/10 border border-[#2AABEE]/30 hover:border-[#2AABEE] rounded-xl p-4 text-left transition-all flex items-center gap-4"
-            >
+            <button id="btnTelegram" class="w-full relative group overflow-hidden bg-[#2AABEE]/10 border border-[#2AABEE]/30 hover:border-[#2AABEE] rounded-xl p-4 text-left transition-all flex items-center gap-4">
               <div class="text-3xl">✈️</div>
               <div>
-                <div class="font-bold text-white group-hover:text-[#2AABEE] transition-colors">
-                  Через Telegram-бота
-                </div>
-                <div class="text-xs text-gray-400">
-                  Быстро, удобно, всё в мессенджере
-                </div>
+                <div class="font-bold text-white group-hover:text-[#2AABEE] transition-colors">Через Telegram-бота</div>
+                <div class="text-xs text-gray-400">Быстро, удобно, всё в мессенджере</div>
               </div>
             </button>
 
-            <button
-              id="btnVK"
-              class="w-full relative group overflow-hidden bg-[#0077FF]/10 border border-[#0077FF]/30 hover:border-[#0077FF] rounded-xl p-4 text-left transition-all flex items-center gap-4"
-            >
+            <button id="btnVK" class="w-full relative group overflow-hidden bg-[#0077FF]/10 border border-[#0077FF]/30 hover:border-[#0077FF] rounded-xl p-4 text-left transition-all flex items-center gap-4">
               <div class="text-3xl">💬</div>
               <div>
-                <div class="font-bold text-white group-hover:text-[#0077FF] transition-colors">
-                  Через ВКонтакте
-                </div>
-                <div class="text-xs text-gray-400">
-                  Не заблокирован, аудитория 80M+ в РФ
-                </div>
+                <div class="font-bold text-white group-hover:text-[#0077FF] transition-colors">Через ВКонтакте</div>
+                <div class="text-xs text-gray-400">Не заблокирован, аудитория 80M+ в РФ</div>
               </div>
             </button>
 
-            <button
-              id="btnWeb"
-              class="w-full relative group overflow-hidden bg-white/5 border border-white/10 hover:border-cyan-500/50 rounded-xl p-4 text-left transition-all flex items-center gap-4"
-            >
+            <button id="btnWeb" class="w-full relative group overflow-hidden bg-white/5 border border-white/10 hover:border-cyan-500/50 rounded-xl p-4 text-left transition-all flex items-center gap-4">
               <div class="text-3xl">🌐</div>
               <div>
-                <div class="font-bold text-white group-hover:text-cyan-400 transition-colors">
-                  Через Web-сайт
-                </div>
-                <div class="text-xs text-gray-400">
-                  Работает в любом браузере, без VPN
-                </div>
+                <div class="font-bold text-white group-hover:text-cyan-400 transition-colors">Через Web-сайт</div>
+                <div class="text-xs text-gray-400">Работает в любом браузере, без VPN</div>
               </div>
             </button>
 
-            <button
-              id="btnEmail"
-              class="w-full relative group overflow-hidden bg-white/5 border border-white/10 hover:border-green-500/50 rounded-xl p-4 text-left transition-all flex items-center gap-4"
-            >
+            <button id="btnEmail" class="w-full relative group overflow-hidden bg-white/5 border border-white/10 hover:border-green-500/50 rounded-xl p-4 text-left transition-all flex items-center gap-4">
               <div class="text-3xl">📧</div>
               <div>
-                <div class="font-bold text-white group-hover:text-green-400 transition-colors">
-                  Email-рассылка
-                </div>
-                <div class="text-xs text-gray-400">
-                  Пошаговая настройка через email
-                </div>
+                <div class="font-bold text-white group-hover:text-green-400 transition-colors">Email-рассылка</div>
+                <div class="text-xs text-gray-400">Пошаговая настройка через email</div>
               </div>
             </button>
           </div>
         </div>
 
-        <!-- ШАГ 3: Email отправлен — проверь почту -->
+        <!-- ШАГ 3: Email отправлен -->
         <div id="email-submitted" class="hidden">
           <div class="text-center mb-6">
-            <div class="w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center text-2xl mx-auto mb-4 shadow-lg shadow-green-500/20">
-              ✉️
-            </div>
+            <div class="w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center text-2xl mx-auto mb-4 shadow-lg shadow-green-500/20">✉️</div>
             <h3 class="text-2xl font-bold text-white mb-2">Проверь свою почту!</h3>
-            <p class="text-sm text-gray-400 mb-2">
-              Мы отправили ссылку для подтверждения на:
-            </p>
+            <p class="text-sm text-gray-400 mb-2">Мы отправили ссылку для подтверждения на:</p>
             <p id="email-submitted-msg" class="text-lg font-bold text-green-400 mb-4"></p>
-            <p class="text-xs text-gray-500">
-              Перейди по ссылке в письме, чтобы подтвердить email и продолжить настройку.
-            </p>
+            <p class="text-xs text-gray-500">Перейди по ссылке в письме, чтобы подтвердить email и продолжить настройку.</p>
           </div>
         </div>
 
-        <!-- ШАГ 4: С возвращением! Я вспомнил тебя -->
+        <!-- ШАГ 4: С возвращением! -->
         <div id="stepRemembered" class="hidden">
           <div class="text-center mb-6">
-            <div class="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 shadow-lg shadow-purple-500/20 animate-bounce">
-              👋
-            </div>
+            <div class="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 shadow-lg shadow-purple-500/20 animate-bounce">👋</div>
             <h3 class="text-2xl font-bold text-white mb-2">С возвращением!</h3>
-            <p class="text-sm text-gray-400 mb-2">
-              Я вспомнил тебя
-            </p>
+            <p class="text-sm text-gray-400 mb-2">Я вспомнил тебя</p>
             <p id="remembered-email-msg" class="text-lg font-semibold text-purple-400 mb-6"></p>
-            <button
-              id="btnProceedToChannels"
-              class="w-full bg-gradient-to-r from-cyan-500 to-purple-500 text-white font-bold py-3.5 rounded-xl hover:opacity-90 transition-opacity flex justify-center items-center gap-2"
-            >
+            <button id="btnProceedToChannels" class="w-full bg-gradient-to-r from-cyan-500 to-purple-500 text-white font-bold py-3.5 rounded-xl hover:opacity-90 transition-opacity flex justify-center items-center gap-2">
               Выбрать канал для настройки →
             </button>
           </div>
         </div>
+
       </div>
     </div>
 
-    <footer class="w-full max-w-5xl mx-auto py-8 text-center text-gray-600 text-xs border-t border-gray-800/50">
-      <div class="mb-4">
-        SETHUBBLE © 2026 | Платформа партнерских программ и SaaS-экосистема
-        нового поколения
-      </div>
+    <footer class="w-full max-w-5xl mx-auto py-8 text-center text-gray-600 text-xs border-t border-gray-800/50 mt-10">
+      <div class="mb-4">NEUROGEN © 2026 | Платформа партнерских программ и SaaS-экосистема нового поколения</div>
       <div class="flex justify-center gap-6">
-        <a
-          href="https://t.me/sethubble_support"
-          class="hover:text-cyan-400 transition-colors"
-        >Поддержка (Support)</a>
-        <a href="#" class="hover:text-cyan-400 transition-colors"
-        >Публичная оферта</a>
+        <a href="https://t.me/sethubble_support" class="hover:text-cyan-400 transition-colors">Поддержка (Support)</a>
+        <a href="#" class="hover:text-cyan-400 transition-colors">Публичная оферта</a>
       </div>
     </footer>
 
+    <!-- СКРИПТЫ (Без изменений) -->
     <script>
-    document.addEventListener("DOMContentLoaded", () => {
-  // === НАСТРОЙКИ ===
-  const DEFAULT_BOT = "sethubble_biz_bot";
-  const DEFAULT_PARTNER_ID = "p_qdr";
+      document.addEventListener("DOMContentLoaded", () => {
+        const DEFAULT_BOT = "sethubble_biz_bot";
+        const DEFAULT_PARTNER_ID = "p_qdr";
+        
+        // ⚠️ ЗАМЕНИ на реальный URL твоего API Gateway из Яндекса! ⚠️
+        const API_URL = "https://d5dsbah1d4ju0glmp9d0.3zvepvee.apigw.yandexcloud.net/?action=web-chat";
+        const WEB_CHAT_URL = "/ai/";
+        const VK_COMMUNITY_URL = "https://vk.me/club237421168";
 
-  // ⚠️ ЗАМЕНИ на реальный URL твоего API Gateway из Яндекса! ⚠️
-  const API_URL =
-    "https://d5dsbah1d4ju0glmp9d0.3zvepvee.apigw.yandexcloud.net/?action=web-chat";
-  const WEB_CHAT_URL = "/ai/";
-  // Прямая ссылка на диалог VK для корректной передачи ref
-  const VK_COMMUNITY_URL = "https://vk.me/club237421168";
+        let partnerId = null;
+        let refBot = null;
 
-  // === ПЕРЕМЕННЫЕ ===
-  let partnerId = null;
-  let refBot = null;
-
-  // === СТАБИЛЬНЫЙ SESSION ID ДЛЯ WEB-КАНАЛА ===
-  let currentSessionId = localStorage.getItem("neurogen_web_session");
-  if (!currentSessionId) {
-    currentSessionId = `web_${
-      Math.random().toString(36).substring(2, 15)
-    }_${Date.now()}`;
-    localStorage.setItem("neurogen_web_session", currentSessionId);
-  }
-
-  // === ИНИЦИАЛИЗАЦИЯ РЕФЕРАЛА (МУЛЬТИКАНАЛ v5.0) ===
-  const urlParams = new URLSearchParams(window.location.search);
-  let encodedId = urlParams.get("page");
-
-  const fromHex = (hex) => {
-    try {
-      if (!/^[0-9a-fA-F]+$/.test(hex)) return null;
-      if (hex.length % 2 !== 0) return null;
-      let str = "";
-      for (let i = 0; i < hex.length; i += 2) {
-        str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
-      }
-      return str;
-    } catch (e) {
-      return null;
-    }
-  };
-
-  if (encodedId) {
-    const decoded = fromHex(encodedId);
-    partnerId = (decoded && decoded.length > 1)
-      ? decoded.trim()
-      : encodedId.trim();
-    if (partnerId) localStorage.setItem("neurogen_partner_id", partnerId);
-  }
-
-  if (!partnerId) {
-    partnerId = localStorage.getItem("neurogen_partner_id")
-      || DEFAULT_PARTNER_ID;
-  }
-
-  const storedBot = localStorage.getItem("neurogen_partner_bot");
-  refBot = (storedBot && storedBot !== "sethubble_bot")
-    ? storedBot
-    : DEFAULT_BOT;
-
-  const badge = document.getElementById("partner-badge");
-  const nameEl = document.getElementById("partner-name");
-  if (badge && nameEl && partnerId !== DEFAULT_PARTNER_ID) {
-    nameEl.textContent = partnerId;
-    badge.classList.remove("hidden");
-  }
-
-  // === ПРОВЕРКА URL И localStorage: восстановление состояния ===
-  const urlStep = urlParams.get("step");
-  const storedEmail = localStorage.getItem("neurogen_email");
-  const emailVerified = localStorage.getItem("neurogen_email_verified") === "true";
-  const emailSubmitted = localStorage.getItem("neurogen_email_submitted") === "true";
-
-  // === ЛОГИКА МОДАЛЬНОГО ОКНА ===
-  const modal = document.getElementById("leadModal");
-  const modalContent = document.getElementById("modalContent");
-  const btnOpenList = document.querySelectorAll(".js-open-modal");
-  const btnClose = document.getElementById("closeModal");
-
-  const stepEmail = document.getElementById("stepEmail");
-  const stepChoice = document.getElementById("stepChoice");
-  const stepRemembered = document.getElementById("stepRemembered");
-  const emailForm = document.getElementById("emailForm");
-  const emailInput = document.getElementById("userEmail");
-  const emailError = document.getElementById("emailError");
-  const submitEmailBtn = document.getElementById("submitEmailBtn");
-
-  const btnWeb = document.getElementById("btnWeb");
-  const btnTelegram = document.getElementById("btnTelegram");
-  const btnVK = document.getElementById("btnVK");
-  const btnEmailEl = document.getElementById("btnEmail");
-
-  function showStepChoice() {
-    stepEmail.classList.add("hidden");
-    stepChoice.classList.remove("hidden");
-    stepRemembered.classList.add("hidden");
-    document.getElementById("email-submitted").classList.add("hidden");
-    // Скрываем Email-кнопку если email уже верифицирован
-    if (emailVerified && btnEmailEl) {
-      btnEmailEl.classList.add("hidden");
-    }
-  }
-
-  function openModal() {
-    modal.classList.remove("hidden");
-    setTimeout(() => {
-      modal.classList.remove("opacity-0");
-      modalContent.classList.add("modal-enter-active");
-    }, 10);
-    emailInput.focus();
-  }
-
-  function closeModal() {
-    modal.classList.add("opacity-0");
-    modalContent.classList.remove("modal-enter-active");
-    setTimeout(() => {
-      modal.classList.add("hidden");
-    }, 300);
-  }
-
-  btnOpenList.forEach(btn => btn.addEventListener("click", openModal));
-  btnClose.addEventListener("click", closeModal);
-  modal.addEventListener("click", (e) => {
-    if (e.target === modal) closeModal();
-  });
-
-  // === АВТОМАТИЧЕСКОЕ ОТКРЫТИЕ МОДАЛКИ ПРИ ВОССТАНОВЛЕНИИ СОСТОЯНИЯ ===
-  if (emailVerified && storedEmail && urlStep === "channels") {
-    // Верифицированный email + параметр step=channels → сразу окно выбора каналов
-    openModal();
-    showStepChoice();
-    const rememberedEmailEl = document.getElementById("remembered-email-msg");
-    if (rememberedEmailEl) rememberedEmailEl.textContent = storedEmail;
-  } else if (emailVerified && storedEmail) {
-    // Верифицированный email → экран "Я вспомнил тебя"
-    openModal();
-    stepEmail.classList.add("hidden");
-    stepChoice.classList.add("hidden");
-    document.getElementById("email-submitted").classList.add("hidden");
-    stepRemembered.classList.remove("hidden");
-    const rememberedEmailEl = document.getElementById("remembered-email-msg");
-    if (rememberedEmailEl) rememberedEmailEl.textContent = storedEmail;
-  } else if (urlStep === "channels") {
-    // step=channels но email не верифицирован → открываем модалку сchoice
-    openModal();
-    showStepChoice();
-  }
-
-  // === ОБРАБОТКА EMAIL ===
-  emailForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const email = emailInput.value.trim();
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!emailRegex.test(email)) {
-      emailError.classList.remove("hidden");
-      return;
-    }
-
-    emailError.classList.add("hidden");
-    submitEmailBtn.innerHTML =
-      "<span class=\"animate-pulse\">ОТПРАВКА...</span>";
-    submitEmailBtn.disabled = true;
-
-    try {
-      const res = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          isEmail: true,
-          email: email,
-          partner_id: partnerId,
-          sessionId: currentSessionId,
-        }),
-      });
-      const data = await res.json();
-      localStorage.setItem("neurogen_email", email);
-      localStorage.setItem("neurogen_email_submitted", "true");
-
-      stepEmail.classList.add("hidden");
-      stepChoice.classList.add("hidden");
-      const emailSubmittedEl = document.getElementById("email-submitted");
-      if (emailSubmittedEl) {
-        emailSubmittedEl.classList.remove("hidden");
-        const emailMsgEl = document.getElementById("email-submitted-msg");
-        if (emailMsgEl) emailMsgEl.textContent = email;
-        // Если email уже зарегистрирован — меняем текст
-        if (data.emailAlreadyRegistered) {
-          const h3 = emailSubmittedEl.querySelector("h3");
-          const pBelow = emailSubmittedEl.querySelector("p.text-xs");
-          if (h3) h3.textContent = "Этот email уже зарегистрирован";
-          if (pBelow) pBelow.textContent = "На вашу почту отправлена ссылка для подтверждения доступа. Это для безопасности вашего аккаунта.";
+        let currentSessionId = localStorage.getItem("neurogen_web_session");
+        if (!currentSessionId) {
+          currentSessionId = `web_${Math.random().toString(36).substring(2, 15)}_${Date.now()}`;
+          localStorage.setItem("neurogen_web_session", currentSessionId);
         }
-      }
-    } catch (err) {
-      console.log("API error, but proceeding local storage save.");
-      localStorage.setItem("neurogen_email", email);
-      localStorage.setItem("neurogen_email_submitted", "true");
-      stepEmail.classList.add("hidden");
-      stepChoice.classList.add("hidden");
-      const emailSubmittedEl = document.getElementById("email-submitted");
-      if (emailSubmittedEl) emailSubmittedEl.classList.remove("hidden");
-    }
-  });
 
-  // === КНОПКА "ВЫБРАТЬ КАНАЛ" ИЗ ШАГА "Я ВСПОМНИЛ" ===
-  document.getElementById("btnProceedToChannels")?.addEventListener("click", () => {
-    stepRemembered.classList.add("hidden");
-    showStepChoice();
-  });
+        const urlParams = new URLSearchParams(window.location.search);
+        let encodedId = urlParams.get("page");
 
-  // === МАРШРУТИЗАЦИЯ ПО КАНАЛАМ (v6.0) ===
+        const fromHex = (hex) => {
+          try {
+            if (!/^[0-9a-fA-F]+$/.test(hex)) return null;
+            if (hex.length % 2 !== 0) return null;
+            let str = "";
+            for (let i = 0; i < hex.length; i += 2) {
+              str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
+            }
+            return str;
+          } catch (e) {
+            return null;
+          }
+        };
 
-  function encodeEmailForUrl(email) {
-    if (!email) return "";
-    return btoa(email).replace(/\+/g, "-").replace(/\//g, "_").replace(
-      /=/g,
-      "",
-    );
-  }
+        if (encodedId) {
+          const decoded = fromHex(encodedId);
+          partnerId = (decoded && decoded.length > 1) ? decoded.trim() : encodedId.trim();
+          if (partnerId) localStorage.setItem("neurogen_partner_id", partnerId);
+        }
 
-  btnTelegram.addEventListener("click", () => {
-    const email = emailInput.value.trim() || storedEmail;
-    const startPayload = email
-      ? `${partnerId}-${encodeEmailForUrl(email)}`
-      : partnerId;
-    window.location.href = `https://t.me/${refBot}?start=${startPayload}`;
-  });
+        if (!partnerId) {
+          partnerId = localStorage.getItem("neurogen_partner_id") || DEFAULT_PARTNER_ID;
+        }
 
-  btnVK.addEventListener("click", () => {
-    const email = emailInput.value.trim() || storedEmail;
-    const startPayload = email
-      ? `${partnerId}-${encodeEmailForUrl(email)}`
-      : partnerId;
-    window.location.href = `${VK_COMMUNITY_URL}?ref=${startPayload}`;
-  });
+        const storedBot = localStorage.getItem("neurogen_partner_bot");
+        refBot = (storedBot && storedBot !== "sethubble_bot") ? storedBot : DEFAULT_BOT;
 
-  btnWeb.addEventListener("click", () => {
-    window.location.href = `${WEB_CHAT_URL}?ref=${partnerId}`;
-  });
+        const badge = document.getElementById("partner-badge");
+        const nameEl = document.getElementById("partner-name");
+        if (badge && nameEl && partnerId !== DEFAULT_PARTNER_ID) {
+          nameEl.textContent = partnerId;
+          badge.classList.remove("hidden");
+        }
 
-  btnEmailEl.addEventListener("click", () => {
-    const email = emailInput.value.trim();
-    stepChoice.innerHTML = `
-      <div class="text-center">
-        <div class="w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center text-2xl mx-auto mb-4 shadow-lg shadow-green-500/20">📧</div>
-        <h3 class="text-2xl font-bold text-white mb-2">Письмо уже в пути!</h3>
-        <p class="text-sm text-gray-400 mb-4">Мы отправим пошаговую инструкцию на <b>${
-      email || "твой email"
-    }</b>.</p>
-      </div>`;
-  });
-});
+        const urlStep = urlParams.get("step");
+        const storedEmail = localStorage.getItem("neurogen_email");
+        const emailVerified = localStorage.getItem("neurogen_email_verified") === "true";
+
+        const modal = document.getElementById("leadModal");
+        const modalContent = document.getElementById("modalContent");
+        const btnOpenList = document.querySelectorAll(".js-open-modal");
+        const btnClose = document.getElementById("closeModal");
+
+        const stepEmail = document.getElementById("stepEmail");
+        const stepChoice = document.getElementById("stepChoice");
+        const stepRemembered = document.getElementById("stepRemembered");
+        const emailForm = document.getElementById("emailForm");
+        const emailInput = document.getElementById("userEmail");
+        const emailError = document.getElementById("emailError");
+        const submitEmailBtn = document.getElementById("submitEmailBtn");
+
+        const btnWeb = document.getElementById("btnWeb");
+        const btnTelegram = document.getElementById("btnTelegram");
+        const btnVK = document.getElementById("btnVK");
+        const btnEmailEl = document.getElementById("btnEmail");
+
+        function showStepChoice() {
+          stepEmail.classList.add("hidden");
+          stepChoice.classList.remove("hidden");
+          stepRemembered.classList.add("hidden");
+          document.getElementById("email-submitted").classList.add("hidden");
+          if (emailVerified && btnEmailEl) {
+            btnEmailEl.classList.add("hidden");
+          }
+        }
+
+        function openModal() {
+          modal.classList.remove("hidden");
+          setTimeout(() => {
+            modal.classList.remove("opacity-0");
+            modalContent.classList.add("modal-enter-active");
+          }, 10);
+          emailInput.focus();
+        }
+
+        function closeModal() {
+          modal.classList.add("opacity-0");
+          modalContent.classList.remove("modal-enter-active");
+          setTimeout(() => {
+            modal.classList.add("hidden");
+          }, 300);
+        }
+
+        btnOpenList.forEach(btn => btn.addEventListener("click", openModal));
+        btnClose.addEventListener("click", closeModal);
+        modal.addEventListener("click", (e) => {
+          if (e.target === modal) closeModal();
+        });
+
+        if (emailVerified && storedEmail && urlStep === "channels") {
+          openModal();
+          showStepChoice();
+          const rememberedEmailEl = document.getElementById("remembered-email-msg");
+          if (rememberedEmailEl) rememberedEmailEl.textContent = storedEmail;
+        } else if (emailVerified && storedEmail) {
+          openModal();
+          stepEmail.classList.add("hidden");
+          stepChoice.classList.add("hidden");
+          document.getElementById("email-submitted").classList.add("hidden");
+          stepRemembered.classList.remove("hidden");
+          const rememberedEmailEl = document.getElementById("remembered-email-msg");
+          if (rememberedEmailEl) rememberedEmailEl.textContent = storedEmail;
+        } else if (urlStep === "channels") {
+          openModal();
+          showStepChoice();
+        }
+
+        emailForm.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const email = emailInput.value.trim();
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+          if (!emailRegex.test(email)) {
+            emailError.classList.remove("hidden");
+            return;
+          }
+
+          emailError.classList.add("hidden");
+          submitEmailBtn.innerHTML = "<span class=\"animate-pulse\">ОТПРАВКА...</span>";
+          submitEmailBtn.disabled = true;
+
+          try {
+            const res = await fetch(API_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                isEmail: true,
+                email: email,
+                partner_id: partnerId,
+                sessionId: currentSessionId,
+              }),
+            });
+            const data = await res.json();
+            localStorage.setItem("neurogen_email", email);
+            localStorage.setItem("neurogen_email_submitted", "true");
+
+            stepEmail.classList.add("hidden");
+            stepChoice.classList.add("hidden");
+            const emailSubmittedEl = document.getElementById("email-submitted");
+            if (emailSubmittedEl) {
+              emailSubmittedEl.classList.remove("hidden");
+              const emailMsgEl = document.getElementById("email-submitted-msg");
+              if (emailMsgEl) emailMsgEl.textContent = email;
+              if (data.emailAlreadyRegistered) {
+                const h3 = emailSubmittedEl.querySelector("h3");
+                const pBelow = emailSubmittedEl.querySelector("p.text-xs");
+                if (h3) h3.textContent = "Этот email уже зарегистрирован";
+                if (pBelow) pBelow.textContent = "На вашу почту отправлена ссылка для подтверждения доступа. Это для безопасности вашего аккаунта.";
+              }
+            }
+          } catch (err) {
+            console.log("API error, but proceeding local storage save.");
+            localStorage.setItem("neurogen_email", email);
+            localStorage.setItem("neurogen_email_submitted", "true");
+            stepEmail.classList.add("hidden");
+            stepChoice.classList.add("hidden");
+            const emailSubmittedEl = document.getElementById("email-submitted");
+            if (emailSubmittedEl) emailSubmittedEl.classList.remove("hidden");
+          }
+        });
+
+        document.getElementById("btnProceedToChannels")?.addEventListener("click", () => {
+          stepRemembered.classList.add("hidden");
+          showStepChoice();
+        });
+
+        function encodeEmailForUrl(email) {
+          if (!email) return "";
+          return btoa(email).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+        }
+
+        btnTelegram.addEventListener("click", () => {
+          const email = emailInput.value.trim() || storedEmail;
+          const startPayload = email ? `${partnerId}-${encodeEmailForUrl(email)}` : partnerId;
+          window.location.href = `https://t.me/${refBot}?start=${startPayload}`;
+        });
+
+        btnVK.addEventListener("click", () => {
+          const email = emailInput.value.trim() || storedEmail;
+          const startPayload = email ? `${partnerId}-${encodeEmailForUrl(email)}` : partnerId;
+          window.location.href = `${VK_COMMUNITY_URL}?ref=${startPayload}`;
+        });
+
+        btnWeb.addEventListener("click", () => {
+          window.location.href = `${WEB_CHAT_URL}?ref=${partnerId}`;
+        });
+
+        btnEmailEl.addEventListener("click", () => {
+          const email = emailInput.value.trim();
+          stepChoice.innerHTML = `
+            <div class="text-center">
+              <div class="w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center text-2xl mx-auto mb-4 shadow-lg shadow-green-500/20">📧</div>
+              <h3 class="text-2xl font-bold text-white mb-2">Письмо уже в пути!</h3>
+              <p class="text-sm text-gray-400 mb-4">Мы отправим пошаговую инструкцию на <b>${email || "твой email"}</b>.</p>
+            </div>`;
+        });
+      });
     </script>
   </body>
 </html>
