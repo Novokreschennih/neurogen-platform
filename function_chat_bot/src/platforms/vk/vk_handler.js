@@ -1608,6 +1608,13 @@ export async function handleVkWebhook(event, context) {
               vkUser.sh_ref_tail = shRefTail;
               vkUser.saved_state = "";
               vkUser.state = "Module_3_Offline";
+
+              // === TRIAL PERIOD: 3 дня бесплатного ИИ для новых партнёров ===
+              if (!vkUser.ai_active_until || vkUser.ai_active_until < Date.now()) {
+                vkUser.ai_active_until = Date.now() + (3 * 24 * 60 * 60 * 1000);
+                log.info("[TRIAL PERIOD] Added 3 days AI trial for new partner", { userId: vkUser.vk_id, aiUntil: new Date(vkUser.ai_active_until).toISOString() });
+              }
+
               await ydb.saveUser(vkUser);
 
               await vkCtx.reply(
@@ -1844,6 +1851,16 @@ export async function handleVkWebhook(event, context) {
               vkUser.state = "Module_3_Offline";
               await ydb.saveUser(vkUser);
               return await renderStep(vkCtx, "Module_3_Offline", vkToken);
+            }
+
+            // === ПРОВЕРКА ИИ-ПОДПИСКИ (SaaS) ===
+            const isAiActive = await ydb.isOwnerAiActive(vkUser, null, String(vkGroupId));
+            if (!isAiActive) {
+              return await vkCtx.reply(
+                "🤖 <b>ИИ-консультант в режиме ожидания</b>\n\n" +
+                  "Владелец системы ещё не активировал нейромозг для этого канала.\n\n" +
+                  "Воспользуйтесь меню навигации 👇"
+              );
             }
 
             // === ДЕФОЛТ: Если состояние не распознано — показать START ===

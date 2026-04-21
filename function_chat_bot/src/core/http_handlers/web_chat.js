@@ -393,6 +393,13 @@ export async function handleWebChat(event, context) {
         // Чистим временные данные, не трогая старые
         delete u.session.verification_question;
         delete u.session.verification_answers;
+
+        // === TRIAL PERIOD: 3 дня бесплатного ИИ для новых партнёров ===
+        if (!u.ai_active_until || u.ai_active_until < Date.now()) {
+          u.ai_active_until = Date.now() + (3 * 24 * 60 * 60 * 1000);
+          log.info("[TRIAL PERIOD] Added 3 days AI trial for new partner", { userId: u.id, aiUntil: new Date(u.ai_active_until).toISOString() });
+        }
+
         await ydb.saveUser(u);
         return {
           statusCode: 200,

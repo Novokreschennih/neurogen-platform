@@ -829,6 +829,12 @@ export function registerTelegramActions(bot, ctx) {
       u.sh_ref_tail = shRefTail;
       u.saved_state = "";
 
+      // === TRIAL PERIOD: 3 дня бесплатного ИИ для новых партнёров ===
+      if (!u.ai_active_until || u.ai_active_until < Date.now()) {
+        u.ai_active_until = Date.now() + (3 * 24 * 60 * 60 * 1000);
+        log.info("[TRIAL PERIOD] Added 3 days AI trial for new partner", { userId: u.user_id, aiUntil: new Date(u.ai_active_until).toISOString() });
+      }
+
       try {
         const res = await fetch(
           `https://api.telegram.org/bot${botToken}/getMe`,
