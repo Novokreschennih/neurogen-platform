@@ -85,6 +85,33 @@
       </div>
     </div>
 
+    <!-- Статистика по каналам -->
+    <div class="px-4 -mt-1 mb-2">
+      <div class="bg-white dark:bg-gray-800 rounded-xl p-3 shadow-sm">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">По каналам</span>
+        </div>
+        <div class="grid grid-cols-4 gap-2">
+          <div class="text-center p-1 rounded bg-blue-50 dark:bg-blue-900/20">
+            <div class="text-lg font-bold text-blue-600">89</div>
+            <div class="text-[9px] text-gray-500">✈️ TG</div>
+          </div>
+          <div class="text-center p-1 rounded bg-indigo-50 dark:bg-indigo-900/20">
+            <div class="text-lg font-bold text-indigo-600">23</div>
+            <div class="text-[9px] text-gray-500">💬 VK</div>
+          </div>
+          <div class="text-center p-1 rounded bg-cyan-50 dark:bg-cyan-900/20">
+            <div class="text-lg font-bold text-cyan-600">8</div>
+            <div class="text-[9px] text-gray-500">🌐 Web</div>
+          </div>
+          <div class="text-center p-1 rounded bg-green-50 dark:bg-green-900/20">
+            <div class="text-lg font-bold text-green-600">4</div>
+            <div class="text-[9px] text-gray-500">📧 Email</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="px-4 mb-4">
       <div
         class="bg-white dark:bg-gray-800 rounded-xl p-3 shadow-sm overflow-x-auto cursor-pointer"
@@ -157,6 +184,52 @@
       </div>
     </div>
 
+    <!-- ФИЛЬТР ПО КАНАЛАМ -->
+    <div
+      class="px-4 mb-2 sticky top-36 z-10 bg-gray-50/90 dark:bg-gray-900/90 backdrop-blur-sm py-2"
+    >
+      <div class="flex items-center gap-1 mb-1">
+        <span class="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Канал:</span>
+      </div>
+      <div class="flex gap-2 overflow-x-auto no-scrollbar pb-2" id="channelFilters">
+        <button
+          onclick="filterByChannel('all')"
+          class="channel-filter-btn active px-3 py-1 rounded-lg text-[10px] font-bold transition-all bg-gray-800 text-white dark:bg-white dark:text-black shadow-sm whitespace-nowrap"
+          data-channel="all"
+        >
+          🌐 Все
+        </button>
+        <button
+          onclick="filterByChannel('telegram')"
+          class="channel-filter-btn px-3 py-1 rounded-lg text-[10px] font-bold transition-all bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:border dark:border-gray-700 hover:opacity-80 whitespace-nowrap"
+          data-channel="telegram"
+        >
+          ✈️ Telegram
+        </button>
+        <button
+          onclick="filterByChannel('vk')"
+          class="channel-filter-btn px-3 py-1 rounded-lg text-[10px] font-bold transition-all bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:border dark:border-gray-700 hover:opacity-80 whitespace-nowrap"
+          data-channel="vk"
+        >
+          💬 VK
+        </button>
+        <button
+          onclick="filterByChannel('web')"
+          class="channel-filter-btn px-3 py-1 rounded-lg text-[10px] font-bold transition-all bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:border dark:border-gray-700 hover:opacity-80 whitespace-nowrap"
+          data-channel="web"
+        >
+          🌐 Web
+        </button>
+        <button
+          onclick="filterByChannel('email')"
+          class="channel-filter-btn px-3 py-1 rounded-lg text-[10px] font-bold transition-all bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:border dark:border-gray-700 hover:opacity-80 whitespace-nowrap"
+          data-channel="email"
+        >
+          📧 Email
+        </button>
+      </div>
+    </div>
+
     <div class="px-4">
       <div class="mb-3 relative">
         <div
@@ -217,9 +290,12 @@
                 </td>
                 <td class="px-3 py-3">
                   <div class="flex flex-col">
-                    <span class="text-sm font-medium dark:text-gray-200"
-                      >Александр (Бизнес)</span
-                    >
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-sm font-medium dark:text-gray-200"
+                        >Александр (Бизнес)</span
+                      >
+                      <span class="text-[9px] px-1 py-0.5 rounded font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">✈️ TG</span>
+                    </div>
                     <span class="text-[10px] text-gray-400">ID: 849201</span>
                   </div>
                 </td>
@@ -246,9 +322,12 @@
                 </td>
                 <td class="px-3 py-3">
                   <div class="flex flex-col">
-                    <span class="text-sm font-medium dark:text-gray-200"
-                      >Елена Смирнова</span
-                    >
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-sm font-medium dark:text-gray-200"
+                        >Елена Смирнова</span
+                      >
+                      <span class="text-[9px] px-1 py-0.5 rounded font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">💬 VK</span>
+                    </div>
                     <span class="text-[10px] text-gray-400">ID: 938211</span>
                   </div>
                 </td>
@@ -384,6 +463,33 @@
         } else {
           alert(message);
         }
+      }
+
+      // === МУЛЬТИКАНАЛЬНАЯ ФИЛЬТРАЦИЯ ===
+      let currentChannelFilter = 'all';
+
+      function filterByChannel(channel) {
+        currentChannelFilter = channel;
+
+        // Обновляем активные кнопки
+        document.querySelectorAll('.channel-filter-btn').forEach(btn => {
+          if (btn.dataset.channel === channel) {
+            btn.classList.add('active', 'bg-gray-800', 'text-white', 'dark:bg-white', 'dark:text-black', 'shadow-sm');
+            btn.classList.remove('bg-gray-200', 'text-gray-600', 'dark:bg-gray-800', 'dark:text-gray-300');
+          } else {
+            btn.classList.remove('active', 'bg-gray-800', 'text-white', 'dark:bg-white', 'dark:text-black', 'shadow-sm');
+            btn.classList.add('bg-gray-200', 'text-gray-600', 'dark:bg-gray-800', 'dark:text-gray-300');
+          }
+        });
+
+        // В демо-режиме показываем уведомление
+        if (channel !== 'all') {
+          const channelNames = { telegram: 'Telegram', vk: 'VK', web: 'Web', email: 'Email' };
+          showProAlert(`Фильтр: ${channelNames[channel] || channel}`);
+        }
+
+        // В рабочей версии здесь был бы fetch к CRM API:
+        // fetchCRMData(1, 50, channel);
       }
     </script>
   </body>

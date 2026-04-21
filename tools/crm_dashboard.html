@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>DEMO CRM | NeuroGen</title>
+    <title>CRM Дашборд | NeuroGen</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -41,51 +41,36 @@
       }
     </style>
   </head>
-  <body class="min-h-screen pb-24 pt-6">
-    <div
-      class="bg-red-500 text-white text-center text-xs font-bold py-1 px-2 fixed top-0 left-0 w-full z-50 animate-pulse shadow-md"
-    >
-      ОЗНАКОМИТЕЛЬНЫЙ ДЕМО-РЕЖИМ
-    </div>
-
-    <header class="bg-white dark:bg-gray-800 shadow-sm p-4 sticky top-6 z-10">
+  <body class="min-h-screen pb-24">
+    <header class="bg-white dark:bg-gray-800 shadow-sm p-4 sticky top-0 z-20">
       <div class="flex items-center justify-between">
         <div>
           <h1 class="text-lg font-bold dark:text-white">📊 CRM NeuroGen</h1>
-          <p class="text-xs text-gray-500" id="adminWelcome">
-            Админ: Гость (Демо)
-          </p>
+          <p class="text-xs text-gray-500" id="adminWelcome">Загрузка...</p>
         </div>
         <div
-          class="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wide"
-        >
-          PRO Feature
-        </div>
+          id="connectionStatus"
+          class="h-2 w-2 rounded-full bg-yellow-400 animate-pulse"
+        ></div>
       </div>
     </header>
 
     <div class="p-4 grid grid-cols-2 gap-3">
-      <div
-        class="stat-card rounded-xl p-4 shadow-md cursor-pointer"
-        onclick="showProAlert('Аналитика лидов')"
-      >
-        <div class="text-3xl font-bold">124</div>
+      <div class="stat-card rounded-xl p-4 shadow-md">
+        <div class="text-3xl font-bold" id="totalLeads">-</div>
         <div class="text-xs opacity-90 uppercase tracking-wider">
           Всего лидов
         </div>
       </div>
-      <div
-        class="stat-card paid rounded-xl p-4 shadow-md cursor-pointer"
-        onclick="showProAlert('Аналитика продаж')"
-      >
-        <div class="text-3xl font-bold">15</div>
+      <div class="stat-card paid rounded-xl p-4 shadow-md">
+        <div class="text-3xl font-bold" id="paidLeads">-</div>
         <div class="text-xs opacity-90 uppercase tracking-wider">
           Продажи (PRO)
         </div>
       </div>
     </div>
 
-    <!-- Статистика по каналам -->
+    <!-- МУЛЬТИКАНАЛЬНАЯ СТАТИСТИКА -->
     <div class="px-4 -mt-1 mb-2">
       <div class="bg-white dark:bg-gray-800 rounded-xl p-3 shadow-sm">
         <div class="flex items-center justify-between mb-2">
@@ -93,19 +78,19 @@
         </div>
         <div class="grid grid-cols-4 gap-2">
           <div class="text-center p-1 rounded bg-blue-50 dark:bg-blue-900/20">
-            <div class="text-lg font-bold text-blue-600">89</div>
+            <div class="text-lg font-bold text-blue-600" id="statTg">0</div>
             <div class="text-[9px] text-gray-500">✈️ TG</div>
           </div>
           <div class="text-center p-1 rounded bg-indigo-50 dark:bg-indigo-900/20">
-            <div class="text-lg font-bold text-indigo-600">23</div>
+            <div class="text-lg font-bold text-indigo-600" id="statVk">0</div>
             <div class="text-[9px] text-gray-500">💬 VK</div>
           </div>
           <div class="text-center p-1 rounded bg-cyan-50 dark:bg-cyan-900/20">
-            <div class="text-lg font-bold text-cyan-600">8</div>
+            <div class="text-lg font-bold text-cyan-600" id="statWeb">0</div>
             <div class="text-[9px] text-gray-500">🌐 Web</div>
           </div>
           <div class="text-center p-1 rounded bg-green-50 dark:bg-green-900/20">
-            <div class="text-lg font-bold text-green-600">4</div>
+            <div class="text-lg font-bold text-green-600" id="statEmail">0</div>
             <div class="text-[9px] text-gray-500">📧 Email</div>
           </div>
         </div>
@@ -113,384 +98,611 @@
     </div>
 
     <div class="px-4 mb-4">
-      <div
-        class="bg-white dark:bg-gray-800 rounded-xl p-3 shadow-sm overflow-x-auto cursor-pointer"
-        onclick="showProAlert('Воронка продаж')"
-      >
+      <div class="bg-white dark:bg-gray-800 rounded-xl p-3 shadow-sm overflow-x-auto">
         <div class="flex gap-4 min-w-max">
           <div class="flex flex-col items-center px-2">
             <span class="text-xs text-gray-400">🚀 Старт</span>
-            <span class="font-bold dark:text-white">45</span>
+            <span class="font-bold dark:text-white" id="stageStart">0</span>
           </div>
           <div class="w-px bg-gray-200 dark:bg-gray-700"></div>
           <div class="flex flex-col items-center px-2">
             <span class="text-xs text-gray-400">🎓 Обуч.</span>
-            <span class="font-bold dark:text-white">40</span>
+            <span class="font-bold dark:text-white" id="stageTraining">0</span>
           </div>
           <div class="w-px bg-gray-200 dark:bg-gray-700"></div>
           <div class="flex flex-col items-center px-2">
             <span class="text-xs text-gray-400">⚡ Оффер</span>
-            <span class="font-bold dark:text-white">24</span>
+            <span class="font-bold dark:text-white" id="stageTripwire">0</span>
           </div>
           <div class="w-px bg-gray-200 dark:bg-gray-700"></div>
           <div class="flex flex-col items-center px-2">
             <span class="text-xs text-gray-400">🎁 Выдача</span>
-            <span class="font-bold text-green-500">15</span>
+            <span class="font-bold text-green-500" id="stageDelivery">0</span>
           </div>
         </div>
       </div>
     </div>
 
-    <div
-      class="px-4 mb-2 sticky top-20 z-10 bg-gray-50/90 dark:bg-gray-900/90 backdrop-blur-sm py-2"
-    >
-      <div class="flex gap-2 overflow-x-auto no-scrollbar pb-2">
-        <button
-          onclick="showProAlert('Сегментация базы')"
-          class="filter-btn active px-4 py-1.5 rounded-full text-xs font-bold transition-all bg-gray-800 text-white dark:bg-white dark:text-black shadow-sm whitespace-nowrap"
-        >
-          ВСЕ
-        </button>
-        <button
-          onclick="showProAlert('Сегментация базы')"
-          class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:border dark:border-gray-700 hover:opacity-80 whitespace-nowrap"
-        >
-          ✅ PRO
-        </button>
-        <button
-          onclick="showProAlert('Сегментация базы')"
-          class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:border dark:border-gray-700 hover:opacity-80 whitespace-nowrap"
-        >
-          🆓 FREE
-        </button>
-        <button
-          onclick="showProAlert('Сегментация базы')"
-          class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:border dark:border-gray-700 hover:opacity-80 whitespace-nowrap"
-        >
-          🚀 СТАРТ
-        </button>
-        <button
-          onclick="showProAlert('Сегментация базы')"
-          class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:border dark:border-gray-700 hover:opacity-80 whitespace-nowrap"
-        >
-          🎓 ОБУЧЕНИЕ
-        </button>
-        <button
-          onclick="showProAlert('Сегментация базы')"
-          class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:border dark:border-gray-700 hover:opacity-80 whitespace-nowrap"
-        >
-          ⌛ ДУМАЮТ
-        </button>
-      </div>
-    </div>
-
     <!-- ФИЛЬТР ПО КАНАЛАМ -->
-    <div
-      class="px-4 mb-2 sticky top-36 z-10 bg-gray-50/90 dark:bg-gray-900/90 backdrop-blur-sm py-2"
-    >
-      <div class="flex items-center gap-1 mb-1">
-        <span class="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Канал:</span>
-      </div>
-      <div class="flex gap-2 overflow-x-auto no-scrollbar pb-2" id="channelFilters">
-        <button
-          onclick="filterByChannel('all')"
-          class="channel-filter-btn active px-3 py-1 rounded-lg text-[10px] font-bold transition-all bg-gray-800 text-white dark:bg-white dark:text-black shadow-sm whitespace-nowrap"
-          data-channel="all"
-        >
-          🌐 Все
+    <div class="px-4 mb-2 sticky top-[72px] z-10 bg-gray-50/90 dark:bg-gray-900/90 backdrop-blur-sm py-2 border-b dark:border-gray-800">
+      <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1" id="channelFilters">
+        <button class="channel-filter-btn active px-3 py-1 rounded-lg text-[10px] font-bold transition-all bg-gray-800 text-white dark:bg-white dark:text-black shadow-sm whitespace-nowrap" data-channel="all">
+          🌐 Все каналы
         </button>
-        <button
-          onclick="filterByChannel('telegram')"
-          class="channel-filter-btn px-3 py-1 rounded-lg text-[10px] font-bold transition-all bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:border dark:border-gray-700 hover:opacity-80 whitespace-nowrap"
-          data-channel="telegram"
-        >
+        <button class="channel-filter-btn px-3 py-1 rounded-lg text-[10px] font-bold transition-all bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:border dark:border-gray-700 hover:opacity-80 whitespace-nowrap" data-channel="telegram">
           ✈️ Telegram
         </button>
-        <button
-          onclick="filterByChannel('vk')"
-          class="channel-filter-btn px-3 py-1 rounded-lg text-[10px] font-bold transition-all bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:border dark:border-gray-700 hover:opacity-80 whitespace-nowrap"
-          data-channel="vk"
-        >
+        <button class="channel-filter-btn px-3 py-1 rounded-lg text-[10px] font-bold transition-all bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:border dark:border-gray-700 hover:opacity-80 whitespace-nowrap" data-channel="vk">
           💬 VK
         </button>
-        <button
-          onclick="filterByChannel('web')"
-          class="channel-filter-btn px-3 py-1 rounded-lg text-[10px] font-bold transition-all bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:border dark:border-gray-700 hover:opacity-80 whitespace-nowrap"
-          data-channel="web"
-        >
+        <button class="channel-filter-btn px-3 py-1 rounded-lg text-[10px] font-bold transition-all bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:border dark:border-gray-700 hover:opacity-80 whitespace-nowrap" data-channel="web">
           🌐 Web
         </button>
-        <button
-          onclick="filterByChannel('email')"
-          class="channel-filter-btn px-3 py-1 rounded-lg text-[10px] font-bold transition-all bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:border dark:border-gray-700 hover:opacity-80 whitespace-nowrap"
-          data-channel="email"
-        >
+        <button class="channel-filter-btn px-3 py-1 rounded-lg text-[10px] font-bold transition-all bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:border dark:border-gray-700 hover:opacity-80 whitespace-nowrap" data-channel="email">
           📧 Email
         </button>
       </div>
     </div>
 
+    <!-- ФИЛЬТР ПО ВОРОНКЕ -->
+    <div class="px-4 mb-2 sticky top-[116px] z-10 bg-gray-50/90 dark:bg-gray-900/90 backdrop-blur-sm py-2">
+      <div class="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+        <button class="filter-btn active px-4 py-1.5 rounded-full text-xs font-bold transition-all bg-gray-800 text-white dark:bg-white dark:text-black shadow-sm whitespace-nowrap" data-filter="all">ВСЕ</button>
+        <button class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:border dark:border-gray-700 hover:opacity-80 whitespace-nowrap" data-filter="PRO">✅ PRO</button>
+        <button class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:border dark:border-gray-700 hover:opacity-80 whitespace-nowrap" data-filter="FREE">🆓 FREE</button>
+        <button class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:border dark:border-gray-700 hover:opacity-80 whitespace-nowrap" data-filter="start">🚀 СТАРТ</button>
+        <button class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:border dark:border-gray-700 hover:opacity-80 whitespace-nowrap" data-filter="training">🎓 ОБУЧЕНИЕ</button>
+        <button class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:border dark:border-gray-700 hover:opacity-80 whitespace-nowrap" data-filter="tripwire">⌛ ДУМАЮТ</button>
+      </div>
+    </div>
+
     <div class="px-4">
+      <!-- ПОЛЕ ЖИВОГО ПОИСКА -->
       <div class="mb-3 relative">
-        <div
-          class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
-        >
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
           <span class="text-gray-400">🔍</span>
         </div>
-        <input
-          type="text"
-          class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-2.5 pl-10 pr-4 text-sm outline-none transition-all shadow-sm dark:text-white"
-          placeholder="Поиск по имени или ID..."
-          onfocus="
-            showProAlert('Поиск по базе');
-            this.blur();
-          "
-        />
+        <input type="text" id="searchInput" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl py-2.5 pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-purple-500 dark:text-white transition-all shadow-sm" placeholder="Поиск по имени или ID..." />
       </div>
 
-      <div
-        class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden mb-6"
-      >
-        <div
-          class="p-3 border-b dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-700/50"
-        >
-          <div
-            class="flex items-center gap-2"
-            onclick="showProAlert('Массовые действия')"
-          >
-            <input
-              type="checkbox"
-              disabled
-              class="w-4 h-4 rounded border-gray-300"
-            />
-            <span
-              class="text-xs font-medium text-gray-500 uppercase cursor-pointer"
-              >Выбрать всех</span
-            >
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden min-h-[300px]">
+        <div class="p-3 border-b dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-700/50">
+          <div class="flex items-center gap-2">
+            <input type="checkbox" id="selectAll" class="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500" />
+            <span class="text-xs font-medium text-gray-500 uppercase">Выбрать всех</span>
           </div>
-          <span
-            class="text-xs font-bold bg-gray-200 dark:bg-gray-600 px-2 py-0.5 rounded-md"
-            >124</span
-          >
+          <span class="text-xs font-bold bg-gray-200 dark:bg-gray-600 px-2 py-0.5 rounded-md" id="leadsCount">0</span>
         </div>
 
-        <div>
+        <div id="loading" class="flex flex-col items-center justify-center py-12">
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mb-2"></div>
+          <span class="text-xs text-gray-400">Загрузка базы...</span>
+        </div>
+
+        <div id="leadsList" class="hidden">
           <table class="w-full">
-            <tbody>
-              <tr
-                class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                onclick="showProAlert('Работа с лидами')"
-              >
-                <td class="px-3 py-3 w-10">
-                  <input
-                    type="checkbox"
-                    disabled
-                    class="w-4 h-4 rounded border-gray-300"
-                  />
-                </td>
-                <td class="px-3 py-3">
-                  <div class="flex flex-col">
-                    <div class="flex items-center gap-1.5">
-                      <span class="text-sm font-medium dark:text-gray-200"
-                        >Александр (Бизнес)</span
-                      >
-                      <span class="text-[9px] px-1 py-0.5 rounded font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">✈️ TG</span>
-                    </div>
-                    <span class="text-[10px] text-gray-400">ID: 849201</span>
-                  </div>
-                </td>
-                <td class="px-3 py-3 text-right">
-                  <div class="flex flex-col items-end gap-1">
-                    <span
-                      class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700"
-                      >PRO</span
-                    >
-                    <span class="text-xs text-green-500 font-bold">Выдача</span>
-                  </div>
-                </td>
-              </tr>
-              <tr
-                class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                onclick="showProAlert('Работа с лидами')"
-              >
-                <td class="px-3 py-3 w-10">
-                  <input
-                    type="checkbox"
-                    disabled
-                    class="w-4 h-4 rounded border-gray-300"
-                  />
-                </td>
-                <td class="px-3 py-3">
-                  <div class="flex flex-col">
-                    <div class="flex items-center gap-1.5">
-                      <span class="text-sm font-medium dark:text-gray-200"
-                        >Елена Смирнова</span
-                      >
-                      <span class="text-[9px] px-1 py-0.5 rounded font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">💬 VK</span>
-                    </div>
-                    <span class="text-[10px] text-gray-400">ID: 938211</span>
-                  </div>
-                </td>
-                <td class="px-3 py-3 text-right">
-                  <div class="flex flex-col items-end gap-1">
-                    <span
-                      class="px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600"
-                      >FREE</span
-                    >
-                    <span class="text-xs text-orange-500 font-medium"
-                      >Думает</span
-                    >
-                  </div>
-                </td>
-              </tr>
-              <tr
-                class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                onclick="showProAlert('Работа с лидами')"
-              >
-                <td class="px-3 py-3 w-10">
-                  <input
-                    type="checkbox"
-                    disabled
-                    class="w-4 h-4 rounded border-gray-300"
-                  />
-                </td>
-                <td class="px-3 py-3">
-                  <div class="flex flex-col">
-                    <span class="text-sm font-medium dark:text-gray-200"
-                      >Михаил Т.</span
-                    >
-                    <span class="text-[10px] text-gray-400">ID: 102938</span>
-                  </div>
-                </td>
-                <td class="px-3 py-3 text-right">
-                  <div class="flex flex-col items-end gap-1">
-                    <span
-                      class="px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600"
-                      >FREE</span
-                    >
-                    <span class="text-xs text-blue-500 font-medium"
-                      >Обучение</span
-                    >
-                  </div>
-                </td>
-              </tr>
-              <tr
-                class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                onclick="showProAlert('Работа с лидами')"
-              >
-                <td class="px-3 py-3 w-10">
-                  <input
-                    type="checkbox"
-                    disabled
-                    class="w-4 h-4 rounded border-gray-300"
-                  />
-                </td>
-                <td class="px-3 py-3">
-                  <div class="flex flex-col">
-                    <span class="text-sm font-medium dark:text-gray-200"
-                      >Иван</span
-                    >
-                    <span class="text-[10px] text-gray-400">ID: 111000</span>
-                  </div>
-                </td>
-                <td class="px-3 py-3 text-right">
-                  <div class="flex flex-col items-end gap-1">
-                    <span
-                      class="px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600"
-                      >FREE</span
-                    >
-                    <span class="text-xs text-gray-400 font-medium">Старт</span>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
+            <tbody id="leadsBody"></tbody>
           </table>
         </div>
 
-        <div class="p-3 text-center border-t dark:border-gray-700">
-          <span
-            class="text-xs text-gray-400 cursor-pointer"
-            onclick="showProAlert('Пагинация')"
-            >Показать еще...</span
-          >
+        <div id="noLeads" class="hidden py-12 text-center">
+          <div class="text-4xl mb-2">📭</div>
+          <p class="text-sm text-gray-500">Лиды не найдены</p>
         </div>
       </div>
     </div>
 
-    <div
-      class="fixed bottom-0 left-0 right-0 p-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-t dark:border-gray-700 shadow-[0_-4px_6_-1px_rgba(0,0,0,0.1)] z-20"
-    >
+    <!-- НИЖНЯЯ ПАНЕЛЬ ДЕЙСТВИЙ -->
+    <div class="fixed bottom-0 left-0 right-0 p-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-t dark:border-gray-700 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-30">
       <div class="flex gap-3 max-w-md mx-auto">
-        <button
-          onclick="showProAlert('Умная рассылка')"
-          class="flex-1 btn-primary py-3 rounded-xl font-bold text-sm shadow-lg transition-all flex items-center justify-center gap-2"
-        >
-          <span>✉️</span> Рассылка (124)
+        <button id="broadcastBtn" class="flex-1 btn-primary py-3 rounded-xl font-bold text-sm shadow-lg disabled:opacity-50 disabled:shadow-none transition-all flex items-center justify-center gap-2" disabled>
+          <span>✉️</span> Рассылка
         </button>
-        <button
-          onclick="showProAlert('Экспорт CSV')"
-          class="px-4 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white rounded-xl font-bold text-sm hover:bg-gray-200 transition-all"
-        >
+        <button id="exportBtn" class="px-4 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white rounded-xl font-bold text-sm hover:bg-gray-200 transition-all">
           📥 CSV
         </button>
       </div>
     </div>
 
+    <!-- МОДАЛЬНОЕ ОКНО РАССЫЛКИ -->
+    <div id="broadcastModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-sm shadow-2xl transform transition-all scale-100 p-5">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-lg font-bold dark:text-white">📢 Умная Рассылка</h3>
+          <button id="closeModalX" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+        </div>
+
+        <!-- АУДИТОРИЯ РАССЫЛКИ -->
+        <div class="mb-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl p-3 text-center flex flex-col gap-1">
+          <span class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-bold">Аудитория:</span>
+          <span id="broadcastTargetLabel" class="text-sm font-medium text-gray-800 dark:text-gray-200">Всем в базе</span>
+          <div>
+            <span id="broadcastCount" class="text-2xl font-bold text-purple-600 dark:text-purple-400">0</span>
+            <span class="text-xs text-gray-500 dark:text-gray-400"> лидов</span>
+          </div>
+        </div>
+
+        <textarea id="broadcastMessage" class="w-full border border-gray-200 dark:border-gray-600 rounded-xl p-3 h-28 text-sm mb-3 focus:ring-2 focus:ring-purple-500 outline-none resize-none bg-gray-50 dark:bg-gray-700 dark:text-white" placeholder="Напиши мощный оффер..."></textarea>
+
+        <!-- КОНСТРУКТОР КНОПКИ -->
+        <div class="mb-4 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-xl border border-gray-100 dark:border-gray-600">
+          <label class="text-xs text-gray-500 font-bold mb-2 block uppercase tracking-wide">🔗 Добавить кнопку (необязательно)</label>
+          <div class="flex gap-2">
+            <input type="text" id="btnText" placeholder="Текст (напр. Забрать)" class="w-1/2 bg-white dark:bg-gray-600 border border-gray-200 dark:border-gray-500 rounded-lg p-2 text-sm outline-none focus:border-purple-500 dark:text-white" />
+            <input type="text" id="btnUrl" placeholder="Ссылка (https://...)" class="w-1/2 bg-white dark:bg-gray-600 border border-gray-200 dark:border-gray-500 rounded-lg p-2 text-sm outline-none focus:border-purple-500 dark:text-white" />
+          </div>
+        </div>
+
+        <div class="flex gap-2">
+          <button id="cancelBroadcast" class="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-gray-700 font-medium text-gray-600 dark:text-gray-300 transition-colors hover:bg-gray-200 dark:hover:bg-gray-600">
+            Отмена
+          </button>
+          <button id="sendBroadcast" class="flex-1 py-3 rounded-xl btn-primary font-bold text-white shadow-lg transition-transform active:scale-95">
+            🚀 Отправить
+          </button>
+        </div>
+      </div>
+    </div>
+
     <script>
+      // ==========================================
+      // ⚙️ НАСТРОЙКИ
+      // ==========================================
+      const BACKEND_URL = "https://d5dsbah1d4ju0glmp9d0.3zvepvee.apigw.yandexcloud.net";
+
       const tg = window.Telegram.WebApp;
-      tg.expand();
       tg.ready();
+      tg.expand();
+
+      const API_HOST = BACKEND_URL && BACKEND_URL.startsWith("http") ? BACKEND_URL : "";
+
+      // Санитайзер XSS
+      function escapeHTML(str) {
+        if (!str) return "";
+        return str.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+      }
+
+      // State
+      let allLeads = [];
+      let filteredLeads = [];
+      let currentFilter = "all";         // Воронка
+      let currentChannelFilter = "all";  // Канал
+      let searchQuery = "";
+      let selectedUserIds = new Set();
+
+      // INFINITE SCROLL
+      let currentDisplayCount = 0;
+      const CHUNK_SIZE = 50;
+
+      // Elements
+      const els = {
+        loading: document.getElementById("loading"),
+        list: document.getElementById("leadsList"),
+        body: document.getElementById("leadsBody"),
+        noData: document.getElementById("noLeads"),
+        broadcastBtn: document.getElementById("broadcastBtn"),
+        modal: document.getElementById("broadcastModal"),
+        statusDot: document.getElementById("connectionStatus"),
+      };
 
       if (tg.initDataUnsafe?.user) {
-        document.getElementById("adminWelcome").textContent =
-          `Админ: ${tg.initDataUnsafe.user.first_name} (Демо)`;
+        document.getElementById("adminWelcome").textContent = `Админ: ${tg.initDataUnsafe.user.first_name}`;
       }
 
-      // Функция вызова всплывающего окна "Купи PRO"
-      function showProAlert(featureName) {
-        if (tg.HapticFeedback) {
-          tg.HapticFeedback.notificationOccurred("warning");
-        }
+      // --- MAIN LOGIC ---
 
-        const message = `Функция «${featureName}» заблокирована 🔒\n\nВ демо-режиме управление базой недоступно. Активируйте PRO-статус в боте, чтобы получить доступ к своим реальным лидам и делать по ним рассылки!`;
+      async function loadData() {
+        if (!API_HOST) return showError("Не настроен BACKEND_URL в HTML файле!");
 
-        if (tg.isVersionAtLeast && tg.isVersionAtLeast("6.2")) {
-          tg.showPopup({
-            title: "Требуется PRO-статус",
-            message: message,
-            buttons: [{ type: "close", text: "Понятно" }],
-          });
-        } else {
-          alert(message);
-        }
+        const urlParams = new URLSearchParams(window.location.search);
+        const botToken = urlParams.get("bot_token");
+
+        if (!botToken) return showError("Нет токена бота.");
+        if (!tg.initData) return showError("Telegram initData не найден.");
+
+        const maxRetries = 3;
+        let retryCount = 0;
+
+        const loadWithRetry = async () => {
+          try {
+            const res = await fetch(`${API_HOST}/?action=get_crm_data`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "x-telegram-initdata": tg.initData,
+              },
+              body: JSON.stringify({ bot_token: botToken }),
+            });
+
+            if (!res.ok) throw new Error(await res.text() || `HTTP ${res.status}`);
+
+            const data = await res.json();
+            allLeads = data.leads || [];
+
+            // Обновляем статистику (включая каналы)
+            updateStats(data.stats, data.channelStats);
+            
+            els.statusDot.classList.replace("bg-yellow-400", "bg-green-500");
+            els.statusDot.classList.remove("animate-pulse");
+
+            applyFilter(currentFilter, currentChannelFilter);
+            els.loading.classList.add("hidden");
+            els.list.classList.remove("hidden");
+
+            if (allLeads.length === 0) els.noData.classList.remove("hidden");
+          } catch (e) {
+            retryCount++;
+            if (retryCount < maxRetries) {
+              const delay = Math.pow(2, retryCount - 1) * 1000;
+              els.statusDot.classList.replace("bg-yellow-400", "bg-red-500");
+              showError(`Ошибка соединения. Повтор через ${delay / 1000}с...`);
+              setTimeout(loadWithRetry, delay);
+            } else {
+              els.statusDot.classList.replace("bg-yellow-400", "bg-red-500");
+              els.loading.classList.add("hidden");
+              els.list.classList.add("hidden");
+              els.noData.classList.remove("hidden");
+              els.noData.innerHTML = `<div class="py-8 px-4 text-center"><div class="text-4xl mb-3">🚨</div><h3 class="text-red-500 font-bold text-lg mb-1">Сбой загрузки базы</h3><p class="text-xs text-gray-500 break-words">${escapeHTML(e.message)}</p></div>`;
+            }
+          }
+        };
+
+        loadWithRetry();
       }
 
-      // === МУЛЬТИКАНАЛЬНАЯ ФИЛЬТРАЦИЯ ===
-      let currentChannelFilter = 'all';
+      function renderLeads() {
+        els.body.innerHTML = "";
+        currentDisplayCount = 0;
+        document.getElementById("leadsCount").textContent = filteredLeads.length;
+        loadMoreLeads();
+      }
 
-      function filterByChannel(channel) {
-        currentChannelFilter = channel;
+      function loadMoreLeads() {
+        if (currentDisplayCount >= filteredLeads.length) return;
 
-        // Обновляем активные кнопки
-        document.querySelectorAll('.channel-filter-btn').forEach(btn => {
-          if (btn.dataset.channel === channel) {
-            btn.classList.add('active', 'bg-gray-800', 'text-white', 'dark:bg-white', 'dark:text-black', 'shadow-sm');
-            btn.classList.remove('bg-gray-200', 'text-gray-600', 'dark:bg-gray-800', 'dark:text-gray-300');
+        const nextChunk = filteredLeads.slice(currentDisplayCount, currentDisplayCount + CHUNK_SIZE);
+        const fragment = document.createDocumentFragment();
+
+        nextChunk.forEach((lead) => {
+          const isSelected = selectedUserIds.has(lead.user_id);
+          const tr = document.createElement("tr");
+          tr.className = `border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${isSelected ? "bg-purple-50 dark:bg-purple-900/20" : ""}`;
+
+          // БЕЙДЖИ СТАТУСА (ВОРОНКА)
+          let statusBadge = "";
+          if (lead.state === "START") statusBadge = '<span class="text-xs text-gray-400">Старт</span>';
+          else if (lead.state.includes("Training")) statusBadge = '<span class="text-xs text-blue-500">Обучение</span>';
+          else if (lead.state.includes("Tripwire")) statusBadge = '<span class="text-xs text-orange-500">Думает</span>';
+          else if (lead.state.includes("Delivery")) statusBadge = '<span class="text-xs text-green-500 font-bold">Купил</span>';
+          else statusBadge = `<span class="text-xs text-gray-500 truncate max-w-[80px]">${escapeHTML(lead.state)}</span>`;
+
+          // БЕЙДЖИ КАНАЛА
+          let channelBadge = "";
+          if (lead.primary_channel === 'vk') channelBadge = '<span class="text-[9px] px-1 py-0.5 rounded font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">💬 VK</span>';
+          else if (lead.primary_channel === 'web') channelBadge = '<span class="text-[9px] px-1 py-0.5 rounded font-bold bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400">🌐 Web</span>';
+          else if (lead.primary_channel === 'email') channelBadge = '<span class="text-[9px] px-1 py-0.5 rounded font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">📧 Email</span>';
+          else channelBadge = '<span class="text-[9px] px-1 py-0.5 rounded font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">✈️ TG</span>'; // По умолчанию Telegram
+
+          tr.innerHTML = `
+            <td class="px-3 py-3 w-10">
+              <input type="checkbox"
+                class="lead-checkbox w-4 h-4 rounded text-purple-600 focus:ring-purple-500 cursor-pointer"
+                value="${escapeHTML(lead.user_id)}"
+                ${isSelected ? "checked" : ""}>
+            </td>
+            <td class="px-3 py-3">
+              <div class="flex flex-col">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-sm font-medium dark:text-gray-200">${escapeHTML(lead.first_name) || "Без имени"}</span>
+                  ${channelBadge}
+                </div>
+                <span class="text-[10px] text-gray-400">ID: ${escapeHTML(lead.user_id)}</span>
+              </div>
+            </td>
+            <td class="px-3 py-3 text-right">
+              <div class="flex flex-col items-end gap-1">
+                ${lead.bought_tripwire ? '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700">PRO</span>' : '<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600">FREE</span>'}
+                ${statusBadge}
+              </div>
+            </td>
+          `;
+          fragment.appendChild(tr);
+        });
+
+        els.body.appendChild(fragment);
+        currentDisplayCount += nextChunk.length;
+      }
+
+      els.body.addEventListener("change", (e) => {
+        if (e.target.classList.contains("lead-checkbox")) {
+          const row = e.target.closest("tr");
+          if (e.target.checked) {
+            selectedUserIds.add(e.target.value);
+            row.classList.add("bg-purple-50", "dark:bg-purple-900/20");
           } else {
-            btn.classList.remove('active', 'bg-gray-800', 'text-white', 'dark:bg-white', 'dark:text-black', 'shadow-sm');
-            btn.classList.add('bg-gray-200', 'text-gray-600', 'dark:bg-gray-800', 'dark:text-gray-300');
+            selectedUserIds.delete(e.target.value);
+            row.classList.remove("bg-purple-50", "dark:bg-purple-900/20");
+          }
+          updateUI();
+        }
+      });
+
+      window.addEventListener("scroll", () => {
+        if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 200) {
+          loadMoreLeads();
+        }
+      });
+
+      function updateUI() {
+        const manualCount = selectedUserIds.size;
+        if (manualCount > 0) {
+          els.broadcastBtn.disabled = false;
+          els.broadcastBtn.innerHTML = `<span>✉️</span> Рассылка (${manualCount})`;
+        } else {
+          els.broadcastBtn.disabled = filteredLeads.length === 0;
+          els.broadcastBtn.innerHTML = `<span>✉️</span> Рассылка (${filteredLeads.length})`;
+        }
+        const allSelected = filteredLeads.length > 0 && filteredLeads.every((l) => selectedUserIds.has(l.user_id));
+        document.getElementById("selectAll").checked = allSelected;
+      }
+
+      // Главная функция фильтрации (Воронка + Канал + Поиск)
+      function applyFilter(funnelFilter, channelFilter) {
+        currentFilter = funnelFilter;
+        currentChannelFilter = channelFilter;
+
+        // 1. Обновляем кнопки воронки
+        document.querySelectorAll(".filter-btn").forEach((btn) => {
+          if (btn.dataset.filter === currentFilter) {
+            btn.className = "filter-btn active px-4 py-1.5 rounded-full text-xs font-bold transition-all bg-gray-800 text-white dark:bg-white dark:text-black shadow-sm whitespace-nowrap";
+          } else {
+            btn.className = "filter-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:border dark:border-gray-700 hover:opacity-80 whitespace-nowrap";
           }
         });
 
-        // В демо-режиме показываем уведомление
-        if (channel !== 'all') {
-          const channelNames = { telegram: 'Telegram', vk: 'VK', web: 'Web', email: 'Email' };
-          showProAlert(`Фильтр: ${channelNames[channel] || channel}`);
+        // 2. Обновляем кнопки каналов
+        document.querySelectorAll(".channel-filter-btn").forEach((btn) => {
+          if (btn.dataset.channel === currentChannelFilter) {
+            btn.className = "channel-filter-btn active px-3 py-1 rounded-lg text-[10px] font-bold transition-all bg-gray-800 text-white dark:bg-white dark:text-black shadow-sm whitespace-nowrap";
+          } else {
+            btn.className = "channel-filter-btn px-3 py-1 rounded-lg text-[10px] font-bold transition-all bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:border dark:border-gray-700 hover:opacity-80 whitespace-nowrap";
+          }
+        });
+
+        let baseLeads = allLeads;
+
+        // Фильтр по Каналу
+        if (currentChannelFilter !== 'all') {
+          // Если primary_channel не задан, считаем что это 'telegram' для обратной совместимости
+          baseLeads = baseLeads.filter(l => (l.primary_channel || 'telegram') === currentChannelFilter);
         }
 
-        // В рабочей версии здесь был бы fetch к CRM API:
-        // fetchCRMData(1, 50, channel);
+        // Фильтр по Воронке
+        if (currentFilter === "PRO") {
+          baseLeads = baseLeads.filter((l) => l.bought_tripwire === true);
+        } else if (currentFilter === "FREE") {
+          baseLeads = baseLeads.filter((l) => !l.bought_tripwire);
+        } else if (currentFilter === "start") {
+          baseLeads = baseLeads.filter((l) => l.state === "START");
+        } else if (currentFilter === "training") {
+          baseLeads = baseLeads.filter((l) => ((l.state || "").includes("Module") || (l.state || "").includes("Theory") || (l.state || "").includes("Training")) && !l.bought_tripwire);
+        } else if (currentFilter === "tripwire") {
+          baseLeads = baseLeads.filter((l) => ((l.state || "").includes("Tripwire") || (l.state || "").includes("Offer") || l.state === "FAQ_PRO") && !l.bought_tripwire);
+        }
+
+        // Фильтр по Поиску
+        if (searchQuery) {
+          const query = searchQuery.toLowerCase();
+          filteredLeads = baseLeads.filter((l) => {
+            const nameMatch = l.first_name && l.first_name.toLowerCase().includes(query);
+            const idMatch = l.user_id && l.user_id.toString().includes(query);
+            return nameMatch || idMatch;
+          });
+        } else {
+          filteredLeads = baseLeads;
+        }
+
+        // Очищаем выбор при смене фильтра
+        selectedUserIds.clear();
+        document.getElementById("selectAll").checked = false;
+
+        renderLeads();
+        updateUI();
       }
+
+      // Слушатели кнопок воронки
+      document.querySelectorAll(".filter-btn").forEach((b) =>
+        b.addEventListener("click", () => applyFilter(b.dataset.filter, currentChannelFilter))
+      );
+
+      // Слушатели кнопок каналов
+      document.querySelectorAll(".channel-filter-btn").forEach((b) =>
+        b.addEventListener("click", () => applyFilter(currentFilter, b.dataset.channel))
+      );
+
+      document.getElementById("searchInput").addEventListener("input", (e) => {
+        searchQuery = e.target.value.trim();
+        applyFilter(currentFilter, currentChannelFilter); 
+      });
+
+      function updateStats(stats, channelStats) {
+        if (!stats) return;
+        const set = (id, val) => (document.getElementById(id).textContent = val);
+        set("totalLeads", stats.total);
+        set("paidLeads", stats.paid);
+        set("stageStart", stats.byStage.start);
+        set("stageTraining", stats.byStage.training);
+        set("stageTripwire", stats.byStage.tripwire);
+        set("stageDelivery", stats.byStage.delivery);
+
+        if (channelStats) {
+          set("statTg", channelStats.telegram || 0);
+          set("statVk", channelStats.vk || 0);
+          set("statWeb", channelStats.web || 0);
+          set("statEmail", channelStats.email || 0);
+        }
+      }
+
+      document.getElementById("selectAll").addEventListener("change", (e) => {
+        const isChecked = e.target.checked;
+        filteredLeads.forEach((l) => {
+          if (isChecked) selectedUserIds.add(l.user_id);
+          else selectedUserIds.delete(l.user_id);
+        });
+        renderLeads();
+        updateUI();
+      });
+
+      // Открытие окна рассылки
+      els.broadcastBtn.addEventListener("click", () => {
+        const manualCount = selectedUserIds.size;
+        const label = document.getElementById("broadcastTargetLabel");
+        const countEl = document.getElementById("broadcastCount");
+
+        if (manualCount > 0) {
+          label.textContent = "👉 Выбрано вручную (галочками)";
+          countEl.textContent = manualCount;
+        } else {
+          // Формируем красивое название аудитории из двух фильтров
+          const funnelNames = { all: "Все лиды", PRO: "Только PRO", FREE: "Только FREE", start: "Этап 'Старт'", training: "Этап 'Обучение'", tripwire: "Этап 'Думают'" };
+          const channelNames = { all: "Все каналы", telegram: "Telegram", vk: "VK", web: "Web", email: "Email" };
+          
+          let audienceName = funnelNames[currentFilter] || "Все";
+          if (currentChannelFilter !== 'all') {
+            audienceName += ` (${channelNames[currentChannelFilter]})`;
+          }
+          
+          label.textContent = audienceName;
+          countEl.textContent = filteredLeads.length;
+        }
+
+        els.modal.classList.remove("hidden");
+        els.modal.classList.add("flex");
+      });
+
+      const closeModal = () => {
+        els.modal.classList.add("hidden");
+        els.modal.classList.remove("flex");
+      };
+      document.getElementById("cancelBroadcast").addEventListener("click", closeModal);
+      document.getElementById("closeModalX").addEventListener("click", closeModal);
+
+      // Отправка на бэкенд
+      document.getElementById("sendBroadcast").addEventListener("click", async () => {
+          const msg = document.getElementById("broadcastMessage").value.trim();
+          if (!msg) return showError("Текст сообщения не может быть пустым!");
+
+          const btnText = document.getElementById("btnText").value.trim();
+          const btnUrl = document.getElementById("btnUrl").value.trim();
+
+          const btn = document.getElementById("sendBroadcast");
+          const originalText = btn.innerHTML;
+          btn.innerHTML = "⏳ Отправка...";
+          btn.disabled = true;
+
+          let requestPayload = {
+            bot_token: new URLSearchParams(window.location.search).get("bot_token"),
+            message: msg,
+          };
+
+          if (selectedUserIds.size > 0) {
+            requestPayload.user_ids = Array.from(selectedUserIds);
+          } else {
+            // ПЕРЕДАЕМ ОБА ФИЛЬТРА В БЭКЕНД!
+            requestPayload.filters = { 
+              filter_tab: currentFilter,
+              channel: currentChannelFilter === 'all' ? null : currentChannelFilter
+            };
+          }
+
+          if (btnText && btnUrl) {
+            if (!btnUrl.startsWith("http")) {
+              btn.innerHTML = originalText;
+              btn.disabled = false;
+              return showError("Ссылка должна начинаться с http:// или https://");
+            }
+            requestPayload.reply_markup = { inline_keyboard: [[{ text: btnText, url: btnUrl }]] };
+          }
+
+          try {
+            const res = await fetch(`${API_HOST}/?action=send_crm_broadcast`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "x-telegram-initdata": tg.initData,
+              },
+              body: JSON.stringify(requestPayload),
+            });
+
+            const result = await res.json();
+            if (result.error) throw new Error(result.error);
+
+            // Если бэкенд возвращает детализацию по каналам, можно показать ее:
+            let successMsg = `🔥 Успешно доставлено: ${result.sent} чел.\nОшибок: ${result.failed}`;
+            if (result.byChannel) {
+               const chStats = [];
+               if (result.byChannel.telegram) chStats.push(`TG: ${result.byChannel.telegram.sent}`);
+               if (result.byChannel.vk) chStats.push(`VK: ${result.byChannel.vk.sent}`);
+               if (result.byChannel.email) chStats.push(`Email: ${result.byChannel.email.sent}`);
+               if (chStats.length > 0) successMsg += `\n\n(${chStats.join(', ')})`;
+            }
+
+            showSuccess(successMsg);
+
+            closeModal();
+            document.getElementById("broadcastMessage").value = "";
+            document.getElementById("btnText").value = "";
+            document.getElementById("btnUrl").value = "";
+
+            selectedUserIds.clear();
+            document.getElementById("selectAll").checked = false;
+            updateUI();
+          } catch (e) {
+            showError("Ошибка отправки: " + e.message);
+          } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+          }
+        });
+
+      document.getElementById("exportBtn").addEventListener("click", async () => {
+          const botToken = new URLSearchParams(window.location.search).get("bot_token");
+
+          try {
+            const res = await fetch(`${API_HOST}/?action=export_csv`, {
+              method: "POST",
+              headers: { "x-telegram-initdata": tg.initData },
+              body: JSON.stringify({ bot_token: botToken }),
+            });
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "leads.csv";
+            a.click();
+          } catch (e) {
+            showError("Ошибка скачивания CSV");
+          }
+        });
+
+      function showError(msg) {
+        if (tg.isVersionAtLeast && tg.isVersionAtLeast("6.2")) {
+          tg.showPopup({ title: "Ошибка", message: msg });
+        } else {
+          alert("❌ " + msg);
+        }
+      }
+
+      function showSuccess(msg) {
+        if (tg.isVersionAtLeast && tg.isVersionAtLeast("6.2")) {
+          tg.showPopup({ title: "Успешно!", message: msg });
+        } else {
+          alert("✅ " + msg);
+        }
+      }
+
+      // Start
+      loadData();
     </script>
   </body>
 </html>
