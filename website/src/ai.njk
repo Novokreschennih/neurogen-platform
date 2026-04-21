@@ -26,16 +26,16 @@ eleventyExcludeFromCollections: true
   </head>
   <body class="relative" style="padding-top: 56px;">
     <!-- HEADER НАВИГАЦИИ -->
-    <header style="position: fixed; top: 0; left: 0; right: 0; z-index: 50; background: rgba(15, 15, 26, 0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.05);">
-      <div style="max-width: 1024px; margin: 0 auto; padding: 0 16px; height: 56px; display: flex; align-items: center; justify-content: space-between;">
-        <a href="/join/" style="display: flex; align-items: center; gap: 6px; color: rgba(156,163,175,1); text-decoration: none; font-size: 14px; transition: color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(156,163,175,1)'">
+    <nav style="position: fixed; top: 0; left: 0; right: 0; z-index: 2147483647; background: rgba(5, 5, 5, 0.99); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-bottom: 1px solid rgba(255,255,255,0.1); box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+      <div style="max-width: 1024px; margin: 0 auto; padding: 0 12px; height: 52px; display: flex; align-items: center; justify-content: space-between;">
+        <a href="/join/" style="position: relative; z-index: 2147483648; display: flex; align-items: center; gap: 6px; color: rgba(200,200,200,1); text-decoration: none; font-size: 14px; font-weight: 600; padding: 10px 14px; border-radius: 10px; transition: all 0.2s; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);" onmouseover="this.style.color='#fff';this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.color='rgba(200,200,200,1)';this.style.background='rgba(255,255,255,0.08)'">
           ← Назад
         </a>
-        <a href="/join/?step=channels" style="display: flex; align-items: center; gap: 6px; color: rgba(156,163,175,1); text-decoration: none; font-size: 14px; transition: color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(156,163,175,1)'">
+        <a href="/join/?step=channels" style="position: relative; z-index: 2147483648; display: flex; align-items: center; gap: 6px; color: rgba(200,200,200,1); text-decoration: none; font-size: 14px; font-weight: 600; padding: 10px 14px; border-radius: 10px; transition: all 0.2s; background: linear-gradient(135deg, rgba(168,85,247,0.4), rgba(6,182,212,0.4)); border: 1px solid rgba(168,85,247,0.5);" onmouseover="this.style.color='#fff';this.style.background='linear-gradient(135deg, rgba(168,85,247,0.6), rgba(6,182,212,0.6))'" onmouseout="this.style.color='rgba(200,200,200,1)';this.style.background='linear-gradient(135deg, rgba(168,85,247,0.4), rgba(6,182,212,0.4))'">
           📺 Выбрать канал
         </a>
       </div>
-    </header>
+    </nav>
 
     <!-- Фоновые градиентные пятна -->
     <div class="fixed inset-0 overflow-hidden pointer-events-none -z-10">
