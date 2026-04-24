@@ -387,26 +387,40 @@ export function setupTelegramHandlers(bot, context) {
 
       if (existingWebUser || existingEmailUser) {
         // v6.0: Нашли существующего пользователя — привязываем Telegram
+        // СОХРАНЯЕМ теги и state существующего пользователя!
         ctx.dbUser = existingWebUser || existingEmailUser;
         ctx.dbUser.tg_id = tgId;
         ctx.dbUser.bot_token = token;
         ctx.dbUser.first_name =
           ctx.from.first_name || ctx.dbUser.first_name || "Друг";
-        ctx.dbUser.session.channels = ctx.dbUser.session.channels || {};
+        
+        // Инициализируем каналы если их нет
+        if (!ctx.dbUser.session) ctx.dbUser.session = {};
+        if (!ctx.dbUser.session.channels) ctx.dbUser.session.channels = {};
+        if (!ctx.dbUser.session.channel_states) ctx.dbUser.session.channel_states = {};
+        
+        // Не затираем существующие теги
+        if (!Array.isArray(ctx.dbUser.session.tags)) ctx.dbUser.session.tags = [];
+        
+        // Не сбрасываем state если пользователь уже был в воронке
+        if (!ctx.dbUser.state || ctx.dbUser.state === "START") {
+          ctx.dbUser.state = "START";
+        }
+        
         ctx.dbUser.session.channels.telegram = {
           enabled: true,
           configured: true,
           bot_username: ctx.me?.username,
           linked_at: Date.now(),
         };
-        ctx.dbUser.session.channel_states =
-          ctx.dbUser.session.channel_states || {};
         ctx.dbUser.session.channel_states.telegram = "START";
+        
         await ydb.saveUser(ctx.dbUser);
 
-        log.info("[TG] Merged Telegram ID into existing user", {
+        log.info("[TG] Merged Telegram ID into existing user with preserved state", {
           tgId,
           userId: ctx.dbUser.id,
+          state: ctx.dbUser.state,
           hadWeb: !!existingWebUser,
           hadEmail: !!existingEmailUser,
         });

@@ -810,12 +810,25 @@ export async function handleVkWebhook(event, context) {
 
           if (existingUser) {
             // МЕРДЖ! Нашли пользователя (веб-сессию или email) — склеиваем с VK
+            // СОХРАНЯЕМ теги и state существующего пользователя!
             vkUser = existingUser;
             vkUser.vk_id = Number(vkUserId);
             vkUser.bot_token = "VK_CENTRAL_GROUP";
             vkUser.first_name = firstName !== "VK Lead" ? firstName : (vkUser.first_name || "VK Lead");
             
+            // Инициализируем каналы если их нет
+            if (!vkUser.session) vkUser.session = {};
             if (!vkUser.session.channels) vkUser.session.channels = {};
+            if (!vkUser.session.channel_states) vkUser.session.channel_states = {};
+            
+            // Не затираем существующие теги
+            if (!Array.isArray(vkUser.session.tags)) vkUser.session.tags = [];
+            
+            // Не сбрасываем state если пользователь уже был в воронке
+            if (!vkUser.state || vkUser.state === "START") {
+              vkUser.state = "START";
+            }
+            
             vkUser.session.channels.vk = {
               enabled: true,
               configured: true,
@@ -823,14 +836,15 @@ export async function handleVkWebhook(event, context) {
               group_id: String(vkGroupId)
             };
             
-            if (!vkUser.session.channel_states) vkUser.session.channel_states = {};
             vkUser.session.channel_states.vk = "START";
             
             await ydb.saveUser(vkUser);
             
-            log.info("[VK] Merged VK ID into existing profile", { 
+            log.info("[VK] Merged with tags and state preserved", { 
               vkId: vkUserId, 
               userId: vkUser.id, 
+              state: vkUser.state,
+              tagsCount: vkUser.session.tags?.length,
               wasWeb: !!existingWebUser, 
               wasEmail: !!existingEmailUser 
             });

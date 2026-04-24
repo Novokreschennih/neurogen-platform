@@ -96,38 +96,33 @@ export function validateStartPayload(raw) {
   const trimmed = raw.trim();
   
   let parts;
-  // Используем безопасный разделитель __
+  // v7.0: Используем безопасный разделитель __ для омниканальности
   if (trimmed.includes("__")) {
     parts = trimmed.split("__");
-  } else if (trimmed.includes("|")) {
-    parts = trimmed.split("|"); // поддержка старых ссылок
+  } else if (trimmed.includes("-")) {
+    parts = trimmed.split("-");
   } else {
     parts = [trimmed];
   }
 
   const partnerId = validatePartnerId(parts[0]);
-  if (!partnerId) return { partnerId: trimmed }; // Фолбэк, если ID нестандартный
+  const result = { partnerId: partnerId || parts[0] };
 
-  const result = { partnerId };
-
-  // Извлекаем webId (обычно начинается с web_)
+  // ТГ шлет payload в формате: p_qdr__web_uuid__emailbase64
+  // parts[1] - это web_id
   if (parts[1] && parts[1].startsWith("web_")) {
     result.webId = parts[1];
   }
 
-  // Извлекаем email (3-я часть)
+  // parts[2] - это email
   if (parts[2] && parts[2] !== "noemail") {
     try {
       const encoded = parts[2].replace(/-/g, "+").replace(/_/g, "/");
       const padded = encoded + "=".repeat((4 - (encoded.length % 4)) % 4);
       const decoded = Buffer.from(padded, "base64").toString("utf8");
       const email = validateEmail(decoded);
-      if (email) {
-        result.email = email;
-      }
-    } catch (e) {
-      // Игнорируем ошибку парсинга email
-    }
+      if (email) result.email = email;
+    } catch (e) {}
   }
 
   return result;
