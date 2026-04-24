@@ -68,17 +68,24 @@ CREATE TABLE user_merges (
 
 -- -------------------------------------------------------------
 -- Таблица: bots (информация о ботах партнёров)
+-- v7.0: Добавлены AI-колонки для конструктора ИИ-сотрудников
 -- -------------------------------------------------------------
 
 CREATE TABLE bots (
-    bot_token Utf8,
-    user_id Utf8,
-    bot_username Utf8,
-    created_at Uint64,
-    sh_user_id Utf8,
-    sh_ref_tail Utf8,
-    tripwire_link Utf8,
-    vk_group_id Utf8,
+    bot_token Utf8,              -- 🔑 Primary Key
+    user_id Utf8,               -- Telegram ID владельца бота
+    bot_username Utf8,          -- Username бота
+    created_at Uint64,          -- Timestamp создания
+    sh_user_id Utf8,            -- SetHubble User ID
+    sh_ref_tail Utf8,           -- Партнёрский хвост
+    tripwire_link Utf8,         -- Tripwire/PRO ссылка
+    vk_group_id Utf8,          -- VK Group ID
+    -- v7.0: AI-конструктор — настройки ИИ для партнёров
+    ai_provider Utf8,           -- 'polza' или 'openrouter'
+    ai_model Utf8,              -- модель, напр. 'openai/gpt-4o-mini'
+    custom_api_key Utf8,        -- личный API-ключ партнёра
+    custom_prompt Utf8,         -- кастомный системный промпт
+    user_daily_limit Uint64,    -- дневной лимит на одного лида
     PRIMARY KEY (bot_token),
 
     INDEX idx_bots_vk_group_id GLOBAL ON (vk_group_id)

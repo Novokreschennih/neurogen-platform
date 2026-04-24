@@ -849,7 +849,8 @@ video {
 }
 
 .min-h-screen {
-	min-height: 100vh;
+	min-height: 100vh; /* Фолбэк для старых браузеров */
+	min-height: 100dvh; /* Динамическая высота для мобильных */
 }
 
 .w-10 {
@@ -2015,7 +2016,8 @@ body {
 
 .funnel-screen {
 	display: none;
-	min-height: 100vh;
+	min-height: 100vh; /* Фолбэк для старых браузеров */
+	min-height: 100dvh; /* Динамическая высота для мобильных */
 	animation: fadeInUp 0.5s ease-out;
 }
 

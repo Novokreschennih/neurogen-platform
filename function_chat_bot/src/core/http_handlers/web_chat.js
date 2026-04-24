@@ -483,63 +483,97 @@ export async function handleWebChat(event, context) {
         }
       }
 
-      // --- Д. Чат с ИИ (OpenRouter) ---
-      // Проверка активности ИИ-подписки владельца канала (SaaS)
+      // --- Д. Чат с ИИ (Универсальный AI Engine v3.0) ---
+
+      // 1. Проверка активности ИИ-подписки владельца канала (SaaS)
       const isAiActive = await ydb.isOwnerAiActive(webUser, null, null);
-      if (!isAiActive) {
+
+      // 2. Получаем настройки владельца (по partner_id)
+      let ownerSettings = { custom_prompt: "", ai_provider: "polza", ai_model: "openai/gpt-4o-mini", custom_api_key: "", user_daily_limit: 0 };
+
+      if (webUser.partner_id) {
+        try {
+          const ownerRows = await ydb.driver.tableClient.withSession(async (session) => {
+              const { resultSets } = await session.executeQuery(
+                  `DECLARE $tail AS Utf8; SELECT custom_prompt, ai_provider, ai_model, custom_api_key, user_daily_limit FROM users WHERE sh_ref_tail = $tail LIMIT 1;`,
+                  { $tail: ydb.driver.TypedValues.utf8(String(webUser.partner_id)) }
+              );
+              return resultSets[0]?.rows || [];
+          });
+          
+          if (ownerRows.length > 0) {
+            const r = ownerRows[0];
+            ownerSettings = {
+              custom_prompt: r.items[0]?.textValue || "",
+              ai_provider: r.items[1]?.textValue || "polza",
+              ai_model: r.items[2]?.textValue || "openai/gpt-4o-mini",
+              custom_api_key: r.items[3]?.textValue || "",
+              user_daily_limit: r.items[4]?.uint64Value ? Number(r.items[4].uint64Value) : 0
+            };
+          }
+        } catch (e) {
+          log.warn("[WEB AI OWNER LOOKUP ERROR]", e.message);
+        }
+      }
+
+      // Проверяем допуск: либо личный ключ, либо оплачена подписка
+      const hasCustomKey = !!ownerSettings.custom_api_key;
+      if (!isAiActive && !hasCustomKey) {
         return {
           statusCode: 200,
           headers: corsHeaders,
           body: JSON.stringify({
-            answer: "🤖 <b>ИИ-консультант временно недоступен</b>\n\nВладелец бота ещё не активировал подписку на ИИ-консультанта.\n\nОбратитесь к владельцу для активации 👇",
+            answer: "🤖 <b>ИИ-консультант в режиме ожидания</b>\n\nВладелец системы ещё не активировал подписку на ИИ-консультанта.\n\nОбратитесь к владельцу для активации 👇",
             sessionId: webSessionId,
           }),
         };
       }
 
-      const webSystemPrompt = `Ты — NeuroGen, харизматичный ИИ-архитектор экосистемы SetHubble. Эксперт по IT-бизнесу и пассивному доходу. Отвечай кратко (2-4 предложения), используй эмодзи. Форматируй HTML: <b>, <i>.`;
-
-      const messages = [{ role: "system", content: webSystemPrompt }];
-      if (
-        webUser.session.dialog_history &&
-        webUser.session.dialog_history.length > 0
-      ) {
-        webUser.session.dialog_history.forEach((m) =>
-          messages.push({ role: m.role, content: m.content }),
-        );
+      // 3. Проверка дневных лимитов (Web-лимит)
+      const today = new Date().toISOString().split("T")[0];
+      if (webUser.session.ai_date !== today) {
+        webUser.session.ai_count = 0;
+        webUser.session.ai_date = today;
       }
-      messages.push({ role: "user", content: txt });
+
+      const currentLimit = ownerSettings.user_daily_limit || (webUser.bought_tripwire ? 30 : 3);
+      if (webUser.session.ai_count >= currentLimit) {
+        return {
+          statusCode: 200,
+          headers: corsHeaders,
+          body: JSON.stringify({
+            answer: "⏳ <b>Лимит консультаций исчерпан.</b> На сегодня я ответил на все вопросы. Возвращайтесь завтра!",
+            sessionId: webSessionId,
+          }),
+        };
+      }
+
+      // 4. Формируем конфиг и вызываем единый AI Engine
+      const botConfig = {
+        ai_provider: ownerSettings.ai_provider,
+        ai_model: ownerSettings.ai_model,
+        custom_api_key: ownerSettings.custom_api_key,
+        custom_prompt: ownerSettings.custom_prompt
+      };
+
+      const aiEngineModule = await import("../../ai_engine.js");
+
+      // Очистка истории
+      const currentHistory = webUser.session?.dialog_history || [];
+      const cleanedHistory = aiEngineModule.cleanupDialogHistory(currentHistory, 24);
 
       try {
-        const apiKey = process.env.OPENROUTER_API_KEY;
-        const aiResponse = await fetch(
-          "https://openrouter.ai/api/v1/chat/completions",
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${apiKey}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: process.env.WEB_CHAT_MODEL || "deepseek/deepseek-v3.2",
-              messages,
-              max_tokens: 500,
-              temperature: 0.75,
-            }),
-          },
-        );
+        // Увеличиваем счетчик
+        webUser.session.ai_count = (webUser.session.ai_count || 0) + 1;
 
-        const aiData = await aiResponse.json();
-        const aiAnswer =
-          aiData.choices?.[0]?.message?.content ||
-          "🤖 Я немного задумался. Повтори еще раз!";
+        const aiResponse = await aiEngineModule.generateAIResponse(txt, webUser, webUser.state, cleanedHistory, botConfig);
 
-        webUser.session.dialog_history.push(
-          { role: "user", content: txt, timestamp: Date.now() },
-          { role: "assistant", content: aiAnswer, timestamp: Date.now() },
-        );
-        webUser.session.dialog_history =
-          webUser.session.dialog_history.slice(-20);
+        const aiAnswer = aiResponse || "🤖 Я немного задумался. Повтори еще раз!";
+
+        // Сохраняем историю
+        const updatedHistory = aiEngineModule.addToDialogHistory(cleanedHistory, "user", txt, 10);
+        const finalHistory = aiEngineModule.addToDialogHistory(updatedHistory, "assistant", aiAnswer, 10);
+        webUser.session.dialog_history = finalHistory;
         await ydb.saveUser(webUser);
 
         return {
@@ -548,12 +582,12 @@ export async function handleWebChat(event, context) {
           body: JSON.stringify({ answer: aiAnswer, sessionId: webSessionId }),
         };
       } catch (aiErr) {
-        log.error("[AI FETCH ERROR]", aiErr);
+        log.error("[WEB AI FETCH ERROR]", aiErr);
         return {
           statusCode: 200,
           headers: corsHeaders,
           body: JSON.stringify({
-            answer: "⚠️ Нейроядро временно недоступно.",
+            answer: "⚠️ Нейроядро временно недоступно. Попробуйте позже.",
             sessionId: webSessionId,
           }),
         };

@@ -369,5 +369,46 @@ export async function handleCrmApi(event, context) {
     };
   }
 
+  // === UPDATE AI SETTINGS (v7.1: Единый облачный интеллект) ===
+  if (action === "update_ai_settings") {
+    const { custom_prompt, ai_provider, ai_model, custom_api_key, user_daily_limit } = JSON.parse(event.body || "{}");
+
+    const ownerId = auth.tgData?.user?.id;
+    if (!ownerId) {
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: "Owner not identified" }),
+      };
+    }
+
+    // Находим партнёра по его Telegram ID
+    const user = await ydb.findUser({ tg_id: Number(ownerId) });
+    if (!user) {
+      return {
+        statusCode: 404,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: "User not found" }),
+      };
+    }
+
+    // Обновляем настройки ИИ в профиле партнёра
+    user.custom_prompt = custom_prompt || "";
+    user.ai_provider = ai_provider || "polza";
+    user.ai_model = ai_model || "openai/gpt-4o-mini";
+    user.custom_api_key = custom_api_key || "";
+    user.user_daily_limit = user_daily_limit || 0;
+
+    await ydb.saveUser(user);
+
+    log.info("[AI SETTINGS] Updated for owner", { ownerId, ai_provider: user.ai_provider, ai_model: user.ai_model });
+
+    return {
+      statusCode: 200,
+      headers: corsHeaders,
+      body: JSON.stringify({ success: true }),
+    };
+  }
+
   return null;
 }

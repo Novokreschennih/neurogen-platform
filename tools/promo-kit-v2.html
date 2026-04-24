@@ -39,12 +39,30 @@
         background-image: linear-gradient(to right, #06b6d4, #a855f7);
       }
 
+      /* Tab active state */
+      .tab-active { color: #06b6d4; border-bottom: 2px solid #06b6d4; }
+      
+      /* Universal Toast notifications */
+      #toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+      .toast { background: rgba(0,0,0,0.9); border: 1px solid rgba(255,255,255,0.15); color: white; padding: 12px 24px; border-radius: 50px; font-size: 14px; font-weight: 600; opacity: 0; transform: translateY(-20px); transition: all 0.3s ease; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+      .toast.show { opacity: 1; transform: translateY(0); }
+      .toast.success { border-color: rgba(34, 197, 94, 0.5); }
+      .toast.error { border-color: rgba(239, 68, 68, 0.5); }
+      .toast.info { border-color: rgba(6, 182, 212, 0.5); }
+
       /* Анимация загрузки */
       .loading-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
       @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+      
+      /* AI Constructor tab content */
+      .ai-content { display: none; }
+      .ai-content.active { display: block; }
     </style>
   </head>
   <body class="min-h-screen bg-[#050505] pb-12 relative overflow-x-hidden">
+    
+    <!-- Universal Toast Container -->
+    <div id="toast-container"></div>
     
     <!-- Фоновые свечения -->
     <div class="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none -z-10">
@@ -61,9 +79,14 @@
           </h1>
           <p class="text-xs text-gray-400">Командный Центр Партнера</p>
         </div>
-        <div id="userAvatar" class="w-10 h-10 rounded-full bg-gradient-to-r from-cyan-500 to-purple-600 flex items-center justify-center text-lg font-bold shadow-lg shadow-purple-500/30">
-          👤
-        </div>
+        <button onclick="switchTab('marketing')" id="tab-btn-marketing" class="w-10 h-10 rounded-full bg-gradient-to-r from-cyan-500 to-purple-600 flex items-center justify-center text-lg font-bold shadow-lg shadow-purple-500/30">
+          🏠
+        </button>
+      </div>
+      <!-- Tabs -->
+      <div class="flex gap-6 mt-3 text-xs font-bold uppercase tracking-wider">
+        <button onclick="switchTab('marketing')" id="tab-marketing" class="pb-2 tab-active transition-all">📊 Маркетинг</button>
+        <button onclick="switchTab('ai')" id="tab-ai" class="pb-2 text-gray-500 transition-all">🧠 Интеллект</button>
       </div>
     </header>
 
@@ -75,20 +98,248 @@
         <p class="text-sm text-cyan-400 loading-pulse font-bold tracking-wider uppercase">Синхронизация с ядром...</p>
       </div>
 
-      <!-- ОСНОВНОЙ КОНТЕНТ -->
+<!-- ОСНОВНОЙ КОНТЕНТ -->
       <div id="mainContent" class="hidden space-y-6">
         
-        <!-- ВАЖНО: БЛОК ЦЕННОСТИ СИСТЕМЫ (Что получил партнер) -->
-        <div class="glass-panel rounded-3xl p-6 md:p-8">
-          <h2 class="text-2xl font-black mb-2 uppercase">Твой <span class="gradient-text">Арсенал</span></h2>
-          <p class="text-sm text-gray-400 mb-6">Твоя IT-империя развернута и готова к работе. Что в твоих руках прямо сейчас:</p>
-          
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="bg-black/40 border border-white/5 p-4 rounded-2xl">
-              <div class="text-2xl mb-2">🐙</div>
-              <h3 class="font-bold text-white mb-1">Мультиканальная ИИ-Воронка</h3>
-              <p class="text-xs text-gray-400">Твой бот работает одновременно в Telegram, ВКонтакте, Email и как Web-чат. 1 минута на запуск.</p>
+        <!-- Tab: Marketing -->
+        <div id="content-marketing" class="ai-content">        
+          <!-- ВАЖНО: БЛОК ЦЕННОСТИ СИСТЕМЫ (Что получил партнер) -->
+          <div class="glass-panel rounded-3xl p-6 md:p-8">
+            <h2 class="text-2xl font-black mb-2 uppercase">Твой <span class="gradient-text">Арсенал</span></h2>
+            <p class="text-sm text-gray-400 mb-6">Твоя IT-империя развернута и готова к работе. Что в твоих руках прямо сейчас:</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-black/40 border border-white/5 p-4 rounded-2xl">
+                <div class="text-2xl mb-2">🐙</div>
+                <h3 class="font-bold text-white mb-1">Мультиканальная ИИ-Воронка</h3>
+                <p class="text-xs text-gray-400">Твой бот работает одновременно в Telegram, ВКонтакте, Email и как Web-чат. 1 минута на запуск.</p>
+              </div>
+              <div class="bg-black/40 border border-white/5 p-4 rounded-2xl">
+                <div class="text-2xl mb-2">💸</div>
+                <h3 class="font-bold text-white mb-1">Пассивный Крипто-Доход</h3>
+                <p class="text-xs text-gray-400">Право перепродажи продукта экосистемы SetHubble. Система сама дожимает лидов, ты — получаешь USDT.</p>
+              </div>
+              <div class="bg-black/40 border border-white/5 p-4 rounded-2xl">
+                <div class="text-2xl mb-2">🧠</div>
+                <h3 class="font-bold text-white mb-1">Нейросети для твоих проектов</h3>
+                <p class="text-xs text-gray-400">Доступ к ИИ-генераторам: создавай автоворонки, лендинги и вирусные сценарии для любого своего бизнеса.</p>
+              </div>
+              <div class="bg-black/40 border border-white/5 p-4 rounded-2xl">
+                <div class="text-2xl mb-2">📈</div>
+                <h3 class="font-bold text-white mb-1">O2O: Захват Офлайна</h3>
+                <p class="text-xs text-gray-400">Генерируй QR-коды для кафе, СТО и салонов красоты. Оцифруй их клиентов и зарабатывай с их покупок в сети.</p>
+              </div>
             </div>
+          </div>
+
+          <!-- БЛОК СТАТИСТИКИ -->
+          <div class="grid grid-cols-2 gap-4">
+            <div class="glass-panel rounded-2xl p-5 border-l-4 border-cyan-500">
+              <p class="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1">Всего переходов</p>
+              <p id="statClicks" class="text-3xl font-black text-white">0</p>
+            </div>
+            <div class="glass-panel rounded-2xl p-5 border-l-4 border-purple-500 bg-purple-900/10">
+              <p class="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1">Твой Доход</p>
+              <p id="statEarnings" class="text-3xl font-black text-purple-400">$0.00</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- ЛЕВЫЙ СТОЛБЕЦ: ССЫЛКИ И QR -->
+            <div class="glass-panel rounded-3xl p-6 text-center neon-border flex flex-col h-full justify-between">
+              <div>
+                <div class="inline-block bg-cyan-500/20 text-cyan-400 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-4 border border-cyan-500/30">Твоя Точка Входа</div>
+                <h2 class="text-xl font-bold text-white mb-6">Реферальный QR-код</h2>
+
+                <div class="flex justify-center mb-6">
+                  <div id="qrcode" class="qr-container shadow-[0_0_30px_rgba(255,255,255,0.1)]"></div>
+                </div>
+
+                <div class="bg-black/50 rounded-xl p-3 mb-6 border border-white/5 break-all">
+                  <p class="text-xs text-cyan-300 font-mono" id="botLinkDisplay">Загрузка...</p>
+                </div>
+              </div>
+
+              <div class="space-y-3 mt-auto">
+                <button id="copyLinkBtn" class="w-full bg-white/10 hover:bg-white/20 border border-white/10 text-white font-bold py-3 px-4 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2">
+                  <span>📋</span> КОПИРОВАТЬ ССЫЛКУ
+                </button>
+                <button id="downloadQrBtn" class="w-full bg-gradient-to-r from-purple-600 to-cyan-600 hover:opacity-90 text-white font-bold py-3 px-4 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg">
+                  <span>📥</span> СКАЧАТЬ ДЛЯ ПЕЧАТИ
+                </button>
+                <button id="createPdfBtn" class="w-full bg-black border border-purple-500/50 hover:bg-purple-900/20 text-white font-bold py-3 px-4 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2">
+                  <span>📄</span> B2B ПРЕЗЕНТАЦИЯ С QR
+                </button>
+              </div>
+            </div>
+
+            <!-- ПРАВЫЙ СТОЛБЕЦ: ТАРИФЫ И ВЫПЛАТЫ -->
+            <div class="glass-panel rounded-3xl p-6 flex flex-col">
+              <h2 class="text-xl font-bold mb-1 uppercase text-white">Финансовый <span class="gradient-text">Мотор</span></h2>
+              <p class="text-xs text-gray-400 mb-6">Условия твоих выплат по реферальной программе.</p>
+              
+              <div class="space-y-4">
+                <!-- ТАРИФ FREE -->
+                <div id="tariff-free" class="bg-black/40 border border-gray-700 p-5 rounded-2xl relative transition-all">
+                  <div id="badge-free" class="hidden absolute -top-3 right-4 bg-green-500 text-black text-[10px] font-black px-3 py-1 rounded-full uppercase shadow-lg shadow-green-500/30">Активен</div>
+                  <h3 class="text-lg font-bold text-gray-300 mb-2">Тариф FREE</h3>
+                  <ul class="text-sm text-gray-400 space-y-2 mb-3">
+                    <li class="flex items-center gap-2"><span class="text-green-500">✔</span> <b>25%</b> с личных продаж</li>
+                    <li class="flex items-center gap-2"><span class="text-green-500">✔</span> <b>По 3%</b> пассива (до 3 уровня)</li>
+                  </ul>
+                </div>
+
+                <!-- ТАРИФ PRO -->
+                <div id="tariff-pro" class="bg-purple-900/10 border border-purple-500/30 p-5 rounded-2xl relative transition-all">
+                  <div id="badge-pro" class="hidden absolute -top-3 right-4 bg-gradient-to-r from-cyan-400 to-purple-500 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase shadow-lg">Активен</div>
+                  <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2">Статус PRO <span class="text-xl">👑</span></h3>
+                  <ul class="text-sm text-gray-300 space-y-2 mb-4">
+                    <li class="flex items-center gap-2"><span class="text-purple-400">🔥</span> <b>50%</b> с личных продаж (Максимум)</li>
+                    <li class="flex items-center gap-2"><span class="text-purple-400">🔥</span> <b>По 5%</b> пассива (до 5 уровня)</li>
+                    <li class="flex items-center gap-2"><span class="text-purple-400">🔥</span> Доступ к CRM и ИИ-приложениям</li>
+                  </ul>
+                  <a id="btn-upgrade-pro" href="https://t.me/sethubble_biz_bot" target="_blank" class="block text-center w-full bg-white text-black font-bold py-2.5 rounded-lg hover:bg-gray-200 transition-all text-sm">
+                    АКТИВИРОВАТЬ PRO
+                  </a>
+                </div>
+              </div>
+              
+              <div class="mt-auto pt-6">
+                 <p class="text-[11px] text-gray-500 text-center">Все начисления происходят автоматически в USDT в твоем личном кабинете SetHubble.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- ГОТОВЫЕ ПОСТЫ -->
+          <div class="glass-panel rounded-3xl p-6 mt-6">
+            <div class="flex justify-between items-center mb-6">
+              <div>
+                <h2 class="text-xl font-bold text-white">📝 Магниты Трафика</h2>
+                <p class="text-xs text-gray-400 mt-1">Готовые посты (твоя ссылка вшита)</p>
+              </div>
+            </div>
+
+            <!-- Фильтры -->
+            <div class="flex gap-2 mb-6 overflow-x-auto no-scrollbar pb-2">
+              <button onclick="filterPosts('all')" class="px-4 py-2 bg-cyan-600 text-white rounded-xl text-xs font-bold whitespace-nowrap transition-colors">Все</button>
+              <button onclick="filterPosts('intrigue')" class="px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl text-xs font-bold whitespace-nowrap transition-colors">🎯 Интрига</button>
+              <button onclick="filterPosts('business')" class="px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl text-xs font-bold whitespace-nowrap transition-colors">💼 Бизнес</button>
+              <button onclick="filterPosts('offline')" class="px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl text-xs font-bold whitespace-nowrap transition-colors">🏪 Офлайн</button>
+            </div>
+
+            <div id="postsContainer" class="space-y-4">
+              <!-- Пост 1 -->
+              <div class="bg-black/40 rounded-2xl p-5 border border-white/5 relative post-card" data-category="intrigue">
+                <div class="flex justify-between items-center mb-3">
+                  <span class="text-[10px] font-bold text-cyan-400 bg-cyan-900/30 px-2 py-1 rounded uppercase tracking-wider">Интрига</span>
+                  <button onclick="copyText('post1', this)" class="text-xs font-bold bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
+                    <span>📋</span> Копировать
+                  </button>
+                </div>
+                <p id="post1" class="text-sm text-gray-300 leading-relaxed">
+                  Я только что собрал ИИ-клона в Telegram за 1 минуту без программирования. Он консультирует людей и строит мне па��тн��рскую сеть 24/7, пока я занимаюсь своими делами. Старт $0. Зайди потестить, как он работает изнутри:<br><br><span class="bot-link text-cyan-400 font-medium"></span>
+                </p>
+              </div>
+
+              <!-- Пост 2 -->
+              <div class="bg-black/40 rounded-2xl p-5 border border-white/5 relative post-card" data-category="business">
+                <div class="flex justify-between items-center mb-3">
+                  <span class="text-[10px] font-bold text-purple-400 bg-purple-900/30 px-2 py-1 rounded uppercase tracking-wider">Бизнес</span>
+                  <button onclick="copyText('post2', this)" class="text-xs font-bold bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
+                    <span>📋</span> Копировать
+                  </button>
+                </div>
+                <p id="post2" class="text-sm text-gray-300 leading-relaxed">
+                  Хватит платить за рекламу авансом. Система оцифровывает твоё сарафанное радио бесплатно — это будущее маркетинга. Попробуй бесплатно:<br><br><span class="bot-link text-cyan-400 font-medium"></span>
+                </p>
+              </div>
+
+              <!-- Пост 3 -->
+              <div class="bg-black/40 rounded-2xl p-5 border border-white/5 relative post-card" data-category="offline">
+                <div class="flex justify-between items-center mb-3">
+                  <span class="text-[10px] font-bold text-green-400 bg-green-900/30 px-2 py-1 rounded uppercase tracking-wider">Офлайн</span>
+                  <button onclick="copyText('post3', this)" class="text-xs font-bold bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
+                    <span>📋</span> Копировать
+                  </button>
+                </div>
+                <p id="post3" class="text-sm text-gray-300 leading-relaxed">
+                  Монетизируй отказников! Гениальная механика пассивного крипто-дохода для любого бизнеса. Подключай QR-коды в своём кафе/магазине и зарабатывай с продаж в сети:<br><br><span class="bot-link text-cyan-400 font-medium"></span>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: AI Constructor -->
+        <div id="content-ai" class="ai-content hidden space-y-6">
+          <div class="glass-panel rounded-2xl p-5 border-l-4 border-cyan-500">
+            <h3 class="font-bold text-white mb-1">Глобальный Нейромозг</h3>
+            <p class="text-xs text-gray-400">Настрой ИИ один раз — и он будет общаться с твоими клиентами в Telegram, VK и на сайте.</p>
+          </div>
+
+          <!-- Presets -->
+          <div class="space-y-3">
+            <p class="text-[10px] font-bold text-gray-500 uppercase">Готовые пресеты:</p>
+            <div class="grid grid-cols-2 gap-2">
+              <button onclick="applyPreset('shark')" class="bg-white/5 border border-white/10 p-3 rounded-xl text-left hover:border-cyan-500 transition-all">
+                <div class="text-lg">🦈</div>
+                <div class="text-[10px] font-bold">Акула продаж</div>
+                <div class="text-[8px] text-gray-500">Дерзкий, давит на выгоду</div>
+              </button>
+              <button onclick="applyPreset('mentor')" class="bg-white/5 border border-white/10 p-3 rounded-xl text-left hover:border-cyan-500 transition-all">
+                <div class="text-lg">🎓</div>
+                <div class="text-[10px] font-bold">Наставник</div>
+                <div class="text-[8px] text-gray-500">Спокойный, обучает</div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Constructor -->
+          <div class="glass-panel rounded-3xl p-6 space-y-4">
+            <div>
+              <label class="text-[10px] font-bold text-gray-400 uppercase">Роль бота:</label>
+              <select id="ai-role" onchange="buildAiPrompt()" class="w-full mt-1 p-3 rounded-xl text-sm outline-none bg-black/50 border border-white/10">
+                <option value="консультант по IT-бизнесу">💼 Бизнес-консультант</option>
+                <option value="твой бро в мире крипты">🤘 Твой бро (неформальный)</option>
+                <option value="эксперт по автоматизации">🤖 Технический эксперт</option>
+              </select>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="text-[10px] font-bold text-gray-400 uppercase">Тон:</label>
+                <select id="ai-tone" onchange="buildAiPrompt()" class="w-full mt-1 p-3 rounded-xl text-sm outline-none bg-black/50 border border-white/10">
+                  <option value="дружелюбный и воодушевляющий">😊 Дружелюбный</option>
+                  <option value="строгий и профессиональный">👔 Деловой</option>
+                  <option value="ироничный и прямой">😼 Харизматичный</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-[10px] font-bold text-gray-400 uppercase">Эмодзи:</label>
+                <select id="ai-emoji" onchange="buildAiPrompt()" class="w-full mt-1 p-3 rounded-xl text-sm outline-none bg-black/50 border border-white/10">
+                  <option value="много подходящих эмодзи">🔥 Много</option>
+                  <option value="минимум эмодзи">➖ Минимум</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="text-[10px] font-bold text-gray-400 uppercase">Доп. инструкции:</label>
+              <textarea id="ai-extra" oninput="buildAiPrompt()" class="w-full mt-1 p-3 rounded-xl text-sm h-20 outline-none bg-black/50 border border-white/10" placeholder="Упоминай, что старт бесплатный..."></textarea>
+            </div>
+
+            <!-- Prompt Preview -->
+            <div class="bg-black/50 rounded-2xl p-4 border border-dashed border-gray-700">
+              <p class="text-[9px] font-bold text-cyan-500 uppercase mb-2">Инструкция для ИИ:</p>
+              <p id="ai-prompt-preview" class="text-[11px] text-gray-400 italic"></p>
+            </div>
+
+            <button onclick="saveAiSettings()" id="saveAiBtn" class="w-full bg-gradient-to-r from-cyan-500 to-purple-600 py-4 rounded-2xl font-bold text-sm shadow-lg active:scale-95 transition-all">
+              🚀 ОБНОВИТЬ ИНТЕЛЛЕКТ
+            </button>
+          </div>
+        </div>
+      </div>
             <div class="bg-black/40 border border-white/5 p-4 rounded-2xl">
               <div class="text-2xl mb-2">💸</div>
               <h3 class="font-bold text-white mb-1">Пассивный Крипто-Доход</h3>
@@ -262,33 +513,112 @@
 
     <!-- JS ЛОГИКА -->
     <script>
-      const tg = window.Telegram.WebApp;
-      tg.expand();
-      tg.ready();
+      // Universal Telegram WebApp (optional - for visual only in TG)
+      let tg = null;
+      try { tg = window.Telegram?.WebApp; if(tg){ tg.expand(); tg.ready(); }}catch(e){ tg = null; }
 
       let userData = null;
       let refLink = "";
       let botName = "";
       let secureToken = "";
+      let authHeaders = { "Content-Type": "application/json" };
+
+      const BACKEND_URL = new URLSearchParams(window.location.search).get("api") || "https://d5dsbah1d4ju0glmp9d0.3zvepvee.apigw.yandexcloud.net";
+
+      // Universal Toast notifications
+      function showToast(message, type = "success") {
+        const container = document.getElementById("toast-container");
+        const toast = document.createElement("div");
+        toast.className = `toast ${type}`;
+        toast.innerHTML = (type === "success" ? "✅ " : type === "error" ? "❌ " : "ℹ️ ") + message;
+        container.appendChild(toast);
+        setTimeout(() => toast.classList.add("show"), 10);
+        setTimeout(() => { toast.classList.remove("show"); setTimeout(() => toast.remove(), 300); }, 3000);
+      }
+
+      // Tab switching
+      function switchTab(tab) {
+        document.getElementById("content-marketing").classList.toggle("hidden", tab !== "marketing");
+        document.getElementById("content-ai").classList.toggle("hidden", tab !== "ai");
+        document.getElementById("tab-marketing").classList.toggle("tab-active", tab === "marketing");
+        document.getElementById("tab-ai").classList.toggle("tab-active", tab === "ai");
+      }
+
+      // AI Constructor functions
+      function buildAiPrompt() {
+        const role = document.getElementById("ai-role").value;
+        const tone = document.getElementById("ai-tone").value;
+        const emoji = document.getElementById("ai-emoji").value;
+        const extra = document.getElementById("ai-extra").value;
+        const prompt = `Ты — ${role}. Стиль: ${tone}. Используй ${emoji}. Твоя задача: продавать подписки SetHubble. ${extra}`;
+        document.getElementById("ai-prompt-preview").textContent = prompt;
+        return prompt;
+      }
+
+      function applyPreset(type) {
+        if (type === "shark") {
+          document.getElementById("ai-role").value = "твой бро в мире крипты";
+          document.getElementById("ai-tone").value = "ироничный и прямой";
+          document.getElementById("ai-emoji").value = "много подходящих эмодзи";
+          document.getElementById("ai-extra").value = "Будь настойчив, делай акцент на том, что пока другие думают — мы зарабатываем. Дави на упущенную выгоду.";
+        } else if (type === "mentor") {
+          document.getElementById("ai-role").value = "консультант по IT-бизнесу";
+          document.getElementById("ai-tone").value = "строгий и профессиональный";
+          document.getElementById("ai-emoji").value = "минимум эмодзи";
+          document.getElementById("ai-extra").value = "Разъясняй математику партнерской программы логично и без лишних эмоций.";
+        }
+        buildAiPrompt();
+        showToast("Пресет применён!");
+      }
+
+      async function saveAiSettings() {
+        const btn = document.getElementById("saveAiBtn");
+        btn.disabled = true;
+        btn.innerHTML = "⏳ Синхронизация...";
+        
+        try {
+          const res = await fetch(`${BACKEND_URL}/?action=update_ai_settings`, {
+            method: "POST",
+            headers: authHeaders,
+            body: JSON.stringify({ custom_prompt: buildAiPrompt() }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            showToast("Интеллект обновлён во всех каналах!");
+            btn.innerHTML = "✅ ГОТОВО!";
+          } else {
+            showToast(data.error || "Ошибка сохранения", "error");
+            btn.innerHTML = "❌ ОШИБКА";
+          }
+        } catch (e) {
+          showToast("Ошибка сети", "error");
+          btn.innerHTML = "❌ ОШИБКА";
+        } finally {
+          setTimeout(() => { btn.disabled = false; btn.innerHTML = "🚀 ОБНОВИТЬ ИНТЕЛЛЕКТ"; }, 2000);
+        }
+      }
 
       async function initUser() {
-        const initData = tg.initData;
-        if (!initData) {
-          showFallbackMode();
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlToken = urlParams.get("token");
+        
+        // Universal auth priority: 1. JWT from URL, 2. LocalStorage, 3. Telegram initData
+        if (urlToken) {
+          authHeaders["Authorization"] = `Bearer ${urlToken}`;
+          localStorage.setItem("neurogen_jwt", urlToken);
+        } else if (localStorage.getItem("neurogen_jwt")) {
+          authHeaders["Authorization"] = `Bearer ${localStorage.getItem("neurogen_jwt")}`;
+        } else if (tg?.initData) {
+          authHeaders["x-telegram-initdata"] = tg.initData;
+        } else {
+          document.getElementById("loadingBlock").innerHTML = '<p class="text-red-500 font-bold text-center">Доступ запрещён. Авторизуйтесь через бота.</p>';
           return;
         }
-
-        const urlParams = new URLSearchParams(window.location.search);
-        const apiFromUrl = urlParams.get("api");
-        const BACKEND_URL = apiFromUrl || "https://d5dsbah1d4ju0glmp9d0.3zvepvee.apigw.yandexcloud.net";
 
         try {
           const response = await fetch(`${BACKEND_URL}/?action=get_partner_link`, {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-telegram-initdata": initData,
-            },
+            headers: authHeaders,
             body: JSON.stringify({ action: "get_partner_link" }),
           });
 
@@ -299,19 +629,14 @@
             userData = data.user;
             refLink = data.refLink;
             botName = data.botName;
-            
-            // === ИНЖЕКТ ДАННЫХ ИЗ БД ===
-            // Мы прокинули пользователя, берем его статус (bought_tripwire приходит из YDB, если ты его добавишь в выдачу API, либо используем заглушку)
-            // Допустим API /get_partner_link возвращает is_pro: true/false. Если нет, имитируем логику по доходу:
-            userData.is_pro = data.user.is_pro || false; 
-
+            userData.is_pro = data.user.is_pro || false;
             initUI();
           } else {
             throw new Error(data.error);
           }
         } catch (error) {
           console.error("Init error:", error);
-          showFallbackMode();
+          document.getElementById("loadingBlock").innerHTML = '<p class="text-red-500 font-bold text-center">Сессия устарела. Откройте меню заново.</p>';
         }
       }
 

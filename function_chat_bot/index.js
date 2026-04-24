@@ -45,7 +45,8 @@ const PRODUCT_ID_FREE = process.env.PRODUCT_ID_FREE || "140_9d5d2";
 const PRODUCT_ID_PRO = process.env.PRODUCT_ID_PRO || "103_97999"; // $20 (со скидкой)
 // === ИСПРАВЛЕНИЕ: Безопасный откат к PRODUCT_ID_PRO, если _40 не задан ===
 const PRODUCT_ID_PRO_40 = process.env.PRODUCT_ID_PRO_40 || PRODUCT_ID_PRO;
-const PRODUCT_ID_AI_SUBSCRIPTION = process.env.PRODUCT_ID_AI_SUBSCRIPTION || "ai_subscription_30days"; // ИИ-подписка на 30 дней
+const PRODUCT_ID_AI_SUBSCRIPTION =
+  process.env.PRODUCT_ID_AI_SUBSCRIPTION || "ai_subscription_30days"; // ИИ-подписка на 30 дней
 
 // === JWT SECRET — ВАЛИДАЦИЯ ПРИ ИМПОРТЕ (см. src/utils/jwt_utils.js) ===
 // JWT_SECRET проверяется автоматически при первом вызове getJwtSecret()
@@ -274,10 +275,15 @@ async function getOrCreatePin(productType, telegramUserId) {
 }
 
 // === ИНТЕГРАЦИЯ OPENROUTER (DEEPSEEK) — НОВАЯ ВЕРСИЯ С AI ENGINE ===
-async function askNeuroGenAI(userText, user) {
-  const apiKey = process.env.OPENROUTER_API_KEY;
+async function askNeuroGenAI(userText, user, botConfig = {}) {
+  // v3.0: Определяем ключ — личный партнёра ИЛИ глобальный
+  const apiKey =
+    botConfig.custom_api_key ||
+    process.env.POLZA_API_KEY ||
+    process.env.OPENROUTER_API_KEY;
+
   if (!apiKey) {
-    log.warn("[AI ENGINE] OPENROUTER_API_KEY not set");
+    log.warn("[AI ENGINE] No API key available");
     return null;
   }
 
@@ -290,14 +296,17 @@ async function askNeuroGenAI(userText, user) {
     state: user.state,
     textLength: userText.length,
     historyLength: cleanedHistory.length,
+    provider: botConfig.ai_provider || "polza",
+    model: botConfig.ai_model || "openai/gpt-4o-mini",
   });
 
-  // Генерируем ответ через AI Engine
+  // Генерируем ответ через AI Engine v3.0 (с botConfig)
   const aiResponse = await aiEngine.generateAIResponse(
     userText,
     user,
     user.state,
     cleanedHistory,
+    botConfig,
   );
 
   if (!aiResponse) {
@@ -346,25 +355,7 @@ const getHeader = (headers, key) => {
  * @returns {object|null} - { tgData, botToken, botInfo } или null при ошибке
  */
 async function authorizeCrmRequest(headers, eventBody, isBase64Encoded) {
-  // 1. Ищем заголовок гибко (не важно, X-Telegram-InitData или x-telegram-initdata)
-  const initData = getHeader(headers, "x-telegram-initdata");
-
-  if (!initData) {
-    console.error(
-      "[AUTH FAIL] Missing header x-telegram-initdata. Headers:",
-      JSON.stringify(headers),
-    );
-    return {
-      error: {
-        statusCode: 401,
-        headers: corsHeaders,
-        body: JSON.stringify({
-          error: "Telegram authorization required (Header missing)",
-        }),
-      },
-    };
-  }
-
+  // 1. Парсим тело запроса (нужно для bot_token в любом случае)
   let bodyStr = eventBody || "";
   if (isBase64Encoded)
     bodyStr = Buffer.from(eventBody, "base64").toString("utf8");
@@ -396,8 +387,42 @@ async function authorizeCrmRequest(headers, eventBody, isBase64Encoded) {
     };
   }
 
-  // 2. Валидируем подпись
-  const tgData = ydb.validateTelegramInitData(initData, botToken);
+  // 2. Ищем JWT токен в заголовке Authorization
+  const authHeader = getHeader(headers, "authorization");
+  let tgData = null;
+
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    const token = authHeader.split(" ")[1];
+    try {
+      const decoded = verifyToken(token);
+      if (decoded && decoded.uid) {
+        tgData = { user: { id: decoded.uid, first_name: decoded.first_name } };
+        console.log("[AUTH JWT] Decoded user:", decoded.uid);
+      }
+    } catch (e) {
+      console.warn("[AUTH JWT ERROR]", e.message);
+    }
+  }
+
+  // 3. Если JWT не работает — пробуем Telegram initData
+  if (!tgData) {
+    const initData = getHeader(headers, "x-telegram-initdata");
+    if (!initData) {
+      console.error("[AUTH FAIL] Missing auth. Headers:", JSON.stringify(headers));
+      return {
+        error: {
+          statusCode: 401,
+          headers: corsHeaders,
+          body: JSON.stringify({
+            error: "Telegram authorization required (Header missing)",
+          }),
+        },
+      };
+    }
+
+    // Валидируем подпись Telegram
+    tgData = ydb.validateTelegramInitData(initData, botToken);
+  }
 
   if (!tgData) {
     console.error("[AUTH FAIL] Signature mismatch", {
@@ -1196,6 +1221,7 @@ export const handler = async (event) => {
       log,
       MAIN_TOKEN,
       getHeader,
+      verifyToken,
     });
     if (partnerResponse) return partnerResponse;
     // --- КОНЕЦ PARTNER API ---
@@ -1210,6 +1236,8 @@ export const handler = async (event) => {
       corsHeaders,
       channelManager,
       sendEmail,
+      askNeuroGenAI,
+      aiEngine,
     });
     if (vkResponse) return vkResponse;
     // === КОНЕЦ VK WEBHOOK ===
@@ -1225,7 +1253,9 @@ export const handler = async (event) => {
 
     if (body.update_id) {
       // === YDB DEDUPLICATION: проверяем, не обрабатывали ли мы это сообщение ===
-      const isAlreadyProcessed = await ydb.isUpdateProcessed(String(body.update_id));
+      const isAlreadyProcessed = await ydb.isUpdateProcessed(
+        String(body.update_id),
+      );
       if (isAlreadyProcessed) {
         log.info(`[DEDUPLICATION] Skipping processed update ${body.update_id}`);
         return response(200, "ok");

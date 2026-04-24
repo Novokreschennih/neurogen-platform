@@ -6,7 +6,7 @@
  */
 
 import jwt from "jsonwebtoken";
-import { getJwtSecret } from "../../utils/jwt_utils.js";
+import { getJwtSecret, generateToken } from "../../utils/jwt_utils.js";
 
 const JWT_SECRET = getJwtSecret();
 
@@ -700,14 +700,19 @@ export const telegramButtons = {
 
         // 1. Твои клиенты (CRM)
         if (isPro) {
-          const webAppUrl =
-            process.env.CRM_WEB_APP_URL ||
-            "https://novokreschennih.github.io/crm-dashboard/";
+          const webAppUrl = process.env.CRM_WEB_APP_URL || "https://novokreschennih.github.io/crm-dashboard/";
+          
+          // Генерируем JWT токен
+          const jwtToken = generateToken({ 
+             uid: user.tg_id || user.id, 
+             first_name: user.first_name 
+          }, { expiresIn: "7d" });
+
           r.push([
             {
               text: "👥 ТВОИ КЛИЕНТЫ",
               web_app: {
-                url: `${webAppUrl}?bot_token=${user.bot_token || ""}`,
+                url: `${webAppUrl}?token=${jwtToken}&bot_token=${user.bot_token || ""}`,
               },
             },
           ]);

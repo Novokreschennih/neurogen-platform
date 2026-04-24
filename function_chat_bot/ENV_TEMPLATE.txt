@@ -192,9 +192,18 @@ UPDATE_CLEANUP_INTERVAL_MS=60000
 # Ключ для OpenRouter (DeepSeek AI)
 OPENROUTER_API_KEY=
 
+# Ключ для Polza.ai (v7.0 AI-конструктор)
+POLZA_API_KEY=
+
 # Supabase для генерации PIN-кодов
 SUPABASE_URL=
 SUPABASE_SERVICE_KEY=
+
+# ============================================================
+# 19.5. POLZA.AI — AI-КОНСТРУКТОР (v7.0)
+# ============================================================
+# Реф-ссылка Polza.ai для партнёров (20% реварда)
+POLZA_REF_URL=https://polza.ai/ref/your_ref_here
 
 # ============================================================
 # 20. МОДЕЛИ AI ДЛЯ OPENROUTER (ОПЦИОНАЛЬНО)

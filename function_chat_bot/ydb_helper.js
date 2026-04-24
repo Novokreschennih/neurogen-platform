@@ -11,9 +11,15 @@ const isValidBotToken = (token) => /^\d+:[A-Za-z0-9_-]+$/.test(token);
 
 export function isValidUserId(userId) {
   if (!userId || typeof userId !== "string") return false;
-  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) return true;
+  if (
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      userId,
+    )
+  )
+    return true;
   if (/^\d{3,20}$/.test(userId)) return true;
-  if (/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(userId)) return true;
+  if (/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(userId))
+    return true;
   if (/^(email:|vk:|web:|telegram:)/.test(userId)) return true;
   return false;
 }
@@ -43,7 +49,7 @@ export async function init() {
 
 // === v6.0: Омниканальная схема ===
 const USER_FIELDS =
-  "id, email, tg_id, vk_id, web_id, partner_id, state, bought_tripwire, session, last_seen, saved_state, bot_token, tariff, sh_user_id, sh_ref_tail, purchases, first_name, last_reminder_time, reminders_count, pin_code, session_version, ai_active_until, created_at";
+  "id, email, tg_id, vk_id, web_id, partner_id, state, bought_tripwire, session, last_seen, saved_state, bot_token, tariff, sh_user_id, sh_ref_tail, purchases, first_name, last_reminder_time, reminders_count, pin_code, session_version, ai_active_until, created_at, custom_api_key, custom_prompt, ai_model, ai_provider, user_daily_limit";
 
 function mapUser(row) {
   if (!row) return null;
@@ -107,6 +113,13 @@ function mapUser(row) {
     created_at: row.items[22]?.uint64Value
       ? Number(row.items[22].uint64Value)
       : null,
+    custom_api_key: row.items[23]?.textValue || "",
+    custom_prompt: row.items[24]?.textValue || "",
+    ai_model: row.items[25]?.textValue || "",
+    ai_provider: row.items[26]?.textValue || "",
+    user_daily_limit: row.items[27]?.uint64Value
+      ? Number(row.items[27].uint64Value)
+      : 0,
 
     // Обратная совместимость для старого кода (CRM, рассылки)
     get user_id() {
@@ -158,14 +171,14 @@ export async function findUser(criteria) {
       return mapUser(resultSets[0].rows[0]);
     });
   } catch (e) {
-      log.error(
-        `Failed to find user by criteria`,
-        e.message || String(e),
-        criteria,
-      );
-      return null;
-    }
+    log.error(
+      `Failed to find user by criteria`,
+      e.message || String(e),
+      criteria,
+    );
+    return null;
   }
+}
 
 export async function verifyEmailCode(email, code) {
   if (!email || !code) return { valid: false, error: "Missing email or code" };
@@ -305,6 +318,11 @@ export async function saveUser(user) {
           $newVer: TypedValues.uint64(String(newVersion)),
           $cat: TypedValues.uint64(String(user.created_at || now)),
           $aiUntil: TypedValues.uint64(String(user.ai_active_until || 0)),
+          $cak: TypedValues.utf8(String(user.custom_api_key || "")),
+          $cp: TypedValues.utf8(String(user.custom_prompt || "")),
+          $aim: TypedValues.utf8(String(user.ai_model || "")),
+          $aip: TypedValues.utf8(String(user.ai_provider || "")),
+          $udl: TypedValues.uint64(String(user.user_daily_limit || 0)),
         };
 
         const query = `
@@ -315,15 +333,18 @@ export async function saveUser(user) {
           DECLARE $tr AS Utf8; DECLARE $shui AS Utf8; DECLARE $shrt AS Utf8; DECLARE $pur AS Json;
           DECLARE $fn AS Utf8; DECLARE $lrt AS Uint64; DECLARE $rc AS Uint64; DECLARE $pc AS Utf8;
           DECLARE $newVer AS Uint64; DECLARE $cat AS Uint64; DECLARE $aiUntil AS Uint64;
+          DECLARE $cak AS Utf8; DECLARE $cp AS Utf8; DECLARE $aim AS Utf8; DECLARE $aip AS Utf8; DECLARE $udl AS Uint64;
 
           UPSERT INTO users (
             id, email, tg_id, vk_id, web_id,
             partner_id, state, bought_tripwire, session,
             last_seen, saved_state, bot_token, tariff, sh_user_id, sh_ref_tail, purchases,
-            first_name, last_reminder_time, reminders_count, pin_code, session_version, ai_active_until, created_at
+            first_name, last_reminder_time, reminders_count, pin_code, session_version, ai_active_until, created_at,
+            custom_api_key, custom_prompt, ai_model, ai_provider, user_daily_limit
           ) VALUES (
             $id, $email, $tg_id, $vk_id, $web_id,
-            $pid, $st, $br, $js, $ls, $sv, $bt, $tr, $shui, $shrt, $pur, $fn, $lrt, $rc, $pc, $newVer, $aiUntil, $cat
+            $pid, $st, $br, $js, $ls, $sv, $bt, $tr, $shui, $shrt, $pur, $fn, $lrt, $rc, $pc, $newVer, $aiUntil, $cat,
+            $cak, $cp, $aim, $aip, $udl
           );
         `;
         await session.executeQuery(query, params);
@@ -497,7 +518,8 @@ export async function getBotInfo(token) {
   if (!isValidBotToken(token)) return null;
   try {
     return await driver.tableClient.withSession(async (session) => {
-      const query = `DECLARE $tok AS Utf8; SELECT user_id, sh_user_id, sh_ref_tail, tripwire_link, bot_username FROM bots WHERE bot_token = $tok;`;
+      // v7.0: Added AI columns (ai_provider, ai_model, custom_api_key, custom_prompt, user_daily_limit)
+      const query = `DECLARE $tok AS Utf8; SELECT user_id, sh_user_id, sh_ref_tail, tripwire_link, bot_username, ai_provider, ai_model, custom_api_key, custom_prompt, user_daily_limit FROM bots WHERE bot_token = $tok;`;
       const { resultSets } = await session.executeQuery(query, {
         $tok: TypedValues.utf8(String(token)),
       });
@@ -509,6 +531,14 @@ export async function getBotInfo(token) {
         sh_ref_tail: r.items[2]?.textValue || "",
         tripwire_link: r.items[3]?.textValue || "",
         bot_username: r.items[4]?.textValue || "",
+        // v7.0 AI-поля для конструктора ИИ-сотрудников
+        ai_provider: r.items[5]?.textValue || "polza",
+        ai_model: r.items[6]?.textValue || "openai/gpt-4o-mini",
+        custom_api_key: r.items[7]?.textValue || "",
+        custom_prompt: r.items[8]?.textValue || "",
+        user_daily_limit: r.items[9]?.uint64Value
+          ? Number(r.items[9].uint64Value)
+          : 0,
       };
     });
   } catch (e) {
@@ -860,13 +890,15 @@ export async function isOwnerAiActive(leadUser, botToken, vkGroupId) {
     // 3. Ищем по реферальному хвосту (для Web-чата)
     else if (leadUser?.partner_id) {
       const utf8Type = TypedValues.utf8("").type;
-      const ownerRows = await driver.tableClient.withSession(async (session) => {
-        const { resultSets } = await session.executeQuery(
-          `DECLARE $tail AS Utf8; SELECT id, ai_active_until FROM users WHERE sh_ref_tail = $tail LIMIT 1;`,
-          { $tail: TypedValues.utf8(String(leadUser.partner_id)) }
-        );
-        return resultSets[0]?.rows || [];
-      });
+      const ownerRows = await driver.tableClient.withSession(
+        async (session) => {
+          const { resultSets } = await session.executeQuery(
+            `DECLARE $tail AS Utf8; SELECT id, ai_active_until FROM users WHERE sh_ref_tail = $tail LIMIT 1;`,
+            { $tail: TypedValues.utf8(String(leadUser.partner_id)) },
+          );
+          return resultSets[0]?.rows || [];
+        },
+      );
       if (ownerRows.length > 0) {
         const ownerIdFromRow = ownerRows[0].items[0]?.textValue;
         const activeUntil = ownerRows[0].items[1]?.uint64Value
@@ -892,7 +924,10 @@ export async function isOwnerAiActive(leadUser, botToken, vkGroupId) {
 
     return false;
   } catch (e) {
-    log.error("[AI SUBSCRIPTION] Error checking owner AI status", e.message || String(e));
+    log.error(
+      "[AI SUBSCRIPTION] Error checking owner AI status",
+      e.message || String(e),
+    );
     return false;
   }
 }
@@ -952,7 +987,9 @@ export async function isUpdateProcessed(updateId) {
       return resultSets[0]?.rows?.length > 0;
     });
   } catch (e) {
-    log.warn(`[PROCESSED UPDATES] Check failed, allowing through: ${e.message}`);
+    log.warn(
+      `[PROCESSED UPDATES] Check failed, allowing through: ${e.message}`,
+    );
     return false;
   }
 }

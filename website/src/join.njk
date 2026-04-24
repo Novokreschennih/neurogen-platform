@@ -58,7 +58,7 @@ eleventyExcludeFromCollections: true
     </div>
 
     <main class="max-w-5xl mx-auto w-full z-10 pt-4">
-      
+
       <!-- Партнерский бейдж -->
       <div
         id="partner-badge"
@@ -114,7 +114,7 @@ eleventyExcludeFromCollections: true
             <div class="text-4xl mb-4">🐙</div>
             <h3 class="text-xl font-bold text-white mb-3">Мультиканальный ИИ-Агент</h3>
             <p class="text-gray-400 text-sm leading-relaxed">
-              Твой цифровой клон запускается одновременно в <b>Telegram, ВКонтакте, и как виджет на твоем сайте</b>. Он сам отвечает на вопросы клиентов, закрывает возражения и ведет их по воронке, используя глубоко обученное нейроядро.
+              Твой цифровой клон запускается одновременно в <b>Telegram, ВКонтакте, и на нашем сайте</b>. Он сам отвечает на вопросы клиентов, закрывает возражения и ведет их по воронке, используя глубоко обученное нейроядро.
             </p>
           </div>
 
@@ -163,7 +163,7 @@ eleventyExcludeFromCollections: true
             <div class="text-xs font-bold bg-gray-800 text-gray-300 px-3 py-1 rounded-full inline-block mb-4">БАЗОВЫЙ ДОСТУП</div>
             <h3 class="text-3xl font-black text-white mb-2">Тариф FREE <span class="text-gray-500 text-lg">$0</span></h3>
             <p class="text-sm text-gray-400 mb-6 border-b border-gray-800 pb-6">Начни строить бизнес без рисков и вложений. Получи бота и обучайся бесплатно.</p>
-            
+
             <ul class="space-y-4 mb-8">
               <li class="flex items-start gap-3">
                 <span class="text-cyan-400 mt-0.5">✅</span>
@@ -192,11 +192,11 @@ eleventyExcludeFromCollections: true
           <!-- PRO TIER -->
           <div class="glass-panel p-8 rounded-3xl border-purple-500/50 relative overflow-hidden shadow-[0_0_30px_rgba(168,85,247,0.15)]">
             <div class="absolute top-0 right-0 bg-gradient-to-r from-cyan-400 to-purple-500 text-white text-[10px] font-black px-4 py-1 rounded-bl-xl uppercase tracking-wider">РЕКОМЕНДУЕМ</div>
-            
+
             <div class="text-xs font-bold bg-purple-900/40 text-purple-300 px-3 py-1 rounded-full inline-block mb-4 border border-purple-500/30">БИЗНЕС-ПАКЕТ</div>
             <h3 class="text-3xl font-black text-white mb-2">Статус PRO</h3>
             <p class="text-sm text-gray-400 mb-6 border-b border-gray-800 pb-6">Активируется внутри бота. Окупается с первой сделки. Максимальная прибыль.</p>
-            
+
             <ul class="space-y-4 mb-8">
               <li class="flex items-start gap-3">
                 <span class="text-purple-400 mt-0.5">🔥</span>
@@ -310,7 +310,7 @@ eleventyExcludeFromCollections: true
           <h2 class="text-3xl md:text-5xl font-black mb-6 uppercase">
             Твой ход. <span class="text-cyan-400">Решай.</span>
           </h2>
-          
+
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10 text-left">
             <div class="p-6 rounded-2xl bg-black/40 border border-gray-800 hover:border-red-500/50 transition-colors">
               <div class="text-red-400 font-bold mb-3 text-lg flex items-center gap-2">
@@ -456,7 +456,7 @@ eleventyExcludeFromCollections: true
       document.addEventListener("DOMContentLoaded", () => {
         const DEFAULT_BOT = "sethubble_biz_bot";
         const DEFAULT_PARTNER_ID = "p_qdr";
-        
+
         // ⚠️ ЗАМЕНИ на реальный URL твоего API Gateway из Яндекса! ⚠️
         const API_URL = "https://d5dsbah1d4ju0glmp9d0.3zvepvee.apigw.yandexcloud.net/?action=web-chat";
         const WEB_CHAT_URL = "/ai/";
@@ -648,17 +648,17 @@ eleventyExcludeFromCollections: true
         btnTelegram.addEventListener("click", () => {
           const email = emailInput.value.trim() || storedEmail;
           const startPayload = email ? `${partnerId}-${encodeEmailForUrl(email)}` : partnerId;
-          window.location.href = `https://t.me/${refBot}?start=${startPayload}`;
+          window.open(`https://t.me/${refBot}?start=${startPayload}`, "_blank");
         });
 
         btnVK.addEventListener("click", () => {
           const email = emailInput.value.trim() || storedEmail;
           const startPayload = email ? `${partnerId}-${encodeEmailForUrl(email)}` : partnerId;
-          window.location.href = `${VK_COMMUNITY_URL}?ref=${startPayload}`;
+          window.open(`${VK_COMMUNITY_URL}?ref=${startPayload}`, "_blank");
         });
 
         btnWeb.addEventListener("click", () => {
-          window.location.href = `${WEB_CHAT_URL}?ref=${partnerId}`;
+          window.open(`${WEB_CHAT_URL}?ref=${partnerId}`, "_blank");
         });
 
         btnEmailEl.addEventListener("click", () => {

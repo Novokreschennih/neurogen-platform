@@ -234,7 +234,7 @@ eleventyExcludeFromCollections: true
     <!-- ИСПРАВЛЕНИЕ: Используем fixed, h-full и flex-col для жесткой фиксации экрана -->
     <div
       id="screenTraining"
-      class="funnel-screen flex-col fixed inset-0 bg-[#050505] z-50"
+      class="funnel-screen flex-col fixed top-0 left-0 w-full bg-[#050505] z-50" style="height: 100dvh; height: -webkit-fill-available; max-height: 100dvh;"
     >
       <!-- HEADER -->
       <header class="w-full max-w-2xl mx-auto flex items-center justify-between px-5 py-3 border-b border-white/5 bg-[#050505]/90 backdrop-blur-md shrink-0">
@@ -266,6 +266,7 @@ eleventyExcludeFromCollections: true
       <div
         id="trainingContent"
         class="flex-1 overflow-y-auto chat-scroll px-4 py-6 w-full max-w-2xl mx-auto"
+        style="overscroll-behavior: none;"
       >
         <!-- Генерируется динамически -->
       </div>
@@ -280,7 +281,7 @@ eleventyExcludeFromCollections: true
                 id="messageInput"
                 rows="1"
                 placeholder="Спроси что-то у NeuroGen..."
-                class="w-full resize-none rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 text-white placeholder-gray-500 px-5 py-3.5 pr-12 text-sm leading-relaxed focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 transition-all"
+                class="w-full resize-none rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 text-white placeholder-gray-500 px-5 py-3.5 pr-12 text-base leading-relaxed focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 transition-all"
               ></textarea>
               <button
                 type="submit"
@@ -567,7 +568,7 @@ eleventyExcludeFromCollections: true
 
     const bubble = document.createElement("div");
     bubble.className =
-      "max-w-[85%] md:max-w-[70%] rounded-2xl px-5 py-4 text-sm leading-relaxed break-words shadow-lg "
+      "max-w-[85%] md:max-w-[70%] rounded-2xl px-5 py-4 text-base leading-relaxed break-words shadow-lg "
       + (isUser
         ? "bg-gradient-to-r from-cyan-500 to-purple-500 text-white rounded-br-sm"
         : "bg-gray-800/90 text-gray-100 rounded-bl-sm border border-white/5");

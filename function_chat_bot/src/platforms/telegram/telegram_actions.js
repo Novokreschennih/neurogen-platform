@@ -171,11 +171,19 @@ export function registerTelegramActions(bot, ctx) {
       process.env.PROMO_KIT_URL ||
       "https://novokreschennih.github.io/neurogen-promo-kit/";
 
+    // v7.1: Generate JWT for universal auth
+    const { generateToken } = await import("../../utils/jwt_utils.js");
+    const jwtToken = generateToken({
+      uid: ctx.dbUser.tg_id,
+      first_name: ctx.dbUser.first_name,
+    }, { expiresIn: "7d" });
+
     const mod3Done = ctx.dbUser.session?.mod3_done;
     const isPro = ctx.dbUser.bought_tripwire;
     const mod3Param = mod3Done || isPro ? "&mod3=1" : "";
 
-    const webAppUrl = `${promoKitUrl}?bot=${botName}&api=https://${apiGw}${mod3Param}`;
+    // v7.1: Add JWT token to URL
+    const webAppUrl = `${promoKitUrl}?token=${jwtToken}&bot=${botName}&api=https://${apiGw}${mod3Param}`;
 
     return ctx.reply(
       `🚀 <b>Promo-Kit</b>\n\nТвой генератор маркетинговых материалов:`,
@@ -194,27 +202,27 @@ export function registerTelegramActions(bot, ctx) {
   // === ОБРАБОТЧИК PARTNER_STATS ===
   bot.action("PARTNER_STATS", async (ctx) => {
     await ctx.answerCbQuery();
-    
+
     const refTail = ctx.dbUser.sh_ref_tail || ctx.dbUser.partner_id || "p_qdr";
-    
+
     try {
       const statsQuery = `
         DECLARE $refTail AS Utf8;
-        SELECT COUNT(*) as referred_count 
-        FROM users 
+        SELECT COUNT(*) as referred_count
+        FROM users
         WHERE partner_id = $refTail;
       `;
       const result = await ydb.ydb.executeQuery(statsQuery, {
         refTail: ydb.createPrimitiveValue(refTail),
       });
       const count = result.resultSets[0]?.rows[0]?.referred_count ?? 0;
-      
+
       await ctx.reply(
         `📊 <b>ВАША ПАРТНЁРСКАЯ СТАТИСТИКА</b>\n\n` +
-        `🔗 Ваш реф. хвост: <code>${refTail}</code>\n` +
-        `👥 Приглашённых пользователей: <b>${count}</b>\n\n` +
-        `💰 Выплаты автоматически начисляются при покупках.`,
-        { parse_mode: "HTML" }
+          `🔗 Ваш реф. хвост: <code>${refTail}</code>\n` +
+          `👥 Приглашённых пользователей: <b>${count}</b>\n\n` +
+          `💰 Выплаты автоматически начисляются при покупках.`,
+        { parse_mode: "HTML" },
       );
     } catch (e) {
       log.error(`[TG PARTNER_STATS] Error:`, e);
@@ -291,13 +299,18 @@ export function registerTelegramActions(bot, ctx) {
 
     const buttons = [];
     if (isPro) {
-      const crmUrl =
-        process.env.CRM_WEB_APP_URL ||
-        "https://novokreschennih.github.io/crm-dashboard/";
+      const crmUrl = process.env.CRM_WEB_APP_URL || "https://novokreschennih.github.io/crm-dashboard/";
+      
+      // Генерируем JWT токен для CRM
+      const jwtToken = generateToken({ 
+        uid: user.tg_id || user.id, 
+        first_name: user.first_name 
+      }, { expiresIn: "7d" });
+
       buttons.push([
         {
           text: "📊 ОТКРЫТЬ CRM-ДАШБОРД",
-          web_app: { url: `${crmUrl}?bot_token=${user.bot_token || ""}` },
+          web_app: { url: `${crmUrl}?token=${jwtToken}&bot_token=${user.bot_token || ""}` },
         },
       ]);
     } else {
@@ -571,69 +584,129 @@ export function registerTelegramActions(bot, ctx) {
         tail = tail.split("?")[0].replace(/\/$/, "").split("/").pop();
       }
       u.sh_ref_tail = tail;
-      
+
       // === ВЕРИФИКАЦИЯ ЧЕРЕЗ ВОПРОС ПО ТАРИФАМ ===
       const tariffQuestions = [
-        { q: "Сколько компаний можно создать на тарифе 'Самолет'?", a: ["1", "один"] },
-        { q: "Максимальная цена товара ($) на тарифе 'Ракета'?", a: ["5000", "5000$"] },
-        { q: "Сколько уровней партнерских программ доступно на тарифе 'Шаттл'?", a: ["10", "десять"] },
-        { q: "Какая комиссия (%) на тарифе 'Самолет'?", a: ["5", "5%", "пять"] },
+        {
+          q: "Сколько компаний можно создать на тарифе 'Самолет'?",
+          a: ["1", "один"],
+        },
+        {
+          q: "Максимальная цена товара ($) на тарифе 'Ракета'?",
+          a: ["5000", "5000$"],
+        },
+        {
+          q: "Сколько уровней партнерских программ доступно на тарифе 'Шаттл'?",
+          a: ["10", "десять"],
+        },
+        {
+          q: "Какая комиссия (%) на тарифе 'Самолет'?",
+          a: ["5", "5%", "пять"],
+        },
         { q: "Какая комиссия (%) на тарифе 'Ракета'?", a: ["3", "3%", "три"] },
         { q: "Какая комиссия (%) на тарифе 'Шаттл'?", a: ["1", "1%", "один"] },
-        { q: "Максимальный доход от партнерских программ ($/год) на тарифе 'Самолет'?", a: ["10k", "10000", "10 000"] },
-        { q: "Максимальный доход от партнерских программ ($/год) на тарифе 'Ракета'?", a: ["100k", "100000", "100 000"] },
-        { q: "Максимальный доход от партнерских программ ($/год) на тарифе 'Шаттл'?", a: ["12m", "12000000", "12 000 000"] },
-        { q: "Доступна ли бинарная система на тарифе 'Самолет'?", a: ["нет", "недоступна", "no"] },
-        { q: "Включена ли бинарная система на тарифе 'Ракета'?", a: ["да", "только включена", "yes"] },
-        { q: "Есть ли полный доступ к бинарной системе на тарифе 'Шаттл'?", a: ["да", "полный доступ", "yes"] },
-        { q: "Макс. количество продуктов /месяц на тарифе 'Самолет'?", a: ["5", "пять"] },
-        { q: "Макс. количество продуктов /месяц на тарифе 'Ракета'?", a: ["50", "пятьдесят"] },
-        { q: "Макс. количество продуктов /месяц на тарифе 'Шаттл'?", a: ["100", "сто"] },
-        { q: "Авто-вывод средств на тарифе 'Самолет'?", a: ["нет", "отключён", "no", "disabled"] },
-        { q: "Авто-вывод средств на тарифе 'Ракета'?", a: ["да", "доступно", "yes", "available"] },
-        { q: "Авто-вывод средств на тарифе 'Шаттл'?", a: ["да", "доступно", "yes", "available"] },
+        {
+          q: "Максимальный доход от партнерских программ ($/год) на тарифе 'Самолет'?",
+          a: ["10k", "10000", "10 000"],
+        },
+        {
+          q: "Максимальный доход от партнерских программ ($/год) на тарифе 'Ракета'?",
+          a: ["100k", "100000", "100 000"],
+        },
+        {
+          q: "Максимальный доход от партнерских программ ($/год) на тарифе 'Шаттл'?",
+          a: ["12m", "12000000", "12 000 000"],
+        },
+        {
+          q: "Доступна ли бинарная система на тарифе 'Самолет'?",
+          a: ["нет", "недоступна", "no"],
+        },
+        {
+          q: "Включена ли бинарная система на тарифе 'Ракета'?",
+          a: ["да", "только включена", "yes"],
+        },
+        {
+          q: "Есть ли полный доступ к бинарной системе на тарифе 'Шаттл'?",
+          a: ["да", "полный доступ", "yes"],
+        },
+        {
+          q: "Макс. количество продуктов /месяц на тарифе 'Самолет'?",
+          a: ["5", "пять"],
+        },
+        {
+          q: "Макс. количество продуктов /месяц на тарифе 'Ракета'?",
+          a: ["50", "пятьдесят"],
+        },
+        {
+          q: "Макс. количество продуктов /месяц на тарифе 'Шаттл'?",
+          a: ["100", "сто"],
+        },
+        {
+          q: "Авто-вывод средств на тарифе 'Самолет'?",
+          a: ["нет", "отключён", "no", "disabled"],
+        },
+        {
+          q: "Авто-вывод средств на тарифе 'Ракета'?",
+          a: ["да", "доступно", "yes", "available"],
+        },
+        {
+          q: "Авто-вывод средств на тарифе 'Шаттл'?",
+          a: ["да", "доступно", "yes", "available"],
+        },
         { q: "Получение баллов на тарифе 'Самолет'?", a: ["нет", "no"] },
         { q: "Получение баллов на тарифе 'Ракета'?", a: ["нет", "no"] },
         { q: "Получение баллов на тарифе 'Шаттл'?", a: ["да", "yes"] },
-        { q: "Макс. сумма пожертвования ($) на тарифе 'Самолет'?", a: ["500", "500$"] },
-        { q: "Макс. сумма пожертвования ($) на тарифе 'Ракета'?", a: ["5000", "5000$"] },
-        { q: "Макс. сумма пожертвования ($) на тарифе 'Шаттл'?", a: ["300k", "300000", "300 000"] },
+        {
+          q: "Макс. сумма пожертвования ($) на тарифе 'Самолет'?",
+          a: ["500", "500$"],
+        },
+        {
+          q: "Макс. сумма пожертвования ($) на тарифе 'Ракета'?",
+          a: ["5000", "5000$"],
+        },
+        {
+          q: "Макс. сумма пожертвования ($) на тарифе 'Шаттл'?",
+          a: ["300k", "300000", "300 000"],
+        },
       ];
-      
-      const randomQ = tariffQuestions[Math.floor(Math.random() * tariffQuestions.length)];
+
+      const randomQ =
+        tariffQuestions[Math.floor(Math.random() * tariffQuestions.length)];
       u.session.verification_question = randomQ.q;
       u.session.verification_answers = randomQ.a;
       u.state = "WAIT_VERIFICATION";
       await ydb.saveUser(u);
-      
+
       return ctx.reply(
         `🔐 <b>ПОДТВЕРЖДЕНИЕ ВЛАДЕНИЯ АККАУНТОМ</b>\n\n` +
-        `Чтобы убедиться, что у тебя есть доступ к личному кабинету SetHubble, ответь на вопрос:\n\n` +
-        `<b>${randomQ.q}</b>\n\n` +
-        `<i>(Подсказка: эти данные есть в таблице тарифов в твоем личном кабинете)</i>`,
+          `Чтобы убедиться, что у тебя есть доступ к личному кабинету SetHubble, ответь на вопрос:\n\n` +
+          `<b>${randomQ.q}</b>\n\n` +
+          `<i>(Подсказка: эти данные есть в таблице тарифов в твоем личном кабинете)</i>`,
         { parse_mode: "HTML", protect_content: true },
       );
     }
-    
+
     if (u.state === "WAIT_VERIFICATION") {
       const expectedAnswers = u.session.verification_answers || [];
       const userAnswer = txt.toLowerCase().trim();
-      
-      const isCorrect = expectedAnswers.some(ans => userAnswer.includes(ans) || ans.includes(userAnswer));
-      
+
+      const isCorrect = expectedAnswers.some(
+        (ans) => userAnswer.includes(ans) || ans.includes(userAnswer),
+      );
+
       if (!isCorrect) {
         return ctx.reply(
           `❌ <b>Неверный ответ.</b>\n\n` +
-          `Загляни в таблицу тарифов в личном кабинете SetHubble и попробуй еще раз.\n\n` +
-          `<b>Вопрос:</b> ${u.session.verification_question}`,
+            `Загляни в таблицу тарифов в личном кабинете SetHubble и попробуй еще раз.\n\n` +
+            `<b>Вопрос:</b> ${u.session.verification_question}`,
           { parse_mode: "HTML", protect_content: true },
         );
       }
-      
+
       // Очистка временных данных
       delete u.session.verification_question;
       delete u.session.verification_answers;
-      
+
       u.state = "Training_Main";
       await ydb.saveUser(u);
 
@@ -831,8 +904,11 @@ export function registerTelegramActions(bot, ctx) {
 
       // === TRIAL PERIOD: 3 дня бесплатного ИИ для новых партнёров ===
       if (!u.ai_active_until || u.ai_active_until < Date.now()) {
-        u.ai_active_until = Date.now() + (3 * 24 * 60 * 60 * 1000);
-        log.info("[TRIAL PERIOD] Added 3 days AI trial for new partner", { userId: u.user_id, aiUntil: new Date(u.ai_active_until).toISOString() });
+        u.ai_active_until = Date.now() + 3 * 24 * 60 * 60 * 1000;
+        log.info("[TRIAL PERIOD] Added 3 days AI trial for new partner", {
+          userId: u.user_id,
+          aiUntil: new Date(u.ai_active_until).toISOString(),
+        });
       }
 
       try {
@@ -969,11 +1045,36 @@ export function registerTelegramActions(bot, ctx) {
 
     // === ОБРАБОТКА СВОБОДНОГО ТЕКСТА (AI) ===
     try {
-      // Проверка активности ИИ-подписки владельца канала (SaaS)
-      const isAiActive = await ydb.isOwnerAiActive(u, token, null);
-      if (!isAiActive) {
+      // v7.1: Получаем настройки из bots (per-bot limits) и owner settings из users (AI config)
+      const botSettings = await ydb.getBotInfo(token);
+      let ownerSettings = { custom_prompt: "", ai_provider: "polza", ai_model: "openai/gpt-4o-mini", custom_api_key: "", user_daily_limit: 0 };
+
+      if (botSettings?.owner_id) {
+        const owner = await ydb.getUser(botSettings.owner_id);
+        if (owner) {
+          ownerSettings = {
+            custom_prompt: owner.custom_prompt || "",
+            ai_provider: owner.ai_provider || "polza",
+            ai_model: owner.ai_model || "openai/gpt-4o-mini",
+            custom_api_key: owner.custom_api_key || "",
+            user_daily_limit: owner.user_daily_limit || 0,
+          };
+        }
+      }
+
+      // v7.0: Проверка доступа к ИИ — личный ключ партнёра ИЛИ активная подписка
+      const hasCustomKey = !!ownerSettings.custom_api_key;
+      const isOwnerAiActive = await ydb.isOwnerAiActive(u, token, null);
+      const hasAiAccess =
+        hasCustomKey || isOwnerAiActive || u.ai_active_until > Date.now();
+
+      if (!hasAiAccess) {
         return ctx.reply(
-          `🤖 <b>ИИ-консультант временно недоступен</b>\n\nВладелец бота ещё не активировал подписку на ИИ-консультанта.\n\nОбратитесь к владельцу для активации 👇`,
+          `🤖 <b>Интеллект бота не активирован.</b>\n\n` +
+            `Чтобы я мог отвечать вашим клиентам, выберите действие в меню <b>Мой профиль -> Настройка ИИ</b>:\n\n` +
+            `1️⃣ Оплатите подписку (100 руб/мес)\n` +
+            `2️⃣ Подключите личный API-ключ Polza.ai (ваша реф. ссылка)\n\n` +
+            `📖 <i>Подробнее: Мой профиль -> Настройка ИИ</i>`,
           {
             parse_mode: "HTML",
             protect_content: true,
@@ -986,7 +1087,7 @@ export function registerTelegramActions(bot, ctx) {
         );
       }
 
-      const today = new Date().toISOString().split("T")[0];
+const today = new Date().toISOString().split("T")[0];
 
       if (u.session.ai_count === undefined) u.session.ai_count = 0;
       if (u.session.ai_date !== today) {
@@ -994,7 +1095,9 @@ export function registerTelegramActions(bot, ctx) {
         u.session.ai_date = today;
       }
 
-      const currentLimit = u.bought_tripwire ? AI_PRO_LIMIT : AI_FREE_LIMIT;
+      // v7.1: Вычисляем лимит (owner -> bot -> global)
+      const defaultLimit = u.bought_tripwire ? AI_PRO_LIMIT : AI_FREE_LIMIT;
+      const currentLimit = (ownerSettings.user_daily_limit || botSettings?.user_daily_limit) || defaultLimit;
 
       if (u.session.ai_count >= currentLimit) {
         const limitMsg = u.bought_tripwire
@@ -1030,8 +1133,26 @@ export function registerTelegramActions(bot, ctx) {
         hasPro: u.bought_tripwire,
       });
 
+      log.info("[AI HANDLER] Processing request", {
+        userId: u.user_id,
+        aiCount: u.session.ai_count,
+        limit: currentLimit,
+        hasPro: u.bought_tripwire,
+        provider: botConfig.ai_provider,
+        model: botConfig.ai_model,
+        hasCustomKey: hasCustomKey,
+      });
+
+      // v7.1: Формируем botConfig для AI Engine v3.0 (приоритет — ownerSettings, fallback — botSettings для лимитов)
+      const botConfig = {
+        ai_provider: ownerSettings.ai_provider || botSettings?.ai_provider || "polza",
+        ai_model: ownerSettings.ai_model || botSettings?.ai_model || "openai/gpt-4o-mini",
+        custom_api_key: ownerSettings.custom_api_key || "",
+        custom_prompt: ownerSettings.custom_prompt || "",
+      };
+
       await ctx.telegram.sendChatAction(ctx.from.id, "typing").catch(() => {});
-      const aiResponse = await askNeuroGenAI(txt, u);
+      const aiResponse = await askNeuroGenAI(txt, u, botConfig);
 
       log.info("[AI HANDLER] Response status", {
         hasResponse: !!aiResponse,

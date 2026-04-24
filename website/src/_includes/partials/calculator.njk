@@ -1,125 +1,375 @@
-<section id="simulator" class="simulator island-dark">
-    
-    <div class="simulator-header">
-        <h2>Калькулятор Эффективности</h2>
-        <p id="simulatorSubtitle" style="color: var(--text-gray); max-width: 700px; margin: auto; transition: opacity 0.3s;">
-            Рассчитайте потенциальный экономический эффект от внедрения программы лояльности.
+<section id="simulator" class="py-20 relative overflow-hidden">
+  <!-- Фоновые свечения -->
+  <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl h-96 bg-purple-900/20 blur-[120px] rounded-full pointer-events-none -z-10">
+  </div>
+
+  <div class="max-w-5xl mx-auto px-4">
+    <div class="text-center mb-12">
+      <div class="inline-block px-4 py-1.5 rounded-full bg-white/5 border border-white/10 mb-4 text-xs font-bold tracking-wide text-cyan-400 uppercase">
+        Интерактивная модель
+      </div>
+      <h2 class="text-3xl md:text-5xl font-black mb-6 uppercase">
+        Калькулятор <span class="gradient-text">Скрытой Прибыли</span>
+      </h2>
+      <p class="text-gray-400 max-w-2xl mx-auto">
+        Выберите свой сценарий и посмотрите, сколько денег проходит мимо вашего
+        кошелька прямо сейчас.
+      </p>
+    </div>
+
+    <!-- НАВИГАЦИЯ ПО БЛОКАМ -->
+    <div class="flex flex-wrap justify-center gap-2 mb-8 bg-black/40 p-2 rounded-2xl border border-white/5 max-w-2xl mx-auto">
+      <button
+        class="calc-tab-btn active flex-1 min-w-[150px] py-3 px-4 rounded-xl text-sm font-bold transition-all text-white bg-white/10 border border-white/10"
+        data-target="calc-block-1"
+      >
+        🏢 Реклама бизнесов
+      </button>
+      <button
+        class="calc-tab-btn flex-1 min-w-[150px] py-3 px-4 rounded-xl text-sm font-bold transition-all text-gray-500 hover:text-white hover:bg-white/5"
+        data-target="calc-block-2"
+      >
+        ☕ Пассив офлайна
+      </button>
+      <button
+        class="calc-tab-btn flex-1 min-w-[150px] py-3 px-4 rounded-xl text-sm font-bold transition-all text-gray-500 hover:text-white hover:bg-white/5"
+        data-target="calc-block-3"
+      >
+        🚀 Сеть агентов
+      </button>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- БЛОК 1: БИЗНЕС (МЕРТВЫЙ БЮДЖЕТ VS SETHUBBLE) -->
+    <!-- ========================================== -->
+    <div
+      id="calc-block-1"
+      class="calc-block active glass-panel rounded-3xl p-6 md:p-10 border-t border-cyan-500/30 shadow-2xl"
+    >
+      <div class="text-center mb-8">
+        <h3 class="text-2xl font-bold text-white mb-2">
+          «Слив бюджета» против «Оплаты за результат»
+        </h3>
+        <p class="text-sm text-gray-400">
+          Посмотрим правде в глаза. Классическая реклама не дает гарантий.
         </p>
-    </div>
-    
-    <div id="simulatorModeSwitcher" class="simulator-mode-switcher" data-mode="author">
-        <div class="mode-switch-indicator"></div>
-        <button class="mode-switch-btn active" data-mode="author">Я — Владелец Бизнеса</button>
-        <button class="mode-switch-btn" data-mode="partner">Я — Партнер</button>
-    </div>
+      </div>
 
-    <!-- Переключатель Типа -->
-    <div id="businessTypeSwitcher" class="simulator-mode-switcher" data-type="online" style="margin-top: -20px; transform: scale(0.9);">
-        <div class="mode-switch-indicator"></div>
-        <button class="mode-switch-btn active" data-type="online">Онлайн</button>
-        <button class="mode-switch-btn" data-type="offline">Офлайн</button>
-    </div>
-
-    <div class="controls-area">
-        <div class="general-controls">
-            <div class="control-group">
-                <label for="price">
-                    <span id="priceLabel">Средний чек (у.е.)</span> 
-                    <span class="value-display" id="priceValue">100 у.е.</span>
-                </label>
-                <input type="range" id="price" class="slider" min="10" max="2000" value="100" step="10">
-            </div>
-            <div class="control-group">
-                <label for="initialPartners">
-                    <span id="initialPartnersLabel">Клиентов/Продаж в месяц</span> 
-                    <span class="value-display" id="initialPartnersValue">10</span>
-                </label>
-                <input type="range" id="initialPartners" class="slider" min="1" max="100" value="10" step="1">
-            </div>
-            <div class="control-group">
-                <label for="partnerDuplication">
-                    <span id="duplicationLabel">Коэффициент виральности</span> 
-                    <span class="value-display" id="partnerDuplicationValue">2</span>
-                </label>
-                <input type="range" id="partnerDuplication" class="slider" min="0" max="10" value="2" step="1" title="Сколько новых клиентов приведет каждый участник">
-            </div>
-        </div>
-    </div>
-
-    <div class="results-grid">
-        <div class="result-column classic">
-            <h3>Классический маркетинг</h3>
-            <p class="subtitle" id="classicSubtitle">1-2 уровня рекомендаций</p>
-            <div class="simulator-controls">
-                <div class="control-group">
-                    <label style="display:flex; justify-content: space-between;">Глубина (уровни) <span class="value-display" id="classicLevelsValue" style="color: var(--text-gray);">2</span></label>
-                    <input type="range" id="classicLevels" class="slider" min="0" max="2" value="2" style="opacity: 0.7;">
-                </div>
-                <div class="control-row" id="classicL1Row">
-                    <label for="classicL1">Вознаграждение ур. 1, %</label>
-                    <input type="number" id="classicL1" class="number-input" value="30" min="0" max="100" step="1">
-                </div>
-                <div class="control-row" id="classicL2Row">
-                    <label for="classicL2">Вознаграждение ур. 2, %</label>
-                    <input type="number" id="classicL2" class="number-input" value="5" min="0" max="100" step="1">
-                </div>
-            </div>
-             <div class="metrics-container">
-                <div class="result-item">
-                    <div class="label" id="classicPartnersLabel">Охват аудитории</div>
-                    <div class="value" id="classicTotalPartners">0</div>
-                </div>
-                <div class="income-box">
-                    <span class="income-label" id="classicIncomeLabel">Экономический эффект</span>
-                    <div class="income-value" id="classicAuthorIncome">0</div>
-                </div>
-            </div>
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-8">
+        <div class="md:col-span-5 space-y-6 bg-black/40 p-6 rounded-2xl border border-white/5">
+          <div>
+            <label
+              class="flex justify-between text-sm text-gray-400 mb-2 font-bold"
+            >
+              <span>Рекламный бюджет (₽/мес)</span>
+              <span id="val-b1-budget" class="text-white">100 000 ₽</span>
+            </label>
+            <input
+              type="range"
+              id="slider-b1-budget"
+              class="w-full accent-cyan-500"
+              min="10000"
+              max="500000"
+              step="10000"
+              value="100000"
+            >
+          </div>
+          <div>
+            <label
+              class="flex justify-between text-sm text-gray-400 mb-2 font-bold"
+            >
+              <span>Средний чек клиента (₽)</span>
+              <span id="val-b1-check" class="text-white">5 000 ₽</span>
+            </label>
+            <input
+              type="range"
+              id="slider-b1-check"
+              class="w-full accent-cyan-500"
+              min="500"
+              max="50000"
+              step="500"
+              value="5000"
+            >
+          </div>
+          <div>
+            <label
+              class="flex justify-between text-sm text-gray-400 mb-2 font-bold"
+            >
+              <span>Вы отдаете агенту (%)</span>
+              <span id="val-b1-percent" class="text-white">10%</span>
+            </label>
+            <input
+              type="range"
+              id="slider-b1-percent"
+              class="w-full accent-cyan-500"
+              min="5"
+              max="50"
+              step="1"
+              value="10"
+            >
+          </div>
         </div>
 
-        <div class="result-column sethubble">
-            <h3>🚀 Модель SetHubble</h3>
-            <p class="subtitle" id="sethubbleSubtitle">Deep Tier System (5 уровней)</p>
-             <div class="simulator-controls">
-                <div class="control-group">
-                    <label style="display:flex; justify-content: space-between; color: white;">Глубина (уровни) <span class="value-display" id="sethubbleLevelsValue" style="color: var(--neon);">5</span></label>
-                    <input type="range" id="sethubbleLevels" class="slider" min="0" max="10" value="5">
-                </div>
-                <div class="control-row" id="sethubbleL1Row">
-                    <label for="sethubbleL1" style="color: white;">Вознаграждение ур. 1, %</label>
-                    <input type="number" id="sethubbleL1" class="number-input" value="40" min="0" max="90" step="1" style="border-color: var(--neon-glow);">
-                </div>
-                <div class="control-row" id="sethubbleL2plusRow">
-                    <label for="sethubbleL2plus" id="sethubbleL2plusLabel" style="color: white;">Вознаграждение ур. 2-10</label>
-                    <input type="number" id="sethubbleL2plus" class="number-input" value="5" min="0" max="50" step="1" style="border-color: var(--neon-glow);">
-                </div>
-                <div class="warning" id="sethubbleWarning"></div>
+        <div class="md:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- Классика -->
+          <div class="bg-red-900/10 border border-red-500/30 p-6 rounded-2xl relative overflow-hidden">
+            <div class="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-black px-3 py-1 rounded-bl-xl">
+              Яндекс / VK / Таргет
             </div>
-            <div class="metrics-container">
-                <div class="result-item">
-                    <div class="label" id="sethubblePartnersLabel">Охват аудитории</div>
-                    <div class="value" id="sethubbleTotalPartners" style="color: var(--neon);">0</div>
+            <h4 class="text-lg font-bold text-red-400 mb-4 mt-2">
+              Классическая модель
+            </h4>
+            <div class="space-y-4">
+              <div>
+                <div class="text-xs text-gray-400">Потрачено авансом:</div>
+                <div class="text-xl font-bold text-white">
+                  <span id="res-b1-classic-spend">100 000</span> ₽
                 </div>
-                <div class="income-box">
-                    <span class="income-label" id="sethubbleIncomeLabel">Экономический эффект</span>
-                    <div class="income-value" id="sethubbleAuthorIncome">0</div>
+              </div>
+              <div>
+                <div class="text-xs text-gray-400">
+                  Гарантированная выручка:
                 </div>
+                <div class="text-2xl font-black text-red-500">0 ₽</div>
+              </div>
+              <p class="text-xs text-gray-500 border-t border-red-500/20 pt-3 mt-3">
+                Риск 100%. Вы оплачиваете показы, клики и ботов. Если продаж нет
+                — деньги сгорели.
+              </p>
             </div>
+          </div>
+
+          <!-- SetHubble -->
+          <div class="bg-cyan-900/20 border border-cyan-500/50 p-6 rounded-2xl relative overflow-hidden shadow-[0_0_20px_rgba(6,182,212,0.15)]">
+            <div class="absolute top-0 right-0 bg-gradient-to-r from-cyan-400 to-blue-500 text-white text-[10px] font-black px-3 py-1 rounded-bl-xl">
+              SetHubble CPA
+            </div>
+            <h4 class="text-lg font-bold text-cyan-400 mb-4 mt-2">
+              Оплата за результат
+            </h4>
+            <div class="space-y-4">
+              <div>
+                <div class="text-xs text-gray-400">
+                  Бюджет расходуется ИЗ ВЫРУЧКИ:
+                </div>
+                <div class="text-xl font-bold text-white">
+                  <span id="res-b1-sh-spend">100 000</span> ₽
+                </div>
+              </div>
+              <div>
+                <div class="text-xs text-gray-400">
+                  Гарантированная выручка:
+                </div>
+                <div class="text-3xl font-black text-green-400 animate-pulse">
+                  <span id="res-b1-sh-revenue">1 000 000</span> ₽
+                </div>
+              </div>
+              <p class="text-xs text-gray-400 border-t border-cyan-500/20 pt-3 mt-3">
+                Чтобы вы потратили 100к на комиссионные агентам, они <b
+                >обязаны</b> принести вам в кассу 1 млн рублей. Нет продаж = 0
+                расходов.
+              </p>
+            </div>
+          </div>
         </div>
-    </div>
-    
-    <div class="conclusion-box">
-        <p id="conclusionText">Передвиньте ползунки, чтобы увидеть потенциал масштабирования.</p>
+      </div>
     </div>
 
-    <!-- ✅ ЮРИДИЧЕСКИЙ ДИСКЛЕЙМЕР -->
-    <div style="font-size: 0.75rem; color: var(--text-gray); margin-top: 15px; opacity: 0.7; line-height: 1.4;">
-        * 1 у.е. (условная единица) эквивалентна 1 USDT. Расчет носит исключительно информационный характер и демонстрирует математическую модель маркетинговой системы. Не является гарантией дохода. Выплаты вознаграждений осуществляются в соответствии с условиями лицензионного договора.
+    <!-- ========================================== -->
+    <!-- БЛОК 2: ПАССИВ (ЭФФЕКТ МУЛЬТИПЛИКАТОРА)  -->
+    <!-- ========================================== -->
+    <div
+      id="calc-block-2"
+      class="calc-block hidden glass-panel rounded-3xl p-6 md:p-10 border-t border-purple-500/30 shadow-2xl"
+    >
+      <div class="text-center mb-8">
+        <h3 class="text-2xl font-bold text-white mb-2">
+          Эффект Мультипликатора
+        </h3>
+        <p class="text-sm text-gray-400">
+          Ваша скидочная система не платит вам, если клиент ушел в соседний
+          ресторан. SetHubble — платит.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+        <div class="space-y-6 bg-black/40 p-6 rounded-2xl border border-white/5">
+          <div>
+            <label
+              class="flex justify-between text-sm text-gray-400 mb-2 font-bold"
+            >
+              <span>Трафик (клиентов в месяц)</span>
+              <span id="val-b2-clients" class="text-white">500 чел.</span>
+            </label>
+            <input
+              type="range"
+              id="slider-b2-clients"
+              class="w-full accent-purple-500"
+              min="50"
+              max="5000"
+              step="50"
+              value="500"
+            >
+          </div>
+          <div>
+            <label
+              class="flex justify-between text-sm text-gray-400 mb-2 font-bold"
+            >
+              <span>Конверсия в скан QR-кода (%)</span>
+              <span id="val-b2-conv" class="text-white">80%</span>
+            </label>
+            <input
+              type="range"
+              id="slider-b2-conv"
+              class="w-full accent-purple-500"
+              min="10"
+              max="100"
+              step="5"
+              value="80"
+            >
+            <p class="text-[10px] text-gray-500 mt-1">
+              Люди с радостью сканируют код на кассе ради мгновенной скидки.
+            </p>
+          </div>
+          <div>
+            <label
+              class="flex justify-between text-sm text-gray-400 mb-2 font-bold"
+            >
+              <span>Их траты в чужих бизнесах (USDT)</span>
+              <span id="val-b2-spend" class="text-white">100 USDT</span>
+            </label>
+            <input
+              type="range"
+              id="slider-b2-spend"
+              class="w-full accent-purple-500"
+              min="10"
+              max="1000"
+              step="10"
+              value="100"
+            >
+          </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-purple-900/30 to-black border border-purple-500/50 p-8 rounded-3xl text-center relative overflow-hidden shadow-[0_0_30px_rgba(168,85,247,0.15)]">
+          <div class="absolute -top-10 -right-10 text-9xl opacity-10">☕</div>
+          <h4 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-2">
+            Ваш пассивный крипто-доход
+          </h4>
+          <p class="text-[10px] text-gray-500 mb-6 max-w-[250px] mx-auto">
+            Комиссия за то, что ваши оцифрованные клиенты покупают товары у
+            конкурентов или соседей.
+          </p>
+
+          <div class="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 mb-2">
+            <span id="res-b2-income">800</span> <span class="text-3xl"
+            >USDT</span>
+          </div>
+          <div class="text-sm text-green-400 font-bold mb-6">
+            ~ <span id="res-b2-rub">76 000</span> ₽ / месяц
+          </div>
+
+          <div class="js-open-modal cursor-pointer bg-white/10 hover:bg-white/20 border border-white/20 text-white text-sm font-bold py-3 px-6 rounded-xl transition-all inline-block">
+            Оцифровать базу бесплатно
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div class="chart-container">
-        <canvas id="salesChart"></canvas>
-        <div id="chart-error" style="display: none; text-align: center; color: var(--text-gray); padding-top: 50px;">
-            Не удалось загрузить библиотеку для построения графика.
+    <!-- ========================================== -->
+    <!-- БЛОК 3: АГЕНТЫ (АГЕНТСКАЯ ЛАВИНА)        -->
+    <!-- ========================================== -->
+    <div
+      id="calc-block-3"
+      class="calc-block hidden glass-panel rounded-3xl p-6 md:p-10 border-t border-blue-500/30 shadow-2xl"
+    >
+      <div class="text-center mb-8">
+        <h3 class="text-2xl font-bold text-white mb-2">Агентская Лавина</h3>
+        <p class="text-sm text-gray-400">
+          Сравнение: почему нельзя сидеть на базовом тарифе (урезание на 3-м
+          уровне).
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-8">
+        <div class="md:col-span-4 space-y-6 bg-black/40 p-6 rounded-2xl border border-white/5 h-fit">
+          <div>
+            <label
+              class="flex justify-between text-sm text-gray-400 mb-2 font-bold"
+            >
+              <span>Лично приглашено агентов</span>
+              <span id="val-b3-direct" class="text-white">5 чел.</span>
+            </label>
+            <input
+              type="range"
+              id="slider-b3-direct"
+              class="w-full accent-blue-500"
+              min="1"
+              max="20"
+              step="1"
+              value="5"
+            >
+          </div>
+          <div>
+            <label
+              class="flex justify-between text-sm text-gray-400 mb-2 font-bold"
+            >
+              <span>Коэффициент виральности</span>
+              <span id="val-b3-viral" class="text-white">3</span>
+            </label>
+            <input
+              type="range"
+              id="slider-b3-viral"
+              class="w-full accent-blue-500"
+              min="1"
+              max="5"
+              step="1"
+              value="3"
+            >
+            <p class="text-[10px] text-gray-500 mt-1">
+              Сколько человек по цепочке пригласит каждый агент.
+            </p>
+          </div>
+
+          <div class="pt-4 border-t border-white/5">
+            <div class="text-xs text-gray-400 mb-1">
+              Доход на тарифе FREE (3 уровня):
+            </div>
+            <div
+              class="text-xl font-bold text-gray-300"
+              id="res-b3-free-income"
+            >
+              $0
+            </div>
+          </div>
+          <div class="pt-2">
+            <div class="text-xs text-gray-400 mb-1">
+              Доход на PRO / Rocket (10 уровней):
+            </div>
+            <div
+              class="text-2xl font-black text-cyan-400"
+              id="res-b3-pro-income"
+            >
+              $0
+            </div>
+          </div>
         </div>
+
+        <div class="md:col-span-8 bg-black/50 border border-white/5 p-4 rounded-2xl relative min-h-[300px]">
+          <canvas id="networkChart"></canvas>
+          <div
+            id="chart-error"
+            class="hidden absolute inset-0 flex items-center justify-center text-red-400 text-sm"
+          >
+            Ошибка загрузки графика
+          </div>
+        </div>
+      </div>
     </div>
+
+    <div class="text-center mt-6 text-xs text-gray-600 max-w-3xl mx-auto leading-relaxed">
+      * Расчет носит исключительно информативный характер и демонстрирует
+      математическую модель. 1 USDT равен 1 у.е. Результаты зависят от ваших
+      усилий и качества трафика.
+    </div>
+  </div>
 </section>

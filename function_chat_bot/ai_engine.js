@@ -4,6 +4,18 @@
  */
 
 // === КАРТА ЗНАНИЙ: что ИИ знает на каждом шаге воронки ===
+
+// === AI ENGINE v3.0: Поддержка Polza.ai и кастомных настроек ===
+const AI_PROVIDERS = {
+  polza: "https://polza.ai/api/v1",
+  openrouter: "https://openrouter.ai/api/v1",
+};
+
+// Дефолтный системный промпт для v3.0
+const DEFAULT_AI_PROMPT = `Ты — NeuroGen, ИИ-консультант платформы SetHubble.
+Твоя цель: помогать лидам и продавать преимущества системы.
+Тон: дружелюбный эксперт, кратко (1-2 предложения), используй эмодзи.
+Всегда заканчивай призывом к действию (CTA).`;
 const KNOWLEDGE_MAP = {
   // До регистрации — только общее
   START: [
@@ -580,6 +592,7 @@ function formatAIResponse(text, emotionAnalysis, hasPro) {
  * @param {object} user - Данные пользователя из БД
  * @param {string} userState - Текущий шаг воронки
  * @param {Array} dialogHistory - История диалога
+ * @param {object} botConfig - Настройки бота (ai_provider, ai_model, custom_api_key, custom_prompt)
  * @returns {Promise<string|null>} Ответ ИИ или null при ошибке
  */
 export async function generateAIResponse(
@@ -587,19 +600,45 @@ export async function generateAIResponse(
   user,
   userState,
   dialogHistory = [],
+  botConfig = {},
 ) {
-  const apiKey = process.env.OPENROUTER_API_KEY;
+  // v3.0: Определяем провайдера (По умолчанию polza)
+  const provider = botConfig.ai_provider || "polza";
+  const baseURL = AI_PROVIDERS[provider];
+
+  if (!baseURL) {
+    console.error(`[AI ENGINE] Unknown provider: ${provider}`);
+    // Fallback на старый функционал если провайдер не найден
+  }
+
+  // v3.0: Ключ — личный партнёра ИЛИ глобальный из .env
+  const apiKey =
+    botConfig.custom_api_key ||
+    process.env.POLZA_API_KEY ||
+    process.env.OPENROUTER_API_KEY;
+
   if (!apiKey) {
-    console.error("[AI ENGINE] OPENROUTER_API_KEY not set");
+    console.error("[AI ENGINE] No API key available");
     return null;
   }
+
+  // v3.0: Модель (дефолт — gpt-4o-mini для экономии)
+  const model = botConfig.ai_model || "openai/gpt-4o-mini";
+
+  // v3.0: Промпт — кастомный партнёра ИЛИ дефолтный
+  const customSystemPrompt = botConfig.custom_prompt || DEFAULT_AI_PROMPT;
 
   // 1. Анализируем эмоцию
   const emotionAnalysis = analyzeEmotion(userText);
 
-  // 2. Выбираем системный промпт
-  const promptKey = selectSystemPrompt(userState, emotionAnalysis, user);
-  const baseSystemPrompt = SYSTEM_PROMPTS[promptKey] || SYSTEM_PROMPTS.BASE;
+  // 2. Выбираем системный промпт: приоритет отдаем личным настройкам партнера!
+  let baseSystemPrompt = botConfig.custom_prompt;
+
+  // Если у партнера нет своего промпта — используем системный с анализом эмоций
+  if (!baseSystemPrompt) {
+    const promptKey = selectSystemPrompt(userState, emotionAnalysis, user);
+    baseSystemPrompt = SYSTEM_PROMPTS[promptKey] || SYSTEM_PROMPTS.BASE;
+  }
 
   // 3. Формируем контекст воронки
   const funnelContext = buildFunnelContext(
@@ -648,26 +687,27 @@ ${historyContext}
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-    const response = await fetch(
-      "https://openrouter.ai/api/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": "https://sethubble.com",
-          "X-Title": "SetHubble NeuroGen AI Engine v2",
-        },
-        body: JSON.stringify({
-          model: process.env.AI_ENGINE_MODEL || "deepseek/deepseek-v3.2",
-          messages,
-          max_tokens: 200,
-          temperature: 0.75,
-          top_p: 0.9,
-        }),
-        signal: controller.signal,
+    // v3.0: Используем baseURL и model из botConfig
+    const endpoint = baseURL
+      ? `${baseURL}/chat/completions`
+      : "https://openrouter.ai/api/v1/chat/completions";
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://sethubble.com",
+        "X-Title": "NeuroGen AI Engine v3",
       },
-    );
+      body: JSON.stringify({
+        model: model,
+        messages,
+        max_tokens: 200,
+        temperature: 0.75,
+        top_p: 0.9,
+      }),
+      signal: controller.signal,
+    });
 
     clearTimeout(timeoutId);
 

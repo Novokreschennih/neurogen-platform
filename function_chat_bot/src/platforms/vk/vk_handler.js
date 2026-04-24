@@ -172,6 +172,8 @@ export async function handleVkWebhook(event, context) {
     corsHeaders,
     channelManager,
     sendEmail,
+    askNeuroGenAI,
+    aiEngine,
   } = context;
 
   const action =
@@ -1300,8 +1302,17 @@ export async function handleVkWebhook(event, context) {
                     vkUser.session?.mod3_done || vkUser.bought_tripwire
                       ? "&mod3=1"
                       : "";
+
+                  // v7.1: Generate JWT for universal auth
+                  const { generateToken } = await import("../../utils/jwt_utils.js");
+                  const jwtToken = generateToken({
+                    uid: vkUser.vk_id,
+                    first_name: vkUser.first_name,
+                  }, { expiresIn: "7d" });
+
+                  const promoKitLink = `${promoKitUrl}?token=${jwtToken}&bot=${botName}&api=https://${apiGw}${mod3Param}`;
                   return await vkCtx.reply(
-                    `🚀 <b>Promo-Kit</b>\n\nТвой генератор маркетинговых материалов:\n${promoKitUrl}?bot=${botName}&api=https://${apiGw}${mod3Param}`,
+                    `🚀 <b>Promo-Kit</b>\n\nТвой генератор маркетинговых материалов:\n\n${promoKitLink}`,
                     {},
                   );
                 }
@@ -1853,9 +1864,29 @@ export async function handleVkWebhook(event, context) {
               return await renderStep(vkCtx, "Module_3_Offline", vkToken);
             }
 
-            // === ПРОВЕРКА ИИ-ПОДПИСКИ (SaaS) ===
+            // === ПРОВЕРКА ИИ-ПОДПИСКИ (SaaS) И ВЫЗОВ НЕЙРОСЕТИ ===
             const isAiActive = await ydb.isOwnerAiActive(vkUser, null, String(vkGroupId));
-            if (!isAiActive) {
+            
+            // 1. СНАЧАЛА достаем настройки бота (владельца VK группы)
+            const botInfo = await ydb.getBotInfoByVkGroup(String(vkGroupId));
+            let ownerSettings = { custom_prompt: "", ai_provider: "polza", ai_model: "openai/gpt-4o-mini", custom_api_key: "", user_daily_limit: 0 };
+            
+            if (botInfo && botInfo.owner_id) {
+                const owner = await ydb.getUser(botInfo.owner_id);
+                if (owner) {
+                    ownerSettings = {
+                        custom_prompt: owner.custom_prompt || "",
+                        ai_provider: owner.ai_provider || "polza",
+                        ai_model: owner.ai_model || "openai/gpt-4o-mini",
+                        custom_api_key: owner.custom_api_key || "",
+                        user_daily_limit: owner.user_daily_limit || 0
+                    };
+                }
+            }
+
+            // 2. ТЕПЕРЬ проверяем допуск: либо оплачена подписка, либо вставлен личный ключ
+            const hasCustomKey = !!ownerSettings.custom_api_key;
+            if (!isAiActive && !hasCustomKey) {
               return await vkCtx.reply(
                 "🤖 <b>ИИ-консультант в режиме ожидания</b>\n\n" +
                   "Владелец системы ещё не активировал нейромозг для этого канала.\n\n" +
@@ -1863,7 +1894,38 @@ export async function handleVkWebhook(event, context) {
               );
             }
 
-            // === ДЕФОЛТ: Если состояние не распознано — показать START ===
+            // Проверяем дневные лимиты
+            const today = new Date().toISOString().split("T")[0];
+            if (vkUser.session.ai_date !== today) {
+                vkUser.session.ai_count = 0;
+                vkUser.session.ai_date = today;
+            }
+            
+            const currentLimit = ownerSettings.user_daily_limit || (vkUser.bought_tripwire ? 30 : 3);
+            if (vkUser.session.ai_count >= currentLimit) {
+                return await vkCtx.reply("⏳ На сегодня лимит вопросов ИИ исчерпан. Пожалуйста, продолжите завтра или используйте меню ниже 👇");
+            }
+
+            // Формируем конфиг и вызываем ИИ
+            const botConfig = {
+                ai_provider: ownerSettings.ai_provider,
+                ai_model: ownerSettings.ai_model,
+                custom_api_key: ownerSettings.custom_api_key,
+                custom_prompt: ownerSettings.custom_prompt
+            };
+
+            // Подгружаем askNeuroGenAI из context (который мы прокинули из index.js)
+            if (askNeuroGenAI) {
+                vkUser.session.ai_count = (vkUser.session.ai_count || 0) + 1;
+                await ydb.saveUser(vkUser);
+                
+                const aiResponse = await askNeuroGenAI(txt, vkUser, botConfig);
+                if (aiResponse) {
+                    return await vkCtx.reply(aiResponse);
+                }
+            }
+
+            // === ДЕФОЛТ: Если состояние не распознано или ИИ вернул null ===
             if (!vkUser.state || vkUser.state === "VK_LEAD") {
               vkUser.state = "START";
               await ydb.saveUser(vkUser);
