@@ -1041,3 +1041,23 @@ export async function cleanupProcessedUpdates() {
     return 0;
   }
 }
+
+/**
+ * Найти пользователя по реферальному хвосту (для Web-чата)
+ */
+export async function getUserByRefTail(tail) {
+  if (!tail) return null;
+  try {
+    return await driver.tableClient.withSession(async (session) => {
+      const query = `DECLARE $tail AS Utf8; SELECT ${USER_FIELDS} FROM users WHERE sh_ref_tail = $tail LIMIT 1;`;
+      const { resultSets } = await session.executeQuery(query, {
+        $tail: TypedValues.utf8(String(tail)),
+      });
+      if (!resultSets[0] || resultSets[0].rows.length === 0) return null;
+      return mapUser(resultSets[0].rows[0]);
+    });
+  } catch (e) {
+    log.error(`Failed to get user by ref tail`, e.message || String(e));
+    return null;
+  }
+}

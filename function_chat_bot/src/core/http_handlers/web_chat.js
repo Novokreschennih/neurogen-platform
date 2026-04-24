@@ -483,7 +483,7 @@ export async function handleWebChat(event, context) {
         }
       }
 
-      // --- Д. Чат с ИИ (Универсальный AI Engine v3.0) ---
+// --- Д. Чат с ИИ (Универсальный AI Engine v3.0) ---
 
       // 1. Проверка активности ИИ-подписки владельца канала (SaaS)
       const isAiActive = await ydb.isOwnerAiActive(webUser, null, null);
@@ -493,22 +493,14 @@ export async function handleWebChat(event, context) {
 
       if (webUser.partner_id) {
         try {
-          const ownerRows = await ydb.driver.tableClient.withSession(async (session) => {
-              const { resultSets } = await session.executeQuery(
-                  `DECLARE $tail AS Utf8; SELECT custom_prompt, ai_provider, ai_model, custom_api_key, user_daily_limit FROM users WHERE sh_ref_tail = $tail LIMIT 1;`,
-                  { $tail: ydb.driver.TypedValues.utf8(String(webUser.partner_id)) }
-              );
-              return resultSets[0]?.rows || [];
-          });
-          
-          if (ownerRows.length > 0) {
-            const r = ownerRows[0];
+          const owner = await ydb.getUserByRefTail(webUser.partner_id);
+          if (owner) {
             ownerSettings = {
-              custom_prompt: r.items[0]?.textValue || "",
-              ai_provider: r.items[1]?.textValue || "polza",
-              ai_model: r.items[2]?.textValue || "openai/gpt-4o-mini",
-              custom_api_key: r.items[3]?.textValue || "",
-              user_daily_limit: r.items[4]?.uint64Value ? Number(r.items[4].uint64Value) : 0
+              custom_prompt: owner.custom_prompt || "",
+              ai_provider: owner.ai_provider || "polza",
+              ai_model: owner.ai_model || "openai/gpt-4o-mini",
+              custom_api_key: owner.custom_api_key || "",
+              user_daily_limit: owner.user_daily_limit || 0
             };
           }
         } catch (e) {
