@@ -296,6 +296,48 @@
 
           <!-- Constructor -->
           <div class="glass-panel rounded-3xl p-6 space-y-4">
+            <!-- НОВОЕ: Настройки Провайдера и Ключа -->
+            <div class="p-4 bg-purple-900/10 border border-purple-500/30 rounded-2xl mb-6 space-y-4">
+              <h4 class="text-xs font-bold text-purple-400 uppercase tracking-wider mb-2">⚙️ Технические настройки ИИ</h4>
+              
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="text-[10px] font-bold text-gray-400 uppercase">Провайдер:</label>
+                  <select id="ai-provider" class="w-full mt-1 p-3 rounded-xl text-sm outline-none bg-black/50 border border-white/10">
+                    <option value="polza">Polza.ai (РФ, Карты)</option>
+                    <option value="openrouter">OpenRouter (Крипта)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-[10px] font-bold text-gray-400 uppercase">Модель нейросети:</label>
+                  <select id="ai-model" class="w-full mt-1 p-3 rounded-xl text-sm outline-none bg-black/50 border border-white/10">
+                    <option value="openai/gpt-4o-mini">GPT-4o-Mini (Быстро, дешево)</option>
+                    <option value="openai/gpt-4o">GPT-4o (Высокий интеллект)</option>
+                    <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet (Топ)</option>
+                    <option value="meta-llama/llama-3-70b-instruct">Llama 3 (70B)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label class="text-[10px] font-bold text-gray-400 uppercase flex justify-between">
+                  <span>Ваш API Ключ (опционально):</span>
+                  <a href="https://polza.ai/" target="_blank" class="text-cyan-400 hover:underline">Получить ключ</a>
+                </label>
+                <input type="password" id="ai-api-key" placeholder="sk-..." class="w-full mt-1 p-3 rounded-xl text-sm outline-none bg-black/50 border border-white/10 focus:border-cyan-500 transition-colors">
+                <p class="text-[9px] text-gray-500 mt-1">Оставьте пустым, чтобы использовать базовый ИИ по подписке.</p>
+              </div>
+
+              <div>
+                <label class="text-[10px] font-bold text-gray-400 uppercase">Дневной лимит ответов (на 1 клиента):</label>
+                <input type="number" id="ai-limit" placeholder="Например: 10" class="w-full mt-1 p-3 rounded-xl text-sm outline-none bg-black/50 border border-white/10 focus:border-cyan-500">
+                <p class="text-[9px] text-gray-500 mt-1">0 — использовать стандартные лимиты системы (3 для FREE, 30 для PRO).</p>
+              </div>
+            </div>
+
+            <!-- Существующие настройки характера -->
+            <h4 class="text-xs font-bold text-cyan-400 uppercase tracking-wider mb-2 mt-6">🎭 Характер бота</h4>
+            
             <div>
               <label class="text-[10px] font-bold text-gray-400 uppercase">Роль бота:</label>
               <select id="ai-role" onchange="buildAiPrompt()" class="w-full mt-1 p-3 rounded-xl text-sm outline-none bg-black/50 border border-white/10">
@@ -576,11 +618,20 @@
         btn.disabled = true;
         btn.innerHTML = "⏳ Синхронизация...";
         
+        // Собираем все данные с формы
+        const payload = {
+          custom_prompt: buildAiPrompt(),
+          ai_provider: document.getElementById("ai-provider").value,
+          ai_model: document.getElementById("ai-model").value,
+          custom_api_key: document.getElementById("ai-api-key").value.trim(),
+          user_daily_limit: parseInt(document.getElementById("ai-limit").value) || 0
+        };
+        
         try {
           const res = await fetch(`${BACKEND_URL}/?action=update_ai_settings`, {
             method: "POST",
             headers: authHeaders,
-            body: JSON.stringify({ custom_prompt: buildAiPrompt() }),
+            body: JSON.stringify(payload),
           });
           const data = await res.json();
           if (data.success) {
@@ -694,6 +745,30 @@
           // Включаем бейджик FREE
           document.getElementById("tariff-free").classList.add("border-green-500/50", "bg-green-900/10");
           document.getElementById("badge-free").classList.remove("hidden");
+        }
+
+        // === ЗАГРУЗКА НАСТРОЕК ИИ ===
+        if (userData.ai_provider) {
+          document.getElementById("ai-provider").value = userData.ai_provider;
+        }
+        if (userData.ai_model) {
+          document.getElementById("ai-model").value = userData.ai_model;
+        }
+        if (userData.custom_prompt) {
+          // Парсим custom_prompt и заполняем поля
+          const prompt = userData.custom_prompt;
+          if (prompt.includes("консультант по IT")) {
+            document.getElementById("ai-role").value = "консультант по IT-бизнесу";
+            document.getElementById("ai-tone").value = prompt.includes("строгий") ? "строгий и профессиональный" : "дружелюбный и воодушевляющий";
+          } else if (prompt.includes("бро")) {
+            document.getElementById("ai-role").value = "твой бро в мире крипты";
+            document.getElementById("ai-tone").value = "ироничный и прямой";
+          }
+          document.getElementById("ai-extra").value = prompt.includes("бесплатный") ? "" : prompt.split(".").slice(-1)[0] || "";
+          buildAiPrompt();
+        }
+        if (userData.user_daily_limit) {
+          document.getElementById("ai-limit").value = userData.user_daily_limit;
         }
 
         generateQR(landingUrl);
