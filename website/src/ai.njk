@@ -418,6 +418,19 @@ eleventyExcludeFromCollections: true
     } else {
       referrer = localStorage.getItem("neurogen_partner_id") || DEFAULT_PARTNER;
     }
+    
+    // Читаем session_id из URL (для склейки профилей)
+    const urlSessionId = params.get("session_id");
+    if (urlSessionId) {
+      currentSessionId = urlSessionId;
+      localStorage.setItem("neurogen_web_session", urlSessionId);
+    }
+    
+    // Читаем email из URL (для склейки профилей)
+    userEmail = params.get("email");
+    if (userEmail) {
+      localStorage.setItem("neurogen_user_email", userEmail);
+    }
   }
 
   // === 2. НАВИГАЦИЯ ПО ЭКРАНАМ ===
@@ -439,6 +452,7 @@ eleventyExcludeFromCollections: true
         body: JSON.stringify({
           action: buttonAction ? "click-button" : "get-web-step",
           sessionId: currentSessionId,
+          email: userEmail,
           callback_data: buttonAction,
           partner_id: referrer,
         }),
@@ -543,6 +557,7 @@ eleventyExcludeFromCollections: true
           sessionId: currentSessionId,
         }),
       });
+      userEmail = email;
       localStorage.setItem("neurogen_email", email);
       localStorage.setItem("neurogen_email_submitted", "true");
 
@@ -642,6 +657,7 @@ eleventyExcludeFromCollections: true
             partner_id: referrer,
             history: chatHistory.slice(-10),
             sessionId: currentSessionId,
+            email: userEmail,
           }),
         });
         const data = await response.json();
