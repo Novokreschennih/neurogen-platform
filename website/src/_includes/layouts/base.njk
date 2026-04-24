@@ -427,13 +427,13 @@
 				// Обработка кликов по каналам
 				btnTelegram.addEventListener("click", () => {
 					const email = emailInput.value.trim() || storedEmail;
-					const startPayload = email ? `${partnerId}-${encodeEmailForUrl(email)}` : partnerId;
+					const startPayload = email ? `${partnerId}-web:${currentSessionId}-${encodeEmailForUrl(email)}` : `${partnerId}-web:${currentSessionId}`;
 					window.open(`https://t.me/${refBot}?start=${startPayload}`, "_blank");
 				});
 
 				btnVK.addEventListener("click", () => {
 					const email = emailInput.value.trim() || storedEmail;
-					const startPayload = email ? `${partnerId}-${encodeEmailForUrl(email)}` : partnerId;
+					const startPayload = email ? `${partnerId}-web:${currentSessionId}-${encodeEmailForUrl(email)}` : `${partnerId}-web:${currentSessionId}`;
 					window.open(`${VK_COMMUNITY_URL}?ref=${startPayload}`, "_blank");
 				});
 

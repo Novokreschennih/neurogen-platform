@@ -765,24 +765,37 @@ export async function handleVkWebhook(event, context) {
             } catch (e) {}
           }
 
-          // === v6.1: ПАРСИНГ PAYLOAD ДЛЯ СКЛЕЙКИ С EMAIL ===
+          // === v6.1: ПАРСИНГ PAYLOAD ДЛЯ СКЛЕЙКИ ПРОФИЛЕЙ ===
+          let webIdFromStart = null;
+
           if (rawRef) {
             const { validateStartPayload } = await import("../../utils/validator.js");
             const parsed = validateStartPayload(rawRef);
             if (parsed) {
               partnerId = parsed.partnerId;
               emailFromJoin = parsed.email || null;
-              log.info(`[VK REF] Parsed referral with email`, { partnerId, hasEmail: !!emailFromJoin });
+              webIdFromStart = parsed.webId || null;
+              log.info(`[VK REF] Parsed referral`, { partnerId, hasEmail: !!emailFromJoin, hasWebId: !!webIdFromStart });
             } else {
               partnerId = rawRef;
             }
           }
 
-          // === v6.1: СКЛЕЙКА ПРОФИЛЕЙ ПО EMAIL ===
+          // === v6.2: УМНАЯ СКЛЕЙКА ПРОФИЛЕЙ (Web -> Email -> Новый) ===
+          let existingWebUser = null;
           let existingEmailUser = null;
-          if (emailFromJoin) {
+
+          // 1. Приоритет №1: Ищем по web_id (если перешел с сайта)
+          if (webIdFromStart) {
+            existingWebUser = await ydb.findUser({ web_id: webIdFromStart });
+          }
+
+          // 2. Приоритет №2: Ищем по email (если перешел из рассылки)
+          if (emailFromJoin && !existingWebUser) {
             existingEmailUser = await ydb.findUser({ email: emailFromJoin });
           }
+
+          let existingUser = existingWebUser || existingEmailUser;
 
           let firstName = "VK Lead";
           if (process.env.VK_GROUP_TOKEN) {
@@ -795,26 +808,34 @@ export async function handleVkWebhook(event, context) {
             } catch (e) {}
           }
 
-          if (existingEmailUser) {
-            // МЕРДЖ! Нашли пользователя по email — добавляем vk_id
-            vkUser = existingEmailUser;
+          if (existingUser) {
+            // МЕРДЖ! Нашли пользователя (веб-сессию или email) — склеиваем с VK
+            vkUser = existingUser;
             vkUser.vk_id = Number(vkUserId);
             vkUser.bot_token = "VK_CENTRAL_GROUP";
             vkUser.first_name = firstName !== "VK Lead" ? firstName : (vkUser.first_name || "VK Lead");
-            vkUser.session.channels = vkUser.session.channels || {};
+            
+            if (!vkUser.session.channels) vkUser.session.channels = {};
             vkUser.session.channels.vk = {
               enabled: true,
               configured: true,
               linked_at: Date.now(),
-              group_id: String(vkGroupId) // v6.2: Сохраняем ID группы, а не пользователя
+              group_id: String(vkGroupId)
             };
-            vkUser.session.channel_states = vkUser.session.channel_states || {};
+            
+            if (!vkUser.session.channel_states) vkUser.session.channel_states = {};
             vkUser.session.channel_states.vk = "START";
+            
             await ydb.saveUser(vkUser);
             
-            log.info("[VK] Merged VK ID into existing email user", { vkId: vkUserId, groupId: vkGroupId, userId: vkUser.id, email: emailFromJoin });
+            log.info("[VK] Merged VK ID into existing profile", { 
+              vkId: vkUserId, 
+              userId: vkUser.id, 
+              wasWeb: !!existingWebUser, 
+              wasEmail: !!existingEmailUser 
+            });
           } else {
-            // НОВЫЙ ПОЛЬЗОВАТЕЛЬ
+            // НОВЫЙ ПОЛЬЗОВАТЕЛЬ (Если пришел из органики ВК)
             vkUser = {
               vk_id: Number(vkUserId),
               email: emailFromJoin || "",
@@ -826,7 +847,7 @@ export async function handleVkWebhook(event, context) {
                 last_activity: Date.now(),
                 tags: [],
                 channels: {
-                  vk: { enabled: true, configured: true, group_id: String(vkGroupId) } // v6.2: Сохраняем ID группы
+                  vk: { enabled: true, configured: true, group_id: String(vkGroupId) }
                 },
                 channel_states: { vk: "START" }
               },
