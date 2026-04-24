@@ -15,18 +15,37 @@ export async function handleWebChat(event, context) {
       ? Buffer.from(event.body, "base64").toString("utf8")
       : event.body || "{}";
     const payload = JSON.parse(payloadStr);
-    const webSessionId = payload.sessionId;
 
     // --- 0. ЗАГРУЗКА ИЛИ СОЗДАНИЕ ПОЛЬЗОВАТЕЛЯ ---
+    const webSessionId = payload.sessionId;
+    const payloadEmail = payload.email ? validateEmail(payload.email) : null;
+    
     let webUser = await ydb?.findUser({ web_id: webSessionId });
 
+    // 1. УМНАЯ СКЛЕЙКА: Если по web_id не нашли, но фронтенд прислал email - ищем по email
+    if (!webUser && payloadEmail) {
+      webUser = await ydb.findUser({ email: payloadEmail });
+      if (webUser) {
+        // Нашли профиль по email! Привязываем к нему этот web-чат
+        webUser.web_id = webSessionId;
+        if (!webUser.session.channels) webUser.session.channels = {};
+        webUser.session.channels.web = { enabled: true, configured: true };
+        if (!webUser.session.channel_states) webUser.session.channel_states = {};
+        webUser.session.channel_states.web = "START";
+        await ydb.saveUser(webUser);
+        log.info(`[WEB] Merged new web_id ${webSessionId} to existing email user ${payloadEmail}`);
+      }
+    }
+
+    // 2. Если профиль всё ещё не найден — создаем новый
     if (!webUser && ydb && webSessionId) {
       log.info(`[WEB] Initializing new session: ${webSessionId}`);
       webUser = {
         web_id: webSessionId,
+        email: payloadEmail || "", // СРАЗУ ЗАПИСЫВАЕМ EMAIL В БАЗУ!
         partner_id: payload.partner_id || payload.referrer || "p_qdr",
         state: "START",
-        first_name: "Друг",
+        first_name: payloadEmail ? payloadEmail.split("@")[0] : "Друг",
         last_seen: Date.now(),
         session: {
           source: "web",
@@ -39,6 +58,11 @@ export async function handleWebChat(event, context) {
       };
       const res = await ydb.saveUser(webUser);
       webUser.id = res.id;
+    } else if (webUser && payloadEmail && !webUser.email) {
+      // 3. Если профиль был, но email в нем пустой — дописываем
+      webUser.email = payloadEmail;
+      webUser.first_name = payloadEmail.split("@")[0];
+      await ydb.saveUser(webUser);
     }
 
     if (!webUser)

@@ -88,57 +88,45 @@ export function validateBotToken(raw) {
 
 /**
  * Валидировать start payload
- * Поддерживаемые форматы:
- *  - partnerId
- *  - partnerId|email@example.com (старый формат с "|")
- *  - partnerId-email@example.com (новый формат с "-" для VK)
- *  - partnerId|web:webSessionId  (v6.0: web_id с сайта)
+ * Новый формат: partnerId__webId__emailBase64
  * @returns {{ partnerId: string, email?: string, webId?: string } | null}
  */
 export function validateStartPayload(raw) {
   if (!raw || typeof raw !== "string") return null;
   const trimmed = raw.trim();
   
-  // v6.0: Поддерживаем оба разделителя: "|" (старый) и "-" (новый для VK)
   let parts;
-  if (trimmed.includes("|")) {
-    // Старый формат с "|"
-    parts = trimmed.split("|");
+  // Используем безопасный разделитель __
+  if (trimmed.includes("__")) {
+    parts = trimmed.split("__");
+  } else if (trimmed.includes("|")) {
+    parts = trimmed.split("|"); // поддержка старых ссылок
   } else {
-    // Новый формат с "-" — делим по последнему дефису (т.к. partner_id может содержать дефисы, напр. p-qdr)
-    const lastDashIndex = trimmed.lastIndexOf("-");
-    if (lastDashIndex !== -1) {
-      parts = [trimmed.substring(0, lastDashIndex), trimmed.substring(lastDashIndex + 1)];
-    } else {
-      parts = [trimmed];
-    }
+    parts = [trimmed];
   }
 
   const partnerId = validatePartnerId(parts[0]);
-  if (!partnerId) return null;
+  if (!partnerId) return { partnerId: trimmed }; // Фолбэк, если ID нестандартный
 
   const result = { partnerId };
 
-  if (parts[1]) {
-    // v6.0: Проверяем формат web:xxx
-    if (parts[1].startsWith("web:")) {
-      const webId = parts[1].substring(4);
-      if (/^[a-f0-9-]{20,50}$/i.test(webId)) {
-        result.webId = webId;
+  // Извлекаем webId (обычно начинается с web_)
+  if (parts[1] && parts[1].startsWith("web_")) {
+    result.webId = parts[1];
+  }
+
+  // Извлекаем email (3-я часть)
+  if (parts[2] && parts[2] !== "noemail") {
+    try {
+      const encoded = parts[2].replace(/-/g, "+").replace(/_/g, "/");
+      const padded = encoded + "=".repeat((4 - (encoded.length % 4)) % 4);
+      const decoded = Buffer.from(padded, "base64").toString("utf8");
+      const email = validateEmail(decoded);
+      if (email) {
+        result.email = email;
       }
-    } else {
-      // Пробуем декодировать как email (base64)
-      try {
-        const encoded = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-        const padded = encoded + "=".repeat((4 - (encoded.length % 4)) % 4);
-        const decoded = Buffer.from(padded, "base64").toString("utf8");
-        const email = validateEmail(decoded);
-        if (email) {
-          result.email = email;
-        }
-      } catch (e) {
-        // Не удалось декодировать — игнорируем
-      }
+    } catch (e) {
+      // Игнорируем ошибку парсинга email
     }
   }
 

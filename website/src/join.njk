@@ -647,18 +647,28 @@ eleventyExcludeFromCollections: true
 
         btnTelegram.addEventListener("click", () => {
           const email = emailInput.value.trim() || storedEmail;
-          const startPayload = email ? `${partnerId}-web:${currentSessionId}-${encodeEmailForUrl(email)}` : `${partnerId}-web:${currentSessionId}`;
+          const encEmail = email ? encodeEmailForUrl(email) : "noemail";
+          // Используем безопасный разделитель __
+          const startPayload = `${partnerId}__${currentSessionId}__${encEmail}`;
           window.open(`https://t.me/${refBot}?start=${startPayload}`, "_blank");
         });
 
         btnVK.addEventListener("click", () => {
           const email = emailInput.value.trim() || storedEmail;
-          const startPayload = email ? `${partnerId}-web:${currentSessionId}-${encodeEmailForUrl(email)}` : `${partnerId}-web:${currentSessionId}`;
+          const encEmail = email ? encodeEmailForUrl(email) : "noemail";
+          // Используем безопасный разделитель __
+          const startPayload = `${partnerId}__${currentSessionId}__${encEmail}`;
           window.open(`${VK_COMMUNITY_URL}?ref=${startPayload}`, "_blank");
         });
 
         btnWeb.addEventListener("click", () => {
-          window.open(`${WEB_CHAT_URL}?ref=${partnerId}`, "_blank");
+          const email = emailInput.value.trim() || storedEmail;
+          // Добавляем email в URL для Web-чата
+          let url = `${WEB_CHAT_URL}?ref=${partnerId}&session_id=${currentSessionId}`;
+          if (email) {
+            url += `&email=${encodeURIComponent(email)}`;
+          }
+          window.open(url, "_blank");
         });
 
         btnEmailEl.addEventListener("click", () => {
