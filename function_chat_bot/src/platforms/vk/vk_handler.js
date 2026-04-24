@@ -1476,6 +1476,24 @@ export async function handleVkWebhook(event, context) {
               txt.toLowerCase() === "/start" ||
               txt.toLowerCase() === "начать"
             ) {
+              // ИСПРАВЛЕНИЕ: Проверяем, есть ли уже прогресс
+              const isStarted = vkUser.state && vkUser.state !== "START" && vkUser.state !== "VK_LEAD";
+              
+              if (isStarted) {
+                // Мягкий возврат (аналог RESUME_GATE)
+                return await vkCtx.reply(
+                  `👋 <b>С возвращением!</b>\n\nВы остановились на шаге: <b>${vkUser.state}</b>\n\nПродолжим?`,
+                  {
+                    reply_markup: {
+                      inline_keyboard: [
+                        [{ text: "▶️ ПРОДОЛЖИТЬ ПУТЬ", callback_data: vkUser.state }],
+                        [{ text: "🏠 ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }]
+                      ]
+                    }
+                  }
+                );
+              }
+
               vkUser.state = "START";
               await ydb.saveUser(vkUser);
               return await renderStep(vkCtx, "START", vkToken);

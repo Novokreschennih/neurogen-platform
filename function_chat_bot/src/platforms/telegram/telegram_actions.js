@@ -1191,9 +1191,17 @@ const today = new Date().toISOString().split("T")[0];
   });
 
   // ============================================================
-  // 8. START (bot.start)
+  // 8. START (bot.start) — Мягкий обработчик, не сбрасывает прогресс
   // ============================================================
   bot.start(async (ctx) => {
+    // Не сбрасывать, если пользователь уже в середине воронки (пришел из Web)
+    const isStarted = ctx.dbUser.state && ctx.dbUser.state !== "START";
+
+    if (isStarted && !ctx.dbUser.state.startsWith("WAIT_")) {
+      // Пользователь уже учится. Покажем ему ворота для возврата.
+      return renderStep(ctx, "RESUME_GATE", token);
+    }
+
     const waitStates = [
       "WAIT_REG_ID",
       "WAIT_REG_TAIL",
