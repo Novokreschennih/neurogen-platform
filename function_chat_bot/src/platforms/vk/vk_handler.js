@@ -1,3 +1,6 @@
+import { resolveUser } from '../../core/omni_resolver.js';
+import { adaptStateForChannel } from '../../scenarios/common/step_order.js';
+
 /**
  * VK Webhook Handler
  * Обрабатывает входящие запросы от VK Callback API
@@ -320,9 +323,21 @@ export async function handleVkWebhook(event, context) {
         }
 
         const vkUserId = Number(userId);
-        log.info(`[VK] Fetching user`, { vkId: vkUserId });
-        const vkUser = await ydb.findUser({ vk_id: vkUserId });
-        log.info(`[VK] findUser result`, {
+        const vkGroupId = payload.group_id;
+        log.info(`[VK] Fetching user via omni_resolver`, { vkId: vkUserId });
+        let vkUser = await resolveUser('vk', {
+          vk_id: vkUserId,
+          first_name: "VK User"
+        });
+        adaptStateForChannel(vkUser, 'vk');
+        vkUser.bot_token = "VK_CENTRAL_GROUP";
+        vkUser.last_seen = Date.now();
+        if (!vkUser.session) vkUser.session = {};
+        if (!vkUser.session.channels) vkUser.session.channels = {};
+        if (!vkUser.session.channels.vk) vkUser.session.channels.vk = {};
+        vkUser.session.channels.vk.group_id = String(vkGroupId);
+        await ydb.saveUser(vkUser);
+        log.info(`[VK] resolveUser result`, {
           found: !!vkUser,
           userId: vkUser?.id,
           vkId: vkUser?.vk_id,
@@ -739,153 +754,64 @@ export async function handleVkWebhook(event, context) {
         processedUpdates.set(vkUpdateId, Date.now());
 
         const text = message.text || "";
-        // v6.0: Ищем по vk_id (без префиксов)
-        let vkUser = await ydb.findUser({ vk_id: vkUserId });
 
-        // v6.0: Auto-detect channels from DB columns
-        if (vkUser) {
-          channelManager.autoDetectChannels(vkUser);
+        let partnerId = process.env.MY_PARTNER_ID || "p_qdr";
+        let emailFromJoin = null;
+        let webIdFromStart = null;
+        let rawRef = null;
+
+        if (message.ref) {
+          rawRef = message.ref;
+        } else if (message.payload) {
+          try {
+            const parsedPayload = JSON.parse(message.payload);
+            rawRef = parsedPayload.command || parsedPayload.ref;
+          } catch (e) {}
         }
 
-        if (!vkUser || typeof vkUser !== "object" || !vkUser.id) {
-          let partnerId = process.env.MY_PARTNER_ID || "p_qdr";
-          let emailFromJoin = null;
-          let rawRef = null;
-
-          // v5.0: Поддержка partner_id из разных источников
-          // 0. Из VK deep link (message.ref при переходе по ссылке vk.me/club?ref=xxx)
-          if (message.ref) {
-            rawRef = message.ref;
-          }
-          // 1. Из message.payload (JSON с command или ref)
-          else if (message.payload) {
-            try {
-              const parsedPayload = JSON.parse(message.payload);
-              rawRef = parsedPayload.command || parsedPayload.ref;
-            } catch (e) {}
-          }
-
-          // === v6.1: ПАРСИНГ PAYLOAD ДЛЯ СКЛЕЙКИ ПРОФИЛЕЙ ===
-          let webIdFromStart = null;
-
-          if (rawRef) {
-            const { validateStartPayload } = await import("../../utils/validator.js");
-            const parsed = validateStartPayload(rawRef);
-            if (parsed) {
-              partnerId = parsed.partnerId;
-              emailFromJoin = parsed.email || null;
-              webIdFromStart = parsed.webId || null;
-              log.info(`[VK REF] Parsed referral`, { partnerId, hasEmail: !!emailFromJoin, hasWebId: !!webIdFromStart });
-            } else {
-              partnerId = rawRef;
-            }
-          }
-
-          // === v6.2: УМНАЯ СКЛЕЙКА ПРОФИЛЕЙ (Web -> Email -> Новый) ===
-          let existingWebUser = null;
-          let existingEmailUser = null;
-
-          // 1. Приоритет №1: Ищем по web_id (если перешел с сайта)
-          if (webIdFromStart) {
-            existingWebUser = await ydb.findUser({ web_id: webIdFromStart });
-          }
-
-          // 2. Приоритет №2: Ищем по email (если перешел из рассылки)
-          if (emailFromJoin && !existingWebUser) {
-            existingEmailUser = await ydb.findUser({ email: emailFromJoin });
-          }
-
-          let existingUser = existingWebUser || existingEmailUser;
-
-          let firstName = "VK Lead";
-          if (process.env.VK_GROUP_TOKEN) {
-            try {
-              const url = `https://api.vk.com/method/users.get?user_ids=${message.from_id}&access_token=${process.env.VK_GROUP_TOKEN}&v=5.199`;
-              const resp = await fetch(url);
-              const data = await resp.json();
-              if (data.response && data.response[0])
-                firstName = data.response[0].first_name;
-            } catch (e) {}
-          }
-
-          if (existingUser) {
-            // МЕРДЖ! Нашли пользователя (веб-сессию или email) — склеиваем с VK
-            // СОХРАНЯЕМ теги и state существующего пользователя!
-            vkUser = existingUser;
-            vkUser.vk_id = Number(vkUserId);
-            vkUser.bot_token = "VK_CENTRAL_GROUP";
-            vkUser.first_name = firstName !== "VK Lead" ? firstName : (vkUser.first_name || "VK Lead");
-            
-            // Инициализируем каналы если их нет
-            if (!vkUser.session) vkUser.session = {};
-            if (!vkUser.session.channels) vkUser.session.channels = {};
-            if (!vkUser.session.channel_states) vkUser.session.channel_states = {};
-            
-            // Не затираем существующие теги
-            if (!Array.isArray(vkUser.session.tags)) vkUser.session.tags = [];
-            
-            // Не сбрасываем state если пользователь уже был в воронке
-            if (!vkUser.state || vkUser.state === "START") {
-              vkUser.state = "START";
-            }
-            
-            vkUser.session.channels.vk = {
-              enabled: true,
-              configured: true,
-              linked_at: Date.now(),
-              group_id: String(vkGroupId)
-            };
-            
-            vkUser.session.channel_states.vk = "START";
-            
-            await ydb.saveUser(vkUser);
-            
-            log.info("[VK] Merged with tags and state preserved", { 
-              vkId: vkUserId, 
-              userId: vkUser.id, 
-              state: vkUser.state,
-              tagsCount: vkUser.session.tags?.length,
-              wasWeb: !!existingWebUser, 
-              wasEmail: !!existingEmailUser 
-            });
+        if (rawRef) {
+          const { validateStartPayload } = await import("../../utils/validator.js");
+          const parsed = validateStartPayload(rawRef);
+          if (parsed) {
+            partnerId = parsed.partnerId;
+            emailFromJoin = parsed.email || null;
+            webIdFromStart = parsed.webId || null;
+            log.info(`[VK REF] Parsed referral`, { partnerId, hasEmail: !!emailFromJoin, hasWebId: !!webIdFromStart });
           } else {
-            // НОВЫЙ ПОЛЬЗОВАТЕЛЬ (Если пришел из органики ВК)
-            vkUser = {
-              vk_id: Number(vkUserId),
-              email: emailFromJoin || "",
-              partner_id: partnerId,
-              state: "START",
-              bought_tripwire: false,
-              session: {
-                source: "vkontakte",
-                last_activity: Date.now(),
-                tags: [],
-                channels: {
-                  vk: { enabled: true, configured: true, group_id: String(vkGroupId) }
-                },
-                channel_states: { vk: "START" }
-              },
-              last_seen: Date.now(),
-              bot_token: "VK_CENTRAL_GROUP",
-              tariff: "",
-              sh_user_id: "",
-              sh_ref_tail: "",
-              purchases: [],
-              first_name: firstName,
-              reminders_count: 0,
-              last_reminder_time: 0,
-            };
-            const result = await ydb.saveUser(vkUser);
-            vkUser.id = result.id;
-            log.info(`[VK] New user created`, {
-              vkId: vkUserId,
-              groupId: vkGroupId,
-              userId: result.id,
-              partnerId,
-              hasEmail: !!emailFromJoin,
-            });
+            partnerId = rawRef;
           }
         }
+
+        let firstName = "VK Lead";
+        if (process.env.VK_GROUP_TOKEN) {
+          try {
+            const url = `https://api.vk.com/method/users.get?user_ids=${message.from_id}&access_token=${process.env.VK_GROUP_TOKEN}&v=5.199`;
+            const resp = await fetch(url);
+            const data = await resp.json();
+            if (data.response && data.response[0])
+              firstName = data.response[0].first_name;
+          } catch (e) {}
+        }
+
+        // v6.0: Получаем или создаём единого пользователя через Omni‑resolver
+        let vkUser = await resolveUser('vk', {
+          vk_id: Number(vkUserId),
+          web_id: webIdFromStart,
+          email: emailFromJoin,
+          partner_id: partnerId,
+          first_name: firstName
+        });
+
+        adaptStateForChannel(vkUser, 'vk');
+
+        // Сохраняем идентификатор VK‑группы в конфигурации канала
+        if (!vkUser.session) vkUser.session = {};
+        if (!vkUser.session.channels) vkUser.session.channels = {};
+        if (!vkUser.session.channels.vk) vkUser.session.channels.vk = {};
+        vkUser.session.channels.vk.group_id = String(vkGroupId);
+        vkUser.bot_token = "VK_CENTRAL_GROUP";
+        vkUser.last_seen = Date.now();
+        await ydb.saveUser(vkUser);
 
         if (!vkUser.session || typeof vkUser.session !== "object")
           vkUser.session = { tags: [], source: "vkontakte" };
@@ -1824,7 +1750,11 @@ export async function handleVkWebhook(event, context) {
                 }
 
                 await ydb.mergeUsers(emailRecord, vkUser.id, "email_match");
-                // vkUser теперь удалён, основной профиль — emailRecord
+                // Перезагружаем выжившего пользователя
+                vkUser = await ydb.getUser(emailRecord.id);
+                adaptStateForChannel(vkUser, 'vk');
+                // Обновить контекст, если уже создан
+                if (typeof vkCtx !== 'undefined') vkCtx.dbUser = vkUser;
               }
 
               // Отправляем приветственное письмо

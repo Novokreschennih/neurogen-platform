@@ -11,6 +11,8 @@ import {
   detectLoop,
   getLoopHint,
 } from "../../utils/ux_helpers.js";
+import { resolveUser } from '../../core/omni_resolver.js';
+import { adaptStateForChannel } from '../../scenarios/common/step_order.js';
 
 export function setupTelegramHandlers(bot, context) {
   const {
@@ -120,64 +122,32 @@ export function setupTelegramHandlers(bot, context) {
     if (!ctx.from || !ctx.from.id) return;
     const tgId = Number(ctx.from.id);
 
-    // 1. Ищем по tg_id
-    ctx.dbUser = await ydb.findUser({ tg_id: tgId });
-
-    // 2. Перехват Payload
-    let payloadWebId = null;
-    let payloadEmail = null;
-    let payloadPartnerId = process.env.MY_PARTNER_ID || "p_qdr";
-
+    let payloadWebId = null, payloadEmail = null, payloadPartnerId = process.env.MY_PARTNER_ID || "p_qdr";
     if (ctx.message?.text?.startsWith("/start ")) {
       const rawRef = ctx.message.text.split(" ")[1];
       const parsed = validateStartPayload(rawRef);
       if (parsed) {
-        payloadPartnerId = parsed.partnerId;
+        payloadPartnerId = parsed.partnerId || payloadPartnerId;
         payloadWebId = parsed.webId;
         payloadEmail = parsed.email;
       }
     }
 
-    // 3. Поиск профиля для склейки
-    let targetOmniUser = null;
-    if (payloadWebId) targetOmniUser = await ydb.findUser({ web_id: payloadWebId });
-    if (!targetOmniUser && payloadEmail) targetOmniUser = await ydb.findUser({ email: payloadEmail });
+    const user = await resolveUser('telegram', {
+      tg_id: tgId,
+      web_id: payloadWebId,
+      email: payloadEmail,
+      partner_id: payloadPartnerId,
+      first_name: ctx.from.first_name
+    });
 
-    // 4. Логика Склейки
-    if (targetOmniUser) {
-      if (ctx.dbUser && ctx.dbUser.id !== targetOmniUser.id) {
-        log.info(`[TG MERGE] Race condition resolve: ${ctx.dbUser.id} -> ${targetOmniUser.id}`);
-        await ydb.mergeUsers(targetOmniUser, ctx.dbUser.id, "tg_race_condition");
-      }
-      ctx.dbUser = targetOmniUser;
-      ctx.dbUser.tg_id = tgId;
-      ctx.dbUser.bot_token = token;
-      
-      if (!ctx.dbUser.session) ctx.dbUser.session = {};
-      if (!ctx.dbUser.session.channels) ctx.dbUser.session.channels = {};
-      ctx.dbUser.session.channels.telegram = { enabled: true, configured: true, bot_username: ctx.me?.username, linked_at: Date.now() };
-      
-      await ydb.saveUser(ctx.dbUser);
-    } else if (!ctx.dbUser) {
-      // Новый пользователь
-      ctx.dbUser = {
-        tg_id: tgId,
-        email: payloadEmail || "",
-        partner_id: payloadPartnerId,
-        state: "START",
-        session: { tags: [], channels: { telegram: { enabled: true, configured: true } } },
-        bot_token: token,
-        first_name: ctx.from.first_name || "Друг",
-        bought_tripwire: false,
-        purchases: []
-      };
-      const res = await ydb.saveUser(ctx.dbUser);
-      ctx.dbUser.id = res.id;
-    }
+    adaptStateForChannel(user, 'telegram');
+    user.bot_token = token;
+    user.last_seen = Date.now();
+    ctx.dbUser = user;
 
-    ctx.dbUser.last_seen = Date.now();
     await next();
-    await ydb.saveUser(ctx.dbUser);
+    await ydb.saveUser(user);
   });
 
   // Регистрация команд и действий

@@ -5,6 +5,8 @@
 import crypto from "crypto";
 import { validateEmail, validatePartnerId } from "../../utils/validator.js";
 import scenario from "../../scenarios/scenario_tg.js";
+import { resolveUser } from '../../core/omni_resolver.js';
+import { adaptStateForChannel } from '../../scenarios/common/step_order.js';
 
 export async function handleWebChat(event, context) {
   const { action, log, corsHeaders, ydb } = context;
@@ -19,65 +21,25 @@ export async function handleWebChat(event, context) {
     // --- 0. ЗАГРУЗКА ИЛИ СОЗДАНИЕ ПОЛЬЗОВАТЕЛЯ ---
     const webSessionId = payload.sessionId;
     const payloadEmail = payload.email ? validateEmail(payload.email) : null;
-    
-    let webUser = await ydb?.findUser({ web_id: webSessionId });
+    const partnerId = payload.partner_id || payload.referrer || "p_qdr";
+    const firstName = payloadEmail ? payloadEmail.split('@')[0] : 'WebUser';
 
-    // 1. УМНАЯ СКЛЕЙКА: Если по web_id не нашли, но фронтенд прислал email - ищем по email
-    if (!webUser && payloadEmail) {
-      webUser = await ydb.findUser({ email: payloadEmail });
-      if (webUser) {
-        // Нашли профиль по email! Привязываем к нему этот web-чат
-        webUser.web_id = webSessionId;
-        if (!webUser.session.channels) webUser.session.channels = {};
-        webUser.session.channels.web = { enabled: true, configured: true };
-        if (!webUser.session.channel_states) webUser.session.channel_states = {};
-        webUser.session.channel_states.web = "START";
-        await ydb.saveUser(webUser);
-        log.info(`[WEB] Merged new web_id ${webSessionId} to existing email user ${payloadEmail}`);
-      }
-    }
+    let webUser = await resolveUser('web', {
+      web_id: webSessionId,
+      email: payloadEmail,
+      partner_id: partnerId,
+      first_name: firstName
+    });
 
-    // 2. Если профиль всё ещё не найден — создаем новый
-    if (!webUser && ydb && webSessionId) {
-      log.info(`[WEB] Initializing new session: ${webSessionId}`);
-      webUser = {
-        web_id: webSessionId,
-        email: payloadEmail || "", // СРАЗУ ЗАПИСЫВАЕМ EMAIL В БАЗУ!
-        partner_id: payload.partner_id || payload.referrer || "p_qdr",
-        state: "START",
-        first_name: payloadEmail ? payloadEmail.split("@")[0] : "Друг",
-        last_seen: Date.now(),
-        session: {
-          source: "web",
-          channels: { web: { enabled: true, configured: true } },
-          tags: [],
-          dialog_history: [],
-          xp: 0,
-          last_activity: Date.now(),
-        },
-      };
-      const res = await ydb.saveUser(webUser);
-      webUser.id = res.id;
-    } else if (webUser && payloadEmail && !webUser.email) {
-      // 3. Если профиль был, но email в нем пустой — дописываем
-      webUser.email = payloadEmail;
-      webUser.first_name = payloadEmail.split("@")[0];
-      await ydb.saveUser(webUser);
-    }
-
-    if (!webUser)
-      return {
-        statusCode: 500,
-        headers: corsHeaders,
-        body: JSON.stringify({ error: "Database error" }),
-      };
+    adaptStateForChannel(webUser, 'web');
+    webUser.last_seen = Date.now();
+    await ydb.saveUser(webUser);
 
     // Лечим сессию, если она пустая или битая
-    webUser.first_name = webUser.first_name || "Друг";
+    webUser.first_name = webUser.first_name || firstName;
     if (!webUser.session) webUser.session = {};
     if (!Array.isArray(webUser.session.tags)) webUser.session.tags = [];
-    if (!Array.isArray(webUser.session.dialog_history))
-      webUser.session.dialog_history = [];
+    if (!Array.isArray(webUser.session.dialog_history)) webUser.session.dialog_history = [];
     if (!webUser.session.channel_states) webUser.session.channel_states = {};
 
     // ============================================================
@@ -221,34 +183,31 @@ export async function handleWebChat(event, context) {
       const verificationCode = crypto.randomUUID().split("-")[0].toUpperCase();
       const codeExpires = Date.now() + 24 * 60 * 60 * 1000;
 
-      let existingEmailUser = await ydb.findUser({ email });
-      if (existingEmailUser) {
-        existingEmailUser.session.email_verification_code = verificationCode;
-        existingEmailUser.session.email_verification_expires = codeExpires;
-        await ydb.saveUser(existingEmailUser);
-        const { sendEmail, templates } = await import("../email/email_service.js");
-        await sendEmail({ to: email, ...templates.emailVerification(existingEmailUser, verificationCode) });
-      } else {
-        webUser.email = email;
-        webUser.first_name = email.split("@")[0];
-        webUser.session.channels = {
-          email: {
-            enabled: true,
-            configured: true,
-            subscribed: false,
-            verified: false,
-          },
-        };
-        webUser.session.email_verification_code = verificationCode;
-        webUser.session.email_verification_expires = codeExpires;
-        await ydb.saveUser(webUser);
-        const { sendEmail, templates } = await import("../email/email_service.js");
-        await sendEmail({ to: email, ...templates.emailVerification(webUser, verificationCode) });
-      }
+      const user = await resolveUser('email', {
+        email: email,
+        partner_id: partnerId,
+        first_name: email.split('@')[0]
+      });
+
+      user.session.email_verification_code = verificationCode;
+      user.session.email_verification_expires = codeExpires;
+      user.session.channels = user.session.channels || {};
+      user.session.channels.email = {
+        ...user.session.channels.email,
+        enabled: true,
+        configured: true,
+        subscribed: false,
+        verified: false,
+      };
+      await ydb.saveUser(user);
+
+      const { sendEmail, templates } = await import("../email/email_service.js");
+      await sendEmail({ to: email, ...templates.emailVerification(user, verificationCode) });
+
       return {
         statusCode: 200,
         headers: corsHeaders,
-        body: JSON.stringify({ success: true, emailSent: true, emailAlreadyRegistered: !!existingEmailUser }),
+        body: JSON.stringify({ success: true, emailSent: true }),
       };
     }
 
