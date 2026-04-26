@@ -753,6 +753,7 @@ export function registerTelegramActions(bot, ctx) {
 
           try {
             if (u.session.old_bot_token) {
+              await fetch(`https://api.telegram.org/bot${u.session.old_bot_token}/deleteWebhook`).catch(() => {});
               const oldLeads = await ydb.getBotUsers(u.session.old_bot_token);
               for (const lead of oldLeads) {
                 lead.bot_token = txt;

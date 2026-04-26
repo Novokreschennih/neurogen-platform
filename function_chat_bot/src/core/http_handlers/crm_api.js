@@ -256,29 +256,32 @@ export async function handleCrmApi(event, context) {
       results.telegram = tgResults;
     }
 
-    // VK рассылка
+    // VK рассылка (асинхронно батчами по 10)
     if (vkUserIds.length > 0 && process.env.VK_SERVICE_TOKEN) {
-      for (const uid of vkUserIds) {
-        try {
-          const vkUserId = uid.replace("vk:", "");
-          const params = new URLSearchParams({
-            access_token: process.env.VK_SERVICE_TOKEN,
-            v: "5.199",
-            user_id: vkUserId,
-            random_id: String(Math.floor(Math.random() * 2147483647)),
-            message: message.replace(/<[^>]*>/g, ""), // VK doesn't support HTML
-          });
-          const resp = await fetch("https://api.vk.com/method/messages.send", {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: params.toString(),
-          });
-          const vkData = await resp.json();
-          if (vkData.response) totalSent++;
-          else totalFailed++;
-        } catch {
-          totalFailed++;
-        }
+      const vkChunkSize = 10;
+      for (let i = 0; i < vkUserIds.length; i += vkChunkSize) {
+        const chunk = vkUserIds.slice(i, i + vkChunkSize);
+        await Promise.all(chunk.map(async (uid) => {
+          try {
+            const vkUserId = uid.replace("vk:", "");
+            const params = new URLSearchParams({
+              access_token: process.env.VK_SERVICE_TOKEN,
+              v: "5.199",
+              user_id: vkUserId,
+              random_id: String(Math.floor(Math.random() * 2147483647)),
+              message: message.replace(/<[^>]*>/g, ""),
+            });
+            const resp = await fetch("https://api.vk.com/method/messages.send", {
+              method: "POST",
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              body: params.toString(),
+            });
+            const vkData = await resp.json();
+            if (vkData.response) totalSent++; else totalFailed++;
+          } catch {
+            totalFailed++;
+          }
+        }));
       }
       results.vk = { sent: totalSent, failed: totalFailed };
     }

@@ -13,6 +13,7 @@
 
 // partner_id: буквы, цифры, подчёркивание, дефис, 2-64 символа
 const PARTNER_ID_RE = /^[a-zA-Z0-9_-]{2,64}$/;
+const SESSION_ID_RE = /^[a-zA-Z0-9_-]{5,64}$/;
 
 // user_id: только цифры (Telegram/VK numeric ID)
 const NUMERIC_ID_RE = /^\d{3,20}$/;
@@ -44,6 +45,12 @@ export function validatePartnerId(raw) {
   if (!raw || typeof raw !== "string") return null;
   const trimmed = raw.trim();
   return PARTNER_ID_RE.test(trimmed) ? trimmed : null;
+}
+
+export function validateWebSessionId(raw) {
+  if (!raw || typeof raw !== "string") return null;
+  const trimmed = raw.trim();
+  return SESSION_ID_RE.test(trimmed) ? trimmed : null;
 }
 
 /**
@@ -148,6 +155,15 @@ export function validateStartPayload(raw) {
   }
 
   return result;
+}
+
+/**
+ * Валидировать state name
+ * @returns {string|null}
+ */
+export function validateState(raw) {
+  if (!raw || typeof raw !== "string") return null;
+  return STATE_RE.test(raw.trim()) ? raw.trim() : null;
 }
 
 // ============================================================

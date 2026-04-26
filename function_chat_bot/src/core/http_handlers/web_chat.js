@@ -3,7 +3,7 @@
  * Обрабатывает всё: Email-лиды, кнопки воронки, верификацию и умный чат с ИИ.
  */
 import crypto from "crypto";
-import { validateEmail, validatePartnerId } from "../../utils/validator.js";
+import { validateEmail, validatePartnerId, validateWebSessionId } from "../../utils/validator.js";
 import scenario from "../../scenarios/scenario_tg.js";
 import { resolveUser } from '../../core/omni_resolver.js';
 import { adaptStateForChannel } from '../../scenarios/common/step_order.js';
@@ -19,7 +19,10 @@ export async function handleWebChat(event, context) {
     const payload = JSON.parse(payloadStr);
 
     // --- 0. ЗАГРУЗКА ИЛИ СОЗДАНИЕ ПОЛЬЗОВАТЕЛЯ ---
-    const webSessionId = payload.sessionId;
+    const webSessionId = validateWebSessionId(payload.sessionId);
+    if (!webSessionId) {
+      return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ error: "Invalid Session ID" }) };
+    }
     const payloadEmail = payload.email ? validateEmail(payload.email) : null;
     const partnerId = payload.partner_id || payload.referrer || "p_qdr";
     const firstName = payloadEmail ? payloadEmail.split('@')[0] : 'WebUser';
