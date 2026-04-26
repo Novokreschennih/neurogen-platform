@@ -126,7 +126,10 @@ export function validateStartPayload(raw) {
   if (parts[1]) {
     const content = parts[1];
 
-    if (content.startsWith("w")) {
+    if (content.startsWith("web_")) {
+      result.webId = content;
+    }
+    else if (content.startsWith("w")) {
       const wId = content.substring(1);
       if (wId.length > 5) result.webId = wId;
     }
@@ -139,7 +142,7 @@ export function validateStartPayload(raw) {
         if (email) result.email = email;
       } catch (e) {}
     }
-    else if (content.startsWith("web_") || content.length > 15) {
+    else if (content.length > 15) {
       result.webId = content;
     }
   }

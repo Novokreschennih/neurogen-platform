@@ -21,7 +21,9 @@ export function parseStartPayload(payload) {
 
   if (parts[1]) {
     const content = parts[1];
-    if (content.startsWith('w')) {
+    if (content.startsWith('web_')) {
+      result.webId = content;
+    } else if (content.startsWith('w')) {
       result.webId = content.substring(1);
     } else if (content.startsWith('e')) {
       try {

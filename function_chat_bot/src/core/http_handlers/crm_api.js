@@ -324,13 +324,13 @@ export async function handleCrmApi(event, context) {
     const allUsers = await ydb.getBotUsers(botToken, 10000, 0);
 
     // Также добавляем пользователей из других каналов (VK, web, email)
-    const allInactive = await ydb.getStaleUsers(99999, 10000, 0);
-    const existingIds = new Set(allUsers.map((u) => u.user_id));
-    for (const u of allInactive) {
-      if (!existingIds.has(u.user_id)) {
-        allUsers.push(u);
-      }
-    }
+    // const allInactive = await ydb.getStaleUsers(99999, 10000, 0);
+    // const existingIds = new Set(allUsers.map((u) => u.user_id));
+    // for (const u of allInactive) {
+    //   if (!existingIds.has(u.user_id)) {
+    //     allUsers.push(u);
+    //   }
+    // }
 
     const csvRows = [
       [
