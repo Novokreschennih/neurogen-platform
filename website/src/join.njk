@@ -641,14 +641,12 @@ eleventyExcludeFromCollections: true
         });
 
         btnTelegram.addEventListener("click", () => {
-          const cleanSessionId = currentSessionId.replace(/^web_/, "");
-          const startPayload = `${partnerId}__w${cleanSessionId}`;
+          const startPayload = `${partnerId}__w${currentSessionId}`;
           window.open(`https://t.me/${refBot}?start=${startPayload}`, "_blank");
         });
 
         btnVK.addEventListener("click", () => {
-          const cleanSessionId = currentSessionId.replace(/^web_/, "");
-          const startPayload = `${partnerId}__w${cleanSessionId}`;
+          const startPayload = `${partnerId}__w${currentSessionId}`;
           window.open(`${VK_COMMUNITY_URL}?ref=${startPayload}`, "_blank");
         });
 
