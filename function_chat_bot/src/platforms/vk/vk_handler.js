@@ -279,7 +279,7 @@ export async function handleVkWebhook(event, context) {
             parsed = rawPayload;
           }
         } catch (e) {
-          return { statusCode: 200, body: "ok" };
+          parsed = { callback_data: rawPayload };
         }
 
         const callbackData = parsed?.callback_data;
@@ -337,6 +337,7 @@ export async function handleVkWebhook(event, context) {
         if (!vkUser.session.channels.vk) vkUser.session.channels.vk = {};
         vkUser.session.channels.vk.group_id = String(vkGroupId);
         await ydb.saveUser(vkUser);
+        log.info(`[VK DEBUG] callbackData:`, { callbackData, vkUserState: vkUser.state, savedState: vkUser.saved_state });
         log.info(`[VK] resolveUser result`, {
           found: !!vkUser,
           userId: vkUser?.id,
@@ -577,6 +578,45 @@ export async function handleVkWebhook(event, context) {
             {},
           );
         }
+        if (callbackData === "WAIT_VERIFICATION") {
+          const question = vkUser.session?.verification_question;
+          if (question) {
+            await vkCtx.reply(
+              `🔐 <b>ПОДТВЕРЖДЕНИЕ ВЛАДЕНИЯ АККАУНТОМ</b>\n\n<b>${question}</b>\n\n<i>(Подсказка: эти данные есть в таблице тарифов в твоем личном кабинете)</i>`,
+              {}
+            );
+          } else {
+            await vkCtx.reply("Вопрос не найден. Попробуйте позже.", {});
+          }
+          return { statusCode: 200, body: "ok" };
+        }
+
+        const waitCallbacks = [
+          "WAIT_REG_ID", "WAIT_REG_TAIL", "WAIT_VERIFICATION",
+          "WAIT_SH_ID_P", "WAIT_SH_TAIL_P", "WAIT_BOT_TOKEN",
+          "WAIT_SECRET_1", "WAIT_SECRET_2", "WAIT_SECRET_3",
+          "WAIT_TG_SETUP", "WAIT_EMAIL_INPUT"
+        ];
+
+        if (waitCallbacks.includes(callbackData)) {
+          const hints = {
+            "WAIT_REG_ID": "✍️ Введи твой цифровой ID (только цифры):",
+            "WAIT_REG_TAIL": "🔗 Пришли свою реферальную ссылку полностью:",
+            "WAIT_VERIFICATION": `🔐 <b>ПОДТВЕРЖДЕНИЕ ВЛАДЕНИЯ АККАУНТОМ</b>\n\n<b>${vkUser.session?.verification_question || "Вопрос не найден"}</b>\n\n<i>(Подсказка: эти данные есть в таблице тарифов в твоем личном кабинете)</i>`,
+            "WAIT_SH_ID_P": "✍️ Введи цифровой ID SetHubble для нового бота:",
+            "WAIT_SH_TAIL_P": "🔗 Пришли ссылку для приглашений:",
+            "WAIT_BOT_TOKEN": "🚀 НАСТРОЙКА БОТА-КЛОНА\n\nПришли мне API TOKEN твоего бота из @BotFather.",
+            "WAIT_SECRET_1": "Введи секретное слово из статьи Модуля 1:",
+            "WAIT_SECRET_2": "Введи секретное слово из статьи Модуля 2:",
+            "WAIT_SECRET_3": "Введи секретное слово из статьи Модуля 3:",
+            "WAIT_TG_SETUP": "Для подключения Telegram отправь токен бота.",
+            "WAIT_EMAIL_INPUT": "📧 Введи свой email для подключения рассылки:"
+          };
+          const replyText = hints[callbackData] || "⚡ Продолжи заполнение данных.";
+          await vkCtx.reply(replyText, {});
+          return { statusCode: 200, body: "ok" };
+        }
+
         if (callbackData === "FORCE_REG_UPDATE") {
           vkUser.state = "WAIT_REG_ID";
           await ydb.saveUser(vkUser);

@@ -64,7 +64,20 @@ export async function handlePaymentWebhook(event, context) {
     return response(400, "invalid_product_id");
   }
 
-  const u = await ydb.findUser({ tg_id: Number(hubTelegramId) });
+  let u = await ydb.findUser({ tg_id: Number(hubTelegramId) });
+
+  if (!u) {
+    console.log(`[PAYMENT] User ${hubTelegramId} not found. Creating stub user to save PRO status.`);
+    u = {
+      tg_id: Number(hubTelegramId),
+      state: "Delivery_1",
+      bought_tripwire: false,
+      session: { tags: ["created_from_payment"] },
+      purchases: [],
+      partner_id: "p_qdr"
+    };
+  }
+
   if (u) {
     if (!u.purchases.includes(hubProductId)) u.purchases.push(hubProductId);
 

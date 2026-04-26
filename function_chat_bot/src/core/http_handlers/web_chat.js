@@ -126,6 +126,7 @@ export async function handleWebChat(event, context) {
         "",
         info.sh_user_id,
         webUser.bought_tripwire,
+        webUser,
       );
 
       // Если шага нет в сценарии — фолбэк на START (чтобы не было undefined)

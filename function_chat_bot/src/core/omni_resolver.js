@@ -53,6 +53,29 @@ export async function resolveUser(channel, ids) {
 
   let main;
   if (found.length === 0) {
+    let existing = null;
+    if (ids.email) {
+      existing = await ydb.findUser({ email: ids.email });
+    }
+    if (!existing && ids.web_id) {
+      existing = await ydb.findUser({ web_id: ids.web_id });
+    }
+
+    if (existing) {
+      if (ids.tg_id && !existing.tg_id) existing.tg_id = ids.tg_id;
+      if (ids.vk_id && !existing.vk_id) existing.vk_id = ids.vk_id;
+      if (ids.web_id && !existing.web_id) existing.web_id = ids.web_id;
+      if (!existing.session) existing.session = {};
+      if (!existing.session.channels) existing.session.channels = {};
+      existing.session.channels[channel] = {
+        ...(existing.session.channels[channel] || {}),
+        enabled: true,
+        configured: true,
+      };
+      await ydb.saveUser(existing);
+      return existing;
+    }
+
     main = {
       tg_id: ids.tg_id || 0,
       vk_id: ids.vk_id || 0,

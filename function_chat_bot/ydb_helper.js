@@ -131,53 +131,62 @@ function mapUser(row) {
 export async function findUser(criteria) {
   if (!criteria || Object.keys(criteria).length === 0) return null;
 
-  try {
-    return await driver.tableClient.withSession(async (session) => {
-      let whereClause = "";
-      let params = {};
-      let declareType = "Utf8";
+  const maxRetries = 3;
+  const baseDelayMs = 500;
 
-      if (criteria.id) {
-        whereClause = "id = $search_val";
-        params = { $search_val: TypedValues.utf8(String(criteria.id)) };
-      } else if (criteria.tg_id) {
-        whereClause = "tg_id = $search_val";
-        params = { $search_val: TypedValues.uint64(String(criteria.tg_id)) };
-        declareType = "Uint64";
-      } else if (criteria.email) {
-        whereClause = "email = $search_val";
-        params = {
-          $search_val: TypedValues.utf8(String(criteria.email).toLowerCase()),
-        };
-      } else if (criteria.web_id) {
-        whereClause = "web_id = $search_val";
-        params = { $search_val: TypedValues.utf8(String(criteria.web_id)) };
-      } else if (criteria.vk_id) {
-        whereClause = "vk_id = $search_val";
-        params = { $search_val: TypedValues.uint64(String(criteria.vk_id)) };
-        declareType = "Uint64";
-      } else {
-        return null;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await driver.tableClient.withSession(async (session) => {
+        let whereClause = "";
+        let params = {};
+        let declareType = "Utf8";
+
+        if (criteria.id) {
+          whereClause = "id = $search_val";
+          params = { $search_val: TypedValues.utf8(String(criteria.id)) };
+        } else if (criteria.tg_id) {
+          whereClause = "tg_id = $search_val";
+          params = { $search_val: TypedValues.uint64(String(criteria.tg_id)) };
+          declareType = "Uint64";
+        } else if (criteria.email) {
+          whereClause = "email = $search_val";
+          params = {
+            $search_val: TypedValues.utf8(String(criteria.email).toLowerCase()),
+          };
+        } else if (criteria.web_id) {
+          whereClause = "web_id = $search_val";
+          params = { $search_val: TypedValues.utf8(String(criteria.web_id)) };
+        } else if (criteria.vk_id) {
+          whereClause = "vk_id = $search_val";
+          params = { $search_val: TypedValues.uint64(String(criteria.vk_id)) };
+          declareType = "Uint64";
+        } else {
+          return null;
+        }
+
+        const query = `
+          DECLARE $search_val AS ${declareType};
+          SELECT ${USER_FIELDS} FROM users WHERE ${whereClause};
+        `;
+
+        const { resultSets } = await session.executeQuery(query, params);
+        if (!resultSets[0] || resultSets[0].rows.length === 0) return null;
+
+        return mapUser(resultSets[0].rows[0]);
+      });
+    } catch (e) {
+      const isResourceExhausted = e.message?.includes("RESOURCE_EXHAUSTED");
+      if (isResourceExhausted && attempt < maxRetries) {
+        const delay = baseDelayMs * Math.pow(2, attempt);
+        log.warn(`[findUser] RESOURCE_EXHAUSTED, retry ${attempt+1}/${maxRetries} in ${delay}ms`);
+        await new Promise(res => setTimeout(res, delay));
+        continue;
       }
-
-      const query = `
-        DECLARE $search_val AS ${declareType};
-        SELECT ${USER_FIELDS} FROM users WHERE ${whereClause};
-      `;
-
-      const { resultSets } = await session.executeQuery(query, params);
-      if (!resultSets[0] || resultSets[0].rows.length === 0) return null;
-
-      return mapUser(resultSets[0].rows[0]);
-    });
-  } catch (e) {
-    log.error(
-      `Failed to find user by criteria`,
-      e.message || String(e),
-      criteria,
-    );
-    return null;
+      log.error(`Failed to find user by criteria`, e.message || String(e), criteria);
+      return null;
+    }
   }
+  return null;
 }
 
 export async function verifyEmailCode(email, code) {

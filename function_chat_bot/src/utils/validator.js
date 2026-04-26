@@ -87,16 +87,24 @@ export function validateBotToken(raw) {
 }
 
 /**
+ * Валидировать callback_data (кнопки)
+ * @returns {string|null}
+ */
+export function validateCallbackData(raw) {
+  if (!raw || typeof raw !== "string") return null;
+  return CALLBACK_DATA_RE.test(raw) ? raw : null;
+}
+
+/**
  * Валидировать start payload
- * Новый формат: partnerId__webId__emailBase64
+ * Новый компактный формат: partnerId__w[webId] ИЛИ partnerId__e[emailBase64]
  * @returns {{ partnerId: string, email?: string, webId?: string } | null}
  */
 export function validateStartPayload(raw) {
   if (!raw || typeof raw !== "string") return null;
   const trimmed = raw.trim();
-  
+
   let parts;
-  // v7.0: Используем безопасный разделитель __ для омниканальности
   if (trimmed.includes("__")) {
     parts = trimmed.split("__");
   } else if (trimmed.includes("-")) {
@@ -108,17 +116,31 @@ export function validateStartPayload(raw) {
   const partnerId = validatePartnerId(parts[0]);
   const result = { partnerId: partnerId || parts[0] };
 
-  // ТГ шлет payload в формате: p_qdr__web_uuid__emailbase64
-  // parts[1] - это web_id
-  if (parts[1] && parts[1].startsWith("web_")) {
-    result.webId = parts[1];
+  if (parts[1]) {
+    const content = parts[1];
+
+    if (content.startsWith("w")) {
+      const wId = content.substring(1);
+      if (wId.length > 5) result.webId = wId;
+    }
+    else if (content.startsWith("e")) {
+      try {
+        let enc = content.substring(1).replace(/-/g, "+").replace(/_/g, "/");
+        const padded = enc + "=".repeat((4 - (enc.length % 4)) % 4);
+        const decoded = Buffer.from(padded, "base64").toString("utf8");
+        const email = validateEmail(decoded);
+        if (email) result.email = email;
+      } catch (e) {}
+    }
+    else if (content.startsWith("web_") || content.length > 15) {
+      result.webId = content;
+    }
   }
 
-  // parts[2] - это email
   if (parts[2] && parts[2] !== "noemail") {
     try {
-      const encoded = parts[2].replace(/-/g, "+").replace(/_/g, "/");
-      const padded = encoded + "=".repeat((4 - (encoded.length % 4)) % 4);
+      const enc = parts[2].replace(/-/g, "+").replace(/_/g, "/");
+      const padded = enc + "=".repeat((4 - (enc.length % 4)) % 4);
       const decoded = Buffer.from(padded, "base64").toString("utf8");
       const email = validateEmail(decoded);
       if (email) result.email = email;
@@ -126,24 +148,6 @@ export function validateStartPayload(raw) {
   }
 
   return result;
-}
-
-/**
- * Валидировать callback_data (кнопки)
- * @returns {string|null}
- */
-export function validateCallbackData(raw) {
-  if (!raw || typeof raw !== "string") return null;
-  return CALLBACK_DATA_RE.test(raw) ? raw : null;
-}
-
-/**
- * Валидировать state name
- * @returns {string|null}
- */
-export function validateState(raw) {
-  if (!raw || typeof raw !== "string") return null;
-  return STATE_RE.test(raw.trim()) ? raw.trim() : null;
 }
 
 // ============================================================

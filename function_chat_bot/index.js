@@ -995,11 +995,14 @@ export const handler = async (event) => {
     event.headers?.["x-forwarded-for"] ||
     "unknown_ip";
 
-  // Исключаем webhook'и Telegram и VK (у них свои IP, их блочить нельзя)
-  const isWebhook =
-    event.body &&
-    (event.body.includes("update_id") ||
-      event.body.includes('type":"message_new"'));
+  // === БЕЗОПАСНАЯ ПРОВЕРКА НА ВЕБХУК (С УЧЕТОМ BASE64) ===
+  let bodyForCheck = event.body || "";
+  if (event.isBase64Encoded) {
+    try {
+      bodyForCheck = Buffer.from(event.body, "base64").toString("utf8");
+    } catch (e) {}
+  }
+  const isWebhook = bodyForCheck.includes("update_id") || bodyForCheck.includes('type":"message_new"') || bodyForCheck.includes('type":"message_event"');
 
   if (!isWebhook && clientIp !== "unknown_ip") {
     const rateCheck = checkRateLimit(clientIp);

@@ -9,6 +9,7 @@ import {
   PAYMENT_DOMAIN,
   SUPPORT_CHAT_URL,
 } from "./constants.js";
+import { buildStartPayload } from "./deeplink.js";
 
 /**
  * Сгенерировать набор ссылок для кнопок воронки
@@ -17,6 +18,7 @@ import {
  * @param {string} custom_pay_link - Кастомная ссылка на оплату (для владельцев ботов)
  * @param {string} sh_user_id - SetHubble user ID пригласителя
  * @param {boolean} boughtTripwire - Купил ли tripwire (PRO-статус)
+ * @param {object} user - Объект пользователя (для омниканальных ссылок)
  * @returns {object} Набор готовых ссылок
  */
 export function getLinks(
@@ -24,6 +26,7 @@ export function getLinks(
   custom_pay_link,
   sh_user_id,
   boughtTripwire = false,
+  user = null,
 ) {
   const productId = boughtTripwire ? PRODUCT_ID_PRO : PRODUCT_ID_FREE;
   const regUrl = `https://sethubble.com/ru/${sh_ref_tail}`;
@@ -31,13 +34,13 @@ export function getLinks(
     ? `https://sethubble.com/ru/?s=${productId}&afid=${sh_user_id}`
     : `https://sethubble.com/ru/?s=${productId}`;
 
-  // Берем цифровой ID владельца бота (пригласителя), а если его нет — резервный ID из .env
   const partnerId = sh_user_id || process.env.MY_SH_USER_ID || "1123";
 
-  // VK deep link для центрального бота
+  const startPayload = user ? buildStartPayload(user) : sh_ref_tail;
+
   const vkGroupId = process.env.VK_CENTRAL_GROUP || "";
   const vkBotLink = sh_ref_tail
-    ? `https://vk.me/club${vkGroupId}?ref=${sh_ref_tail}`
+    ? `https://vk.me/club${vkGroupId}?ref=${startPayload}`
     : `https://vk.me/club${vkGroupId}`;
 
   return {
@@ -58,5 +61,6 @@ export function getLinks(
     free_disk:
       process.env.FREE_DISK_LINK || "https://disk.yandex.ru/d/a2Gsuwnu32eJKg",
     vk_bot: vkBotLink,
+    start_payload: startPayload,
   };
 }

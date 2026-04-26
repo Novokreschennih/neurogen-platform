@@ -93,7 +93,7 @@ export function setupTelegramHandlers(bot, context) {
       ? Promise.resolve({ sh_user_id: process.env.MY_SH_USER_ID, sh_ref_tail: process.env.MY_PARTNER_ID, bot_username: "sethubble_biz_bot" })
       : ydb.getBotInfo(token));
 
-    const links = scenario.getLinks(info?.sh_ref_tail || user.partner_id, info?.tripwire_link, info?.sh_user_id, user.bought_tripwire);
+    const links = scenario.getLinks(info?.sh_ref_tail || user.partner_id, info?.tripwire_link, info?.sh_user_id, user.bought_tripwire, user);
     const messageText = typeof step.text === "function" ? step.text(links, user, info) : step.text;
     const progress = formatTrainingProgress(stepKey, user);
     const finalText = progress ? `${progress}${messageText}` : messageText;
@@ -133,7 +133,7 @@ export function setupTelegramHandlers(bot, context) {
       }
     }
 
-    const user = await resolveUser('telegram', {
+    let user = await resolveUser('telegram', {
       tg_id: tgId,
       web_id: payloadWebId,
       email: payloadEmail,
@@ -144,7 +144,28 @@ export function setupTelegramHandlers(bot, context) {
     adaptStateForChannel(user, 'telegram');
     user.bot_token = token;
     user.last_seen = Date.now();
+
+    if (!user.tg_id || user.tg_id === 0) {
+      user.tg_id = tgId;
+      log.info(`[OMNI-LINK] Successfully linked Telegram ID ${tgId} to Web User ${user.web_id}`);
+    }
+
     ctx.dbUser = user;
+
+    // Защита от race condition: если параллельный запрос уже создал пользователя с этим tg_id
+    const existingTg = await ydb.findUser({ tg_id: tgId });
+    if (existingTg && existingTg.id !== user.id) {
+      const mergedUser = await resolveUser('telegram', {
+        tg_id: tgId,
+        web_id: user.web_id,
+        email: user.email,
+        partner_id: user.partner_id,
+        first_name: user.first_name
+      });
+      user = mergedUser;
+      ctx.dbUser = user;
+      log.warn(`[TG RACE] Merged duplicate tg_id ${tgId}`);
+    }
 
     await next();
     await ydb.saveUser(user);
