@@ -587,6 +587,14 @@ const DOZHIM_MAP = {
 // === КАРТА ШАГОВ, ГДЕ НУЖНЫ НАПОМИНАНИЯ (1ч, 3ч, 24ч) ===
 const REMIND_MAP = {
   Pre_Training_Logic: true,
+  WAIT_REG_ID: true,
+  WAIT_REG_TAIL: true,
+  WAIT_VERIFICATION: true,
+  WAIT_FUNNEL_EMAIL: true,
+  WAIT_BOT_TOKEN: true,
+  WAIT_SECRET_1: true,
+  WAIT_SECRET_2: true,
+  WAIT_SECRET_3: true,
   Training_Main: true,
   Module_1_Strategy: true,
   Module_2_Online: true,

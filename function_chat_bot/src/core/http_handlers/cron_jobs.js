@@ -369,10 +369,15 @@ export async function handleCronJobs(event, context) {
 
       let attemptMade = shouldSendReminder(u) || shouldSendDozhim(u);
 
-      if (actionTaken || u.session.is_banned || attemptMade) {
-        u.last_seen = Date.now();
-        await ydb.saveUser(u);
+      // === АНТИ-ЗАТОР (ОЧИСТКА ОЧЕРЕДИ) ===
+      // Сохраняем реальное время последнего действия юзера (чтобы не сломать таймеры дожимов)
+      if (!u.session.last_activity) {
+        u.session.last_activity = u.last_seen;
       }
+
+      // ВСЕГДА обновляем last_seen, чтобы юзер ушел в конец очереди и Крон проверил следующих!
+      u.last_seen = Date.now();
+      await ydb.saveUser(u);
 
       await new Promise((res) => setTimeout(res, CRON_USER_PAUSE_MS));
     } catch (e) {
