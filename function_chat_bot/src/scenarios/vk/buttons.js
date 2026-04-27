@@ -277,7 +277,7 @@ export const vkButtons = {
       [
         {
           text: `📖 ЧИТАТЬ СТАТЬЮ ${isCompleted ? "✅" : ""}`,
-          url: `${ACADEMY_BASE_URL}/module-1/?bot=${botName}`,
+          url: `${ACADEMY_BASE_URL}/module-1/?vk_group=${process.env.VK_CENTRAL_GROUP || "237421168"}`,
         },
       ],
       isCompleted
@@ -307,7 +307,7 @@ export const vkButtons = {
         [
           {
             text: "📘 ЧИТАТЬ УРОК 2 ✅",
-            url: `${ACADEMY_BASE_URL}/module-2/?bot=${botName}`,
+            url: `${ACADEMY_BASE_URL}/module-2/?vk_group=${process.env.VK_CENTRAL_GROUP || "237421168"}`,
           },
         ],
         [
@@ -323,7 +323,7 @@ export const vkButtons = {
         [
           {
             text: "📖 ОТКРЫТЬ УРОК 2",
-            url: `${ACADEMY_BASE_URL}/module-2/?bot=${botName}`,
+            url: `${ACADEMY_BASE_URL}/module-2/?vk_group=${process.env.VK_CENTRAL_GROUP || "237421168"}`,
           },
         ],
         [
@@ -383,7 +383,7 @@ export const vkButtons = {
         [
           {
             text: "📖 ЧИТАТЬ СТАТЬЮ ✅",
-            url: `${ACADEMY_BASE_URL}/module-3/?bot=${botName}`,
+            url: `${ACADEMY_BASE_URL}/module-3/?vk_group=${process.env.VK_CENTRAL_GROUP || "237421168"}`,
           },
         ],
         [
@@ -399,7 +399,7 @@ export const vkButtons = {
         [
           {
             text: "📖 ОТКРЫТЬ УРОК 3",
-            url: `${ACADEMY_BASE_URL}/module-3/?bot=${botName}`,
+            url: `${ACADEMY_BASE_URL}/module-3/?vk_group=${process.env.VK_CENTRAL_GROUP || "237421168"}`,
           },
         ],
         [

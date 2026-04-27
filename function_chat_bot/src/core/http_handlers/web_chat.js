@@ -149,9 +149,16 @@ export async function handleWebChat(event, context) {
             text: startStep.text(links, webUser, info),
             image: startStep.image,
             buttons:
-              typeof startStep.buttons === "function"
+              (typeof startStep.buttons === "function"
                 ? startStep.buttons(links, webUser, info)
-                : startStep.buttons,
+                : startStep.buttons)?.map(row =>
+                row.map(btn => {
+                  if (btn.url && btn.url.includes("module-")) {
+                    return { ...btn, url: btn.url + "&web=1" };
+                  }
+                  return btn;
+                })
+              ),
             neuroCoins: webUser.session?.xp || 0,
           }),
         };
@@ -169,9 +176,16 @@ export async function handleWebChat(event, context) {
               : step.text,
           image: step.image,
           buttons:
-            typeof step.buttons === "function"
+            (typeof step.buttons === "function"
               ? step.buttons(links, webUser, info)
-              : step.buttons,
+              : step.buttons)?.map(row =>
+              row.map(btn => {
+                if (btn.url && btn.url.includes("module-")) {
+                  return { ...btn, url: btn.url + "&web=1" };
+                }
+                return btn;
+              })
+            ),
           neuroCoins: webUser.session?.xp || 0,
         }),
       };
