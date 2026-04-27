@@ -707,11 +707,55 @@ export function registerTelegramActions(bot, ctx) {
       delete u.session.verification_question;
       delete u.session.verification_answers;
 
+      if (!u.email && !u.session.email) {
+        u.state = "WAIT_FUNNEL_EMAIL";
+        await ydb.saveUser(u);
+        await ctx.reply("✅ <b>Аккаунт SetHubble подтверждён!</b>\n\nОстался последний технический шаг перед стартом обучения.", { parse_mode: "HTML", protect_content: true });
+        return renderStep(ctx, "WAIT_FUNNEL_EMAIL", token);
+      }
+
       u.state = "Training_Main";
       await ydb.saveUser(u);
 
       await ctx.reply(
         `✅ <b>Аккаунт подтверждён!</b>\n\nЯ открыл для тебя доступ к материалам. В Главном Меню теперь разблокирован раздел «Обучение».\n\nА сейчас переходим сразу к делу 👇`,
+        { parse_mode: "HTML", protect_content: true },
+      );
+      return renderStep(ctx, "Training_Main", token);
+    }
+
+    if (u.state === "WAIT_FUNNEL_EMAIL") {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(txt)) {
+        return ctx.reply("❌ Это не похоже на email. Пожалуйста, проверь на опечатки и отправь еще раз:", { protect_content: true });
+      }
+
+      const emailRecord = await ydb.findUser({ email: txt });
+
+      u.email = txt.toLowerCase();
+      u.session.email = u.email;
+      u.session.email_verified = true;
+      if (!u.session.channels) u.session.channels = {};
+      u.session.channels.email = { enabled: true, configured: true, subscribed: true };
+
+      await ydb.saveUser(u);
+
+      if (emailRecord && emailRecord.id !== u.id) {
+        log.info("[TG FUNNEL] Merging email record into TG user", { email: txt, tgUserId: u.id });
+        emailRecord.tg_id = Number(ctx.from.id);
+        if (u.session?.dialog_history) {
+          emailRecord.session.dialog_history = emailRecord.session.dialog_history || [];
+          emailRecord.session.dialog_history.push(...u.session.dialog_history);
+        }
+        await ydb.mergeUsers(emailRecord, u.id, "funnel_email_match");
+        ctx.dbUser = await ydb.getUser(emailRecord.id);
+      }
+
+      ctx.dbUser.state = "Training_Main";
+      await ydb.saveUser(ctx.dbUser);
+
+      await ctx.reply(
+        `✅ <b>Email успешно привязан!</b>\n\nЯ открыл для тебя доступ к материалам. В Главном Меню теперь разблокирован раздел «Обучение».\n\nА сейчас переходим сразу к делу 👇`,
         { parse_mode: "HTML", protect_content: true },
       );
       return renderStep(ctx, "Training_Main", token);

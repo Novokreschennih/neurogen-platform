@@ -5,7 +5,7 @@ const FUNNEL_STEPS = [
   "Business_Offline_Pain", "Business_Offline_Solution", "Business_Offline_Case", "Business_Offline_Parachute",
   "Business_Online_Pain", "Business_Online_Solution", "Business_Online_Case",
   "Pre_Training_Logic",
-  "WAIT_REG_ID", "WAIT_REG_TAIL", "WAIT_VERIFICATION",
+  "WAIT_REG_ID", "WAIT_REG_TAIL", "WAIT_VERIFICATION", "WAIT_FUNNEL_EMAIL",
   "WAIT_SECRET_1", "WAIT_SECRET_2", "WAIT_SECRET_3",
   "WAIT_SH_ID_P", "WAIT_SH_TAIL_P", "WAIT_PARTNER_REG",
   "WAIT_BOT_TOKEN", "SETUP_BOT_START", "CONFIRM_BOT_DATA",

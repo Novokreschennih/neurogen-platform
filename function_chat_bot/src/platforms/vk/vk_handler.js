@@ -1577,12 +1577,57 @@ export async function handleVkWebhook(event, context) {
               // Очистка временных данных
               delete vkUser.session.verification_question;
               delete vkUser.session.verification_answers;
-              
+
+              if (!vkUser.email && !vkUser.session.email) {
+                vkUser.state = "WAIT_FUNNEL_EMAIL";
+                await ydb.saveUser(vkUser);
+                await vkCtx.reply("✅ <b>Аккаунт SetHubble подтверждён!</b>\n\nОстался последний технический шаг перед стартом обучения.", {});
+                return await renderStep(vkCtx, "WAIT_FUNNEL_EMAIL", vkToken);
+              }
+
               vkUser.state = "Training_Main";
               await ydb.saveUser(vkUser);
 
               await vkCtx.reply(
                 `✅ <b>Аккаунт подтверждён!</b>\n\nЯ открыл для тебя доступ к материалам. В Главном Меню теперь разблокирован раздел «Обучение».\n\nА сейчас переходим сразу к делу 👇`,
+                {},
+              );
+              return await renderStep(vkCtx, "Training_Main", vkToken);
+            }
+
+            if (vkUser.state === "WAIT_FUNNEL_EMAIL") {
+              const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+              if (!emailRegex.test(txt)) {
+                return await vkCtx.reply("❌ Это не похоже на email. Пожалуйста, проверь на опечатки и отправь еще раз:", {});
+              }
+
+              const emailRecord = await ydb.findUser({ email: txt });
+
+              vkUser.email = txt.toLowerCase();
+              vkUser.session.email = vkUser.email;
+              vkUser.session.email_verified = true;
+              if (!vkUser.session.channels) vkUser.session.channels = {};
+              vkUser.session.channels.email = { enabled: true, configured: true, subscribed: true };
+
+              await ydb.saveUser(vkUser);
+
+              if (emailRecord && emailRecord.id !== vkUser.id) {
+                log.info("[VK FUNNEL] Merging email record into VK user", { email: txt });
+                emailRecord.vk_id = Number(message.from_id);
+                if (vkUser.session?.dialog_history) {
+                  emailRecord.session.dialog_history = emailRecord.session.dialog_history || [];
+                  emailRecord.session.dialog_history.push(...vkUser.session.dialog_history);
+                }
+                await ydb.mergeUsers(emailRecord, vkUser.id, "funnel_email_match");
+                vkUser = await ydb.getUser(emailRecord.id);
+                vkCtx.dbUser = vkUser;
+              }
+
+              vkUser.state = "Training_Main";
+              await ydb.saveUser(vkUser);
+
+              await vkCtx.reply(
+                `✅ <b>Email успешно привязан!</b>\n\nЯ открыл для тебя доступ к материалам. В Главном Меню теперь разблокирован раздел «Обучение».\n\nА сейчас переходим сразу к делу 👇`,
                 {},
               );
               return await renderStep(vkCtx, "Training_Main", vkToken);
