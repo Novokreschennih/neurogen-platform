@@ -38,6 +38,11 @@ export async function handleWebChat(event, context) {
     webUser.last_seen = Date.now();
     await ydb.saveUser(webUser);
 
+    // Записываем клик по рефке
+    if (partnerId && partnerId !== "p_qdr") {
+      await ydb.recordLinkClick(partnerId, webUser.id, "WEB_LEAD");
+    }
+
     // Лечим сессию, если она пустая или битая
     webUser.first_name = webUser.first_name || firstName;
     if (!webUser.session) webUser.session = {};

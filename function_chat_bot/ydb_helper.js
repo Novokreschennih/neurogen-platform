@@ -687,6 +687,77 @@ export async function getBotUsersCount(botToken) {
   }
 }
 
+export async function getUsersByPartner(partnerId, limit = 10000, offset = 0) {
+  try {
+    return await driver.tableClient.withSession(async (session) => {
+      const { resultSets } = await session.executeQuery(
+        `DECLARE $pid AS Utf8; DECLARE $l AS Uint64; DECLARE $o AS Uint64;
+         SELECT ${USER_FIELDS} FROM users
+         WHERE partner_id = $pid
+         ORDER BY last_seen DESC LIMIT $l OFFSET $o;`,
+        {
+          $pid: TypedValues.utf8(String(partnerId)),
+          $l: TypedValues.uint64(String(limit)),
+          $o: TypedValues.uint64(String(offset)),
+        },
+      );
+      return (resultSets[0]?.rows || []).map((r) => mapUser(r));
+    });
+  } catch (e) {
+    log.error(`Failed to get users by partner`, e.message || String(e));
+    return [];
+  }
+}
+
+export async function getPartnerUsersCount(partnerId) {
+  try {
+    return await driver.tableClient.withSession(async (session) => {
+      const { resultSets } = await session.executeQuery(
+        `DECLARE $pid AS Utf8; SELECT COUNT(*) as cnt FROM users WHERE partner_id = $pid;`,
+        { $pid: TypedValues.utf8(String(partnerId)) },
+      );
+      if (!resultSets[0] || resultSets[0].rows.length === 0) return 0;
+      return Number(resultSets[0].rows[0].items[0].uint64Value);
+    });
+  } catch (e) {
+    return 0;
+  }
+}
+
+export async function getPartnerStatsByFunnel(partnerId) {
+  try {
+    return await driver.tableClient.withSession(async (session) => {
+      const { resultSets } = await session.executeQuery(
+        `DECLARE $pid AS Utf8;
+         SELECT state, bought_tripwire, COUNT(*) AS cnt FROM users WHERE partner_id = $pid GROUP BY state, bought_tripwire;`,
+        { $pid: TypedValues.utf8(String(partnerId)) },
+      );
+
+      let total = 0, paid = 0, start_count = 0, training_count = 0, tripwire_count = 0, delivery_count = 0;
+      for (const row of resultSets[0]?.rows || []) {
+        const items = row.items || [];
+        const st = items[0]?.textValue || items[0]?.utf8Value || "";
+        const isPro = items[1]?.boolValue === true;
+        const count = Number(items[2]?.uint64Value || 0);
+
+        total += count;
+        if (isPro) { paid += count; delivery_count += count; }
+        else {
+          if (st === "START") start_count += count;
+          else if (st.includes("Module") || st.includes("Theory") || st.includes("Training")) training_count += count;
+          else if (st.includes("Tripwire") || st.includes("Offer") || st === "FAQ_PRO") tripwire_count += count;
+        }
+      }
+      return {
+        total, paid,
+        byStage: { start: start_count, training: training_count, tripwire: tripwire_count, delivery: delivery_count },
+      };
+    });
+  } catch (e) {
+    return { total: 0, paid: 0, byStage: { start: 0, training: 0, tripwire: 0, delivery: 0 } };
+  }
+}
+
 export async function getBotStats(botToken) {
   try {
     return await driver.tableClient.withSession(async (session) => {
@@ -695,7 +766,6 @@ export async function getBotStats(botToken) {
          SELECT state, bought_tripwire, COUNT(*) AS cnt FROM users WHERE bot_token = $bt GROUP BY state, bought_tripwire;`,
         { $bt: TypedValues.utf8(String(botToken)) },
       );
-
       let total = 0,
         paid = 0,
         start_count = 0,

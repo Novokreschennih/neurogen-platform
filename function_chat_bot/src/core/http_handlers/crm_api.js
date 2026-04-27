@@ -55,9 +55,15 @@ export async function handleCrmApi(event, context) {
     const page = parseInt(data.page) || 1;
     const pageSize = parseInt(data.pageSize) || 50;
     const offset = (page - 1) * pageSize;
-    const totalCount = await ydb.getBotUsersCount(botToken);
-    const users = await ydb.getBotUsers(botToken, pageSize, offset);
-    const stats = await ydb.getBotStats(botToken);
+
+    // УЗНАЕМ ХВОСТ ПАРТНЕРА, КОТОРЫЙ ОТКРЫЛ CRM
+    const partner = await ydb.findUser({ tg_id: Number(auth.tgData.user.id) });
+    const partnerTail = partner?.sh_ref_tail || "p_qdr";
+
+    // ИЩЕМ ЛИДОВ ПО ХВОСТУ ПАРТНЕРА, А НЕ ПО ТОКЕНУ
+    const totalCount = await ydb.getPartnerUsersCount(partnerTail);
+    const users = await ydb.getUsersByPartner(partnerTail, pageSize, offset);
+    const stats = await ydb.getPartnerStatsByFunnel(partnerTail);
 
     // Фильтр по каналу
     const channelFilter = data.channel || null;
@@ -126,19 +132,10 @@ export async function handleCrmApi(event, context) {
     }
 
     if (Object.keys(filters).length > 0 || filters.channel) {
-      // Загружаем всех пользователей бота + пользователей из других каналов
-      const allUsers = await ydb.getBotUsers(botToken, 10000, 0);
-
-      // Для мультиканальности загружаем всех неактивных пользователей (включая VK, web, email)
-      // и фильтруем по bot_token или channel
-      const allInactive = await ydb.getStaleUsers(99999, 10000, 0);
-      const existingIds = new Set(allUsers.map((u) => u.user_id));
-      for (const u of allInactive) {
-        if (!existingIds.has(u.user_id)) {
-          allUsers.push(u);
-          existingIds.add(u.user_id);
-        }
-      }
+      // Для мультиканальности загружаем ВСЕХ лидов ПАРТНЕРА
+      const partner = await ydb.findUser({ tg_id: Number(auth.tgData.user.id) });
+      const partnerTail = partner?.sh_ref_tail || "p_qdr";
+      const allUsers = await ydb.getUsersByPartner(partnerTail, 10000, 0);
 
       targetUserIds = allUsers
         .filter((u) => u !== null)
@@ -207,7 +204,9 @@ export async function handleCrmApi(event, context) {
     }
 
     // === Мультиканальная рассылка ===
-    const allUsersForBroadcast = await ydb.getBotUsers(botToken, 10000, 0);
+    const partner = await ydb.findUser({ tg_id: Number(auth.tgData.user.id) });
+    const partnerTail = partner?.sh_ref_tail || "p_qdr";
+    const allUsersForBroadcast = await ydb.getUsersByPartner(partnerTail, 10000, 0);
     const userMap = new Map(allUsersForBroadcast.map((u) => [u.user_id, u]));
 
     const tgUserIds = [];
@@ -321,16 +320,9 @@ export async function handleCrmApi(event, context) {
 
   // === EXPORT CSV ===
   if (action === "export_csv") {
-    const allUsers = await ydb.getBotUsers(botToken, 10000, 0);
-
-    // Также добавляем пользователей из других каналов (VK, web, email)
-    // const allInactive = await ydb.getStaleUsers(99999, 10000, 0);
-    // const existingIds = new Set(allUsers.map((u) => u.user_id));
-    // for (const u of allInactive) {
-    //   if (!existingIds.has(u.user_id)) {
-    //     allUsers.push(u);
-    //   }
-    // }
+    const partner = await ydb.findUser({ tg_id: Number(auth.tgData.user.id) });
+    const partnerTail = partner?.sh_ref_tail || "p_qdr";
+    const allUsers = await ydb.getUsersByPartner(partnerTail, 10000, 0);
 
     const csvRows = [
       [

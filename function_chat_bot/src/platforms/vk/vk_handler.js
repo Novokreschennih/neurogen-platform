@@ -330,7 +330,9 @@ export async function handleVkWebhook(event, context) {
           first_name: "VK User"
         });
         adaptStateForChannel(vkUser, 'vk');
-        vkUser.bot_token = "VK_CENTRAL_GROUP";
+        if (!vkUser.bot_token) {
+          vkUser.bot_token = "VK_CENTRAL_GROUP";
+        }
         vkUser.last_seen = Date.now();
         if (!vkUser.session) vkUser.session = {};
         if (!vkUser.session.channels) vkUser.session.channels = {};
@@ -849,7 +851,9 @@ export async function handleVkWebhook(event, context) {
         if (!vkUser.session.channels) vkUser.session.channels = {};
         if (!vkUser.session.channels.vk) vkUser.session.channels.vk = {};
         vkUser.session.channels.vk.group_id = String(vkGroupId);
-        vkUser.bot_token = "VK_CENTRAL_GROUP";
+        if (!vkUser.bot_token || vkUser.bot_token === "VK_CENTRAL_GROUP") {
+          vkUser.bot_token = "VK_CENTRAL_GROUP";
+        }
         vkUser.last_seen = Date.now();
         await ydb.saveUser(vkUser);
 

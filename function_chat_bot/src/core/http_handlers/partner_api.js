@@ -116,6 +116,7 @@ export async function handlePartnerApi(event, context) {
           earnings: earnings.toFixed(2),
           clicks,
           is_pro: user.bought_tripwire,
+          partner_id: user.sh_ref_tail,
         },
       });
     } catch (error) {

@@ -712,9 +712,9 @@
         document.getElementById("loadingBlock").classList.add("hidden");
         document.getElementById("mainContent").classList.remove("hidden");
 
-        botName = botName.replace("@", "");
+        const tail = userData.partner_id || userData.sh_ref_tail || "p_qdr";
         const toHex = (str) => Array.from(str).map((c) => c.charCodeAt(0).toString(16).padStart(2, "0")).join("");
-        secureToken = toHex(botName);
+        secureToken = toHex(tail);
 
         // Landing URL
         const landingUrl = `https://sethubble.ru/join/?page=${secureToken}`;

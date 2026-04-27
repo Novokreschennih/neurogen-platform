@@ -291,14 +291,25 @@
 
       // --- MAIN LOGIC ---
 
+      // --- MAIN LOGIC ---
+
+      // Читаем оба токена из URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const botToken = urlParams.get("bot_token");
+      const jwtToken = urlParams.get("token");
+
+      // УНИВЕРСАЛЬНЫЕ ЗАГОЛОВКИ (JWT + Telegram)
+      function getAuthHeaders() {
+        const headers = { "Content-Type": "application/json" };
+        if (jwtToken) headers["Authorization"] = `Bearer ${jwtToken}`;
+        if (tg.initData) headers["x-telegram-initdata"] = tg.initData;
+        return headers;
+      }
+
       async function loadData() {
         if (!API_HOST) return showError("Не настроен BACKEND_URL в HTML файле!");
-
-        const urlParams = new URLSearchParams(window.location.search);
-        const botToken = urlParams.get("bot_token");
-
         if (!botToken) return showError("Нет токена бота.");
-        if (!tg.initData) return showError("Telegram initData не найден.");
+        if (!tg.initData && !jwtToken) return showError("Нет данных для авторизации.");
 
         const maxRetries = 3;
         let retryCount = 0;
@@ -307,10 +318,7 @@
           try {
             const res = await fetch(`${API_HOST}/?action=get_crm_data`, {
               method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "x-telegram-initdata": tg.initData,
-              },
+              headers: getAuthHeaders(),
               body: JSON.stringify({ bot_token: botToken }),
             });
 
@@ -627,10 +635,7 @@
           try {
             const res = await fetch(`${API_HOST}/?action=send_crm_broadcast`, {
               method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "x-telegram-initdata": tg.initData,
-              },
+              headers: getAuthHeaders(),
               body: JSON.stringify(requestPayload),
             });
 
@@ -671,7 +676,7 @@
           try {
             const res = await fetch(`${API_HOST}/?action=export_csv`, {
               method: "POST",
-              headers: { "x-telegram-initdata": tg.initData },
+              headers: getAuthHeaders(),
               body: JSON.stringify({ bot_token: botToken }),
             });
             const blob = await res.blob();
