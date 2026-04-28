@@ -1,5 +1,5 @@
-import { resolveUser } from '../../core/omni_resolver.js';
-import { adaptStateForChannel } from '../../scenarios/common/step_order.js';
+import { resolveUser } from "../../core/omni_resolver.js";
+import { adaptStateForChannel } from "../../scenarios/common/step_order.js";
 
 /**
  * VK Webhook Handler
@@ -325,11 +325,11 @@ export async function handleVkWebhook(event, context) {
         const vkUserId = Number(userId);
         const vkGroupId = payload.group_id;
         log.info(`[VK] Fetching user via omni_resolver`, { vkId: vkUserId });
-        let vkUser = await resolveUser('vk', {
+        let vkUser = await resolveUser("vk", {
           vk_id: vkUserId,
-          first_name: "VK User"
+          first_name: "VK User",
         });
-        adaptStateForChannel(vkUser, 'vk');
+        adaptStateForChannel(vkUser, "vk");
         if (!vkUser.bot_token) {
           vkUser.bot_token = "VK_CENTRAL_GROUP";
         }
@@ -339,7 +339,11 @@ export async function handleVkWebhook(event, context) {
         if (!vkUser.session.channels.vk) vkUser.session.channels.vk = {};
         vkUser.session.channels.vk.group_id = String(vkGroupId);
         // Промежуточное сохранение удалено — пользователь сохранится в конце роутера
-        log.info(`[VK DEBUG] callbackData:`, { callbackData, vkUserState: vkUser.state, savedState: vkUser.saved_state });
+        log.info(`[VK DEBUG] callbackData:`, {
+          callbackData,
+          vkUserState: vkUser.state,
+          savedState: vkUser.saved_state,
+        });
         log.info(`[VK] resolveUser result`, {
           found: !!vkUser,
           userId: vkUser?.id,
@@ -585,7 +589,7 @@ export async function handleVkWebhook(event, context) {
           if (question) {
             await vkCtx.reply(
               `🔐 <b>ПОДТВЕРЖДЕНИЕ ВЛАДЕНИЯ АККАУНТОМ</b>\n\n<b>${question}</b>\n\n<i>(Подсказка: эти данные есть в таблице тарифов в твоем личном кабинете)</i>`,
-              {}
+              {},
             );
           } else {
             await vkCtx.reply("Вопрос не найден. Попробуйте позже.", {});
@@ -594,27 +598,36 @@ export async function handleVkWebhook(event, context) {
         }
 
         const waitCallbacks = [
-          "WAIT_REG_ID", "WAIT_REG_TAIL", "WAIT_VERIFICATION",
-          "WAIT_SH_ID_P", "WAIT_SH_TAIL_P", "WAIT_BOT_TOKEN",
-          "WAIT_SECRET_1", "WAIT_SECRET_2", "WAIT_SECRET_3",
-          "WAIT_TG_SETUP", "WAIT_EMAIL_INPUT"
+          "WAIT_REG_ID",
+          "WAIT_REG_TAIL",
+          "WAIT_VERIFICATION",
+          "WAIT_SH_ID_P",
+          "WAIT_SH_TAIL_P",
+          "WAIT_BOT_TOKEN",
+          "WAIT_SECRET_1",
+          "WAIT_SECRET_2",
+          "WAIT_SECRET_3",
+          "WAIT_TG_SETUP",
+          "WAIT_EMAIL_INPUT",
         ];
 
         if (waitCallbacks.includes(callbackData)) {
           const hints = {
-            "WAIT_REG_ID": "✍️ Введи твой цифровой ID (только цифры):",
-            "WAIT_REG_TAIL": "🔗 Пришли свою реферальную ссылку полностью:",
-            "WAIT_VERIFICATION": `🔐 <b>ПОДТВЕРЖДЕНИЕ ВЛАДЕНИЯ АККАУНТОМ</b>\n\n<b>${vkUser.session?.verification_question || "Вопрос не найден"}</b>\n\n<i>(Подсказка: эти данные есть в таблице тарифов в твоем личном кабинете)</i>`,
-            "WAIT_SH_ID_P": "✍️ Введи цифровой ID SetHubble для нового бота:",
-            "WAIT_SH_TAIL_P": "🔗 Пришли ссылку для приглашений:",
-            "WAIT_BOT_TOKEN": "🚀 НАСТРОЙКА БОТА-КЛОНА\n\nПришли мне API TOKEN твоего бота из @BotFather.",
-            "WAIT_SECRET_1": "Введи секретное слово из статьи Модуля 1:",
-            "WAIT_SECRET_2": "Введи секретное слово из статьи Модуля 2:",
-            "WAIT_SECRET_3": "Введи секретное слово из статьи Модуля 3:",
-            "WAIT_TG_SETUP": "Для подключения Telegram отправь токен бота.",
-            "WAIT_EMAIL_INPUT": "📧 Введи свой email для подключения рассылки:"
+            WAIT_REG_ID: "✍️ Введи твой цифровой ID (только цифры):",
+            WAIT_REG_TAIL: "🔗 Пришли свою реферальную ссылку полностью:",
+            WAIT_VERIFICATION: `🔐 <b>ПОДТВЕРЖДЕНИЕ ВЛАДЕНИЯ АККАУНТОМ</b>\n\n<b>${vkUser.session?.verification_question || "Вопрос не найден"}</b>\n\n<i>(Подсказка: эти данные есть в таблице тарифов в твоем личном кабинете)</i>`,
+            WAIT_SH_ID_P: "✍️ Введи цифровой ID SetHubble для нового бота:",
+            WAIT_SH_TAIL_P: "🔗 Пришли ссылку для приглашений:",
+            WAIT_BOT_TOKEN:
+              "🚀 НАСТРОЙКА БОТА-КЛОНА\n\nПришли мне API TOKEN твоего бота из @BotFather.",
+            WAIT_SECRET_1: "Введи секретное слово из статьи Модуля 1:",
+            WAIT_SECRET_2: "Введи секретное слово из статьи Модуля 2:",
+            WAIT_SECRET_3: "Введи секретное слово из статьи Модуля 3:",
+            WAIT_TG_SETUP: "Для подключения Telegram отправь токен бота.",
+            WAIT_EMAIL_INPUT: "📧 Введи свой email для подключения рассылки:",
           };
-          const replyText = hints[callbackData] || "⚡ Продолжи заполнение данных.";
+          const replyText =
+            hints[callbackData] || "⚡ Продолжи заполнение данных.";
           await vkCtx.reply(replyText, {});
           return { statusCode: 200, body: "ok" };
         }
@@ -736,13 +749,15 @@ export async function handleVkWebhook(event, context) {
             const count = result.resultSets[0]?.rows[0]?.referred_count ?? 0;
             await vkCtx.reply(
               `📊 <b>ВАША ПАРТНЁРСКАЯ СТАТИСТИКА</b>\\n\\n` +
-              `🔗 Ваш реф. хвост: <code>${refTail}</code>\\n` +
-              `👥 Приглашённых пользователей: <b>${count}</b>\\n\\n` +
-              `💰 Выплаты автоматически начисляются при покупках.`,
+                `🔗 Ваш реф. хвост: <code>${refTail}</code>\\n` +
+                `👥 Приглашённых пользователей: <b>${count}</b>\\n\\n` +
+                `💰 Выплаты автоматически начисляются при покупках.`,
             );
           } catch (e) {
             log.error(`[VK PARTNER_STATS] Error:`, e);
-            await vkCtx.reply(`⚠️ Ошибка получения статистики. Попробуйте позже.`);
+            await vkCtx.reply(
+              `⚠️ Ошибка получения статистики. Попробуйте позже.`,
+            );
           }
           return { statusCode: 200, body: "ok" };
         }
@@ -812,13 +827,18 @@ export async function handleVkWebhook(event, context) {
         }
 
         if (rawRef) {
-          const { validateStartPayload } = await import("../../utils/validator.js");
+          const { validateStartPayload } =
+            await import("../../utils/validator.js");
           const parsed = validateStartPayload(rawRef);
           if (parsed) {
             partnerId = parsed.partnerId;
             emailFromJoin = parsed.email || null;
             webIdFromStart = parsed.webId || null;
-            log.info(`[VK REF] Parsed referral`, { partnerId, hasEmail: !!emailFromJoin, hasWebId: !!webIdFromStart });
+            log.info(`[VK REF] Parsed referral`, {
+              partnerId,
+              hasEmail: !!emailFromJoin,
+              hasWebId: !!webIdFromStart,
+            });
           } else {
             partnerId = rawRef;
           }
@@ -836,15 +856,15 @@ export async function handleVkWebhook(event, context) {
         }
 
         // v6.0: Получаем или создаём единого пользователя через Omni‑resolver
-        let vkUser = await resolveUser('vk', {
+        let vkUser = await resolveUser("vk", {
           vk_id: Number(vkUserId),
           web_id: webIdFromStart,
           email: emailFromJoin,
           partner_id: partnerId,
-          first_name: firstName
+          first_name: firstName,
         });
 
-        adaptStateForChannel(vkUser, 'vk');
+        adaptStateForChannel(vkUser, "vk");
 
         // Сохраняем идентификатор VK‑группы в конфигурации канала
         if (!vkUser.session) vkUser.session = {};
@@ -893,6 +913,12 @@ export async function handleVkWebhook(event, context) {
         }
 
         const translateKeyboard = (tgOpts, addMainMenu = true) => {
+          // ИСПРАВЛЕНИЕ: Если это шаг "Главное меню", принудительно возвращаем null,
+          // чтобы ВК показал постоянную нижнюю клавиатуру (getVkMainMenuKeyboard)
+          if (vkUser.state === "MAIN_MENU") {
+            return null;
+          }
+
           if (
             !tgOpts ||
             !tgOpts.reply_markup ||
@@ -1309,11 +1335,15 @@ export async function handleVkWebhook(event, context) {
                       : "";
 
                   // v7.1: Generate JWT for universal auth
-                  const { generateToken } = await import("../../utils/jwt_utils.js");
-                  const jwtToken = generateToken({
-                    uid: vkUser.vk_id,
-                    first_name: vkUser.first_name,
-                  }, { expiresIn: "7d" });
+                  const { generateToken } =
+                    await import("../../utils/jwt_utils.js");
+                  const jwtToken = generateToken(
+                    {
+                      uid: vkUser.vk_id,
+                      first_name: vkUser.first_name,
+                    },
+                    { expiresIn: "7d" },
+                  );
 
                   const promoKitLink = `${promoKitUrl}?token=${jwtToken}&bot=${botName}&api=https://${apiGw}${mod3Param}`;
                   return await vkCtx.reply(
@@ -1447,8 +1477,11 @@ export async function handleVkWebhook(event, context) {
               txt.toLowerCase() === "начать"
             ) {
               // ИСПРАВЛЕНИЕ: Проверяем, есть ли уже прогресс
-              const isStarted = vkUser.state && vkUser.state !== "START" && vkUser.state !== "VK_LEAD";
-              
+              const isStarted =
+                vkUser.state &&
+                vkUser.state !== "START" &&
+                vkUser.state !== "VK_LEAD";
+
               if (isStarted) {
                 // Мягкий возврат (аналог RESUME_GATE)
                 return await vkCtx.reply(
@@ -1456,11 +1489,21 @@ export async function handleVkWebhook(event, context) {
                   {
                     reply_markup: {
                       inline_keyboard: [
-                        [{ text: "▶️ ПРОДОЛЖИТЬ ПУТЬ", callback_data: vkUser.state }],
-                        [{ text: "🏠 ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }]
-                      ]
-                    }
-                  }
+                        [
+                          {
+                            text: "▶️ ПРОДОЛЖИТЬ ПУТЬ",
+                            callback_data: vkUser.state,
+                          },
+                        ],
+                        [
+                          {
+                            text: "🏠 ГЛАВНОЕ МЕНЮ",
+                            callback_data: "MAIN_MENU",
+                          },
+                        ],
+                      ],
+                    },
+                  },
                 );
               }
 
@@ -1519,46 +1562,115 @@ export async function handleVkWebhook(event, context) {
                 tail = tail.split("?")[0].replace(/\/$/, "").split("/").pop();
               }
               vkUser.sh_ref_tail = tail;
-              
+
               // === ВЕРИФИКАЦИЯ ЧЕРЕЗ ВОПРОС ПО ТАРИФАМ (аналогично Telegram) ===
               const tariffQuestions = [
-                { q: "Сколько компаний можно создать на тарифе 'Самолет'?", a: ["1", "один"] },
-                { q: "Максимальная цена товара ($) на тарифе 'Ракета'?", a: ["5000", "5000$"] },
-                { q: "Сколько уровней партнерских программ доступно на тарифе 'Шаттл'?", a: ["10", "десять"] },
-                { q: "Какая комиссия (%) на тарифе 'Самолет'?", a: ["5", "5%", "пять"] },
-                { q: "Какая комиссия (%) на тарифе 'Ракета'?", a: ["3", "3%", "три"] },
-                { q: "Какая комиссия (%) на тарифе 'Шаттл'?", a: ["1", "1%", "один"] },
-                { q: "Максимальный доход от партнерских программ ($/год) на тарифе 'Самолет'?", a: ["10k", "10000", "10 000"] },
-                { q: "Максимальный доход от партнерских программ ($/год) на тарифе 'Ракета'?", a: ["100k", "100000", "100 000"] },
-                { q: "Максимальный доход от партнерских программ ($/год) на тарифе 'Шаттл'?", a: ["12m", "12000000", "12 000 000"] },
-                { q: "Доступна ли бинарная система на тарифе 'Самолет'?", a: ["нет", "недоступна", "no"] },
-                { q: "Включена ли бинарная система на тарифе 'Ракета'?", a: ["да", "только включена", "yes"] },
-                { q: "Есть ли полный доступ к бинарной системе на тарифе 'Шаттл'?", a: ["да", "полный доступ", "yes"] },
-                { q: "Макс. количество продуктов /месяц на тарифе 'Самолет'?", a: ["5", "пять"] },
-                { q: "Макс. количество продуктов /месяц на тарифе 'Ракета'?", a: ["50", "пятьдесят"] },
-                { q: "Макс. количество продуктов /месяц на тарифе 'Шаттл'?", a: ["100", "сто"] },
-                { q: "Авто-вывод средств на тарифе 'Самолет'?", a: ["нет", "отключён", "no", "disabled"] },
-                { q: "Авто-вывод средств на тарифе 'Ракета'?", a: ["да", "доступно", "yes", "available"] },
-                { q: "Авто-вывод средств на тарифе 'Шаттл'?", a: ["да", "доступно", "yes", "available"] },
-                { q: "Получение баллов на тарифе 'Самолет'?", a: ["нет", "no"] },
+                {
+                  q: "Сколько компаний можно создать на тарифе 'Самолет'?",
+                  a: ["1", "один"],
+                },
+                {
+                  q: "Максимальная цена товара ($) на тарифе 'Ракета'?",
+                  a: ["5000", "5000$"],
+                },
+                {
+                  q: "Сколько уровней партнерских программ доступно на тарифе 'Шаттл'?",
+                  a: ["10", "десять"],
+                },
+                {
+                  q: "Какая комиссия (%) на тарифе 'Самолет'?",
+                  a: ["5", "5%", "пять"],
+                },
+                {
+                  q: "Какая комиссия (%) на тарифе 'Ракета'?",
+                  a: ["3", "3%", "три"],
+                },
+                {
+                  q: "Какая комиссия (%) на тарифе 'Шаттл'?",
+                  a: ["1", "1%", "один"],
+                },
+                {
+                  q: "Максимальный доход от партнерских программ ($/год) на тарифе 'Самолет'?",
+                  a: ["10k", "10000", "10 000"],
+                },
+                {
+                  q: "Максимальный доход от партнерских программ ($/год) на тарифе 'Ракета'?",
+                  a: ["100k", "100000", "100 000"],
+                },
+                {
+                  q: "Максимальный доход от партнерских программ ($/год) на тарифе 'Шаттл'?",
+                  a: ["12m", "12000000", "12 000 000"],
+                },
+                {
+                  q: "Доступна ли бинарная система на тарифе 'Самолет'?",
+                  a: ["нет", "недоступна", "no"],
+                },
+                {
+                  q: "Включена ли бинарная система на тарифе 'Ракета'?",
+                  a: ["да", "только включена", "yes"],
+                },
+                {
+                  q: "Есть ли полный доступ к бинарной системе на тарифе 'Шаттл'?",
+                  a: ["да", "полный доступ", "yes"],
+                },
+                {
+                  q: "Макс. количество продуктов /месяц на тарифе 'Самолет'?",
+                  a: ["5", "пять"],
+                },
+                {
+                  q: "Макс. количество продуктов /месяц на тарифе 'Ракета'?",
+                  a: ["50", "пятьдесят"],
+                },
+                {
+                  q: "Макс. количество продуктов /месяц на тарифе 'Шаттл'?",
+                  a: ["100", "сто"],
+                },
+                {
+                  q: "Авто-вывод средств на тарифе 'Самолет'?",
+                  a: ["нет", "отключён", "no", "disabled"],
+                },
+                {
+                  q: "Авто-вывод средств на тарифе 'Ракета'?",
+                  a: ["да", "доступно", "yes", "available"],
+                },
+                {
+                  q: "Авто-вывод средств на тарифе 'Шаттл'?",
+                  a: ["да", "доступно", "yes", "available"],
+                },
+                {
+                  q: "Получение баллов на тарифе 'Самолет'?",
+                  a: ["нет", "no"],
+                },
                 { q: "Получение баллов на тарифе 'Ракета'?", a: ["нет", "no"] },
                 { q: "Получение баллов на тарифе 'Шаттл'?", a: ["да", "yes"] },
-                { q: "Макс. сумма пожертвования ($) на тарифе 'Самолет'?", a: ["500", "500$"] },
-                { q: "Макс. сумма пожертвования ($) на тарифе 'Ракета'?", a: ["5000", "5000$"] },
-                { q: "Макс. сумма пожертвования ($) на тарифе 'Шаттл'?", a: ["300k", "300000", "300 000"] },
+                {
+                  q: "Макс. сумма пожертвования ($) на тарифе 'Самолет'?",
+                  a: ["500", "500$"],
+                },
+                {
+                  q: "Макс. сумма пожертвования ($) на тарифе 'Ракета'?",
+                  a: ["5000", "5000$"],
+                },
+                {
+                  q: "Макс. сумма пожертвования ($) на тарифе 'Шаттл'?",
+                  a: ["300k", "300000", "300 000"],
+                },
               ];
-              
-              const randomQ = tariffQuestions[Math.floor(Math.random() * tariffQuestions.length)];
+
+              const randomQ =
+                tariffQuestions[
+                  Math.floor(Math.random() * tariffQuestions.length)
+                ];
               vkUser.session.verification_question = randomQ.q;
               vkUser.session.verification_answers = randomQ.a;
               vkUser.state = "WAIT_VERIFICATION";
               await ydb.saveUser(vkUser);
-              
+
               return await vkCtx.reply(
                 `🔐 <b>ПОДТВЕРЖДЕНИЕ ВЛАДЕНИЯ АККАУНТОМ</b>\n\n` +
-                `Чтобы убедиться, что у тебя есть доступ к личному кабинету SetHubble, ответь на вопрос:\n\n` +
-                `<b>${randomQ.q}</b>\n\n` +
-                `<i>(Подсказка: эти данные есть в таблице тарифов в твоем личном кабинете)</i>`,
+                  `Чтобы убедиться, что у тебя есть доступ к личному кабинету SetHubble, ответь на вопрос:\n\n` +
+                  `<b>${randomQ.q}</b>\n\n` +
+                  `<i>(Подсказка: эти данные есть в таблице тарифов в твоем личном кабинете)</i>`,
                 {},
               );
             }
@@ -1566,18 +1678,20 @@ export async function handleVkWebhook(event, context) {
             if (vkUser.state === "WAIT_VERIFICATION") {
               const expectedAnswers = vkUser.session.verification_answers || [];
               const userAnswer = txt.toLowerCase().trim();
-              
-              const isCorrect = expectedAnswers.some(ans => userAnswer.includes(ans) || ans.includes(userAnswer));
-              
+
+              const isCorrect = expectedAnswers.some(
+                (ans) => userAnswer.includes(ans) || ans.includes(userAnswer),
+              );
+
               if (!isCorrect) {
                 return await vkCtx.reply(
                   `❌ <b>Неверный ответ.</b>\n\n` +
-                  `Загляни в таблицу тарифов в личном кабинете SetHubble и попробуй еще раз.\n\n` +
-                  `<b>Вопрос:</b> ${vkUser.session.verification_question}`,
+                    `Загляни в таблицу тарифов в личном кабинете SetHubble и попробуй еще раз.\n\n` +
+                    `<b>Вопрос:</b> ${vkUser.session.verification_question}`,
                   {},
                 );
               }
-              
+
               // Очистка временных данных
               delete vkUser.session.verification_question;
               delete vkUser.session.verification_answers;
@@ -1585,7 +1699,10 @@ export async function handleVkWebhook(event, context) {
               if (!vkUser.email && !vkUser.session.email) {
                 vkUser.state = "WAIT_FUNNEL_EMAIL";
                 await ydb.saveUser(vkUser);
-                await vkCtx.reply("✅ <b>Аккаунт SetHubble подтверждён!</b>\n\nОстался последний технический шаг перед стартом обучения.", {});
+                await vkCtx.reply(
+                  "✅ <b>Аккаунт SetHubble подтверждён!</b>\n\nОстался последний технический шаг перед стартом обучения.",
+                  {},
+                );
                 return await renderStep(vkCtx, "WAIT_FUNNEL_EMAIL", vkToken);
               }
 
@@ -1602,7 +1719,10 @@ export async function handleVkWebhook(event, context) {
             if (vkUser.state === "WAIT_FUNNEL_EMAIL") {
               const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
               if (!emailRegex.test(txt)) {
-                return await vkCtx.reply("❌ Это не похоже на email. Пожалуйста, проверь на опечатки и отправь еще раз:", {});
+                return await vkCtx.reply(
+                  "❌ Это не похоже на email. Пожалуйста, проверь на опечатки и отправь еще раз:",
+                  {},
+                );
               }
 
               const emailRecord = await ydb.findUser({ email: txt });
@@ -1611,18 +1731,31 @@ export async function handleVkWebhook(event, context) {
               vkUser.session.email = vkUser.email;
               vkUser.session.email_verified = true;
               if (!vkUser.session.channels) vkUser.session.channels = {};
-              vkUser.session.channels.email = { enabled: true, configured: true, subscribed: true };
+              vkUser.session.channels.email = {
+                enabled: true,
+                configured: true,
+                subscribed: true,
+              };
 
               await ydb.saveUser(vkUser);
 
               if (emailRecord && emailRecord.id !== vkUser.id) {
-                log.info("[VK FUNNEL] Merging email record into VK user", { email: txt });
+                log.info("[VK FUNNEL] Merging email record into VK user", {
+                  email: txt,
+                });
                 emailRecord.vk_id = Number(message.from_id);
                 if (vkUser.session?.dialog_history) {
-                  emailRecord.session.dialog_history = emailRecord.session.dialog_history || [];
-                  emailRecord.session.dialog_history.push(...vkUser.session.dialog_history);
+                  emailRecord.session.dialog_history =
+                    emailRecord.session.dialog_history || [];
+                  emailRecord.session.dialog_history.push(
+                    ...vkUser.session.dialog_history,
+                  );
                 }
-                await ydb.mergeUsers(emailRecord, vkUser.id, "funnel_email_match");
+                await ydb.mergeUsers(
+                  emailRecord,
+                  vkUser.id,
+                  "funnel_email_match",
+                );
                 vkUser = await ydb.getUser(emailRecord.id);
                 vkCtx.dbUser = vkUser;
               }
@@ -1689,9 +1822,18 @@ export async function handleVkWebhook(event, context) {
               vkUser.state = "Module_3_Offline";
 
               // === TRIAL PERIOD: 3 дня бесплатного ИИ для новых партнёров ===
-              if (!vkUser.ai_active_until || vkUser.ai_active_until < Date.now()) {
-                vkUser.ai_active_until = Date.now() + (3 * 24 * 60 * 60 * 1000);
-                log.info("[TRIAL PERIOD] Added 3 days AI trial for new partner", { userId: vkUser.vk_id, aiUntil: new Date(vkUser.ai_active_until).toISOString() });
+              if (
+                !vkUser.ai_active_until ||
+                vkUser.ai_active_until < Date.now()
+              ) {
+                vkUser.ai_active_until = Date.now() + 3 * 24 * 60 * 60 * 1000;
+                log.info(
+                  "[TRIAL PERIOD] Added 3 days AI trial for new partner",
+                  {
+                    userId: vkUser.vk_id,
+                    aiUntil: new Date(vkUser.ai_active_until).toISOString(),
+                  },
+                );
               }
 
               await ydb.saveUser(vkUser);
@@ -1728,14 +1870,19 @@ export async function handleVkWebhook(event, context) {
               await ydb.saveUser(vkUser);
 
               // Сводка каналов
-              const allConfigured = Object.keys(vkUser.session?.channels || {}).filter(
-                (ch) => vkUser.session.channels[ch]?.configured
-              );
-              const channelNames = { telegram: "📱 Telegram", vk: "💬 VK", web: "🌐 Web", email: "📧 Email" };
+              const allConfigured = Object.keys(
+                vkUser.session?.channels || {},
+              ).filter((ch) => vkUser.session.channels[ch]?.configured);
+              const channelNames = {
+                telegram: "📱 Telegram",
+                vk: "💬 VK",
+                web: "🌐 Web",
+                email: "📧 Email",
+              };
 
               let summaryMsg = "";
               if (allConfigured.length > 0) {
-                summaryMsg = `\n\n📊 <b>Твои каналы:</b> ${allConfigured.map(ch => channelNames[ch] || ch).join(" • ")}`;
+                summaryMsg = `\n\n📊 <b>Твои каналы:</b> ${allConfigured.map((ch) => channelNames[ch] || ch).join(" • ")}`;
                 if (allConfigured.length >= 3) {
                   summaryMsg += `\n\n🎉 <b>3 канала!</b> По статистике это даёт в 3 раза больше лидов!`;
                 }
@@ -1804,7 +1951,8 @@ export async function handleVkWebhook(event, context) {
                 configured: true,
                 subscribed: true,
               };
-              vkUser.session.channel_states = vkUser.session.channel_states || {};
+              vkUser.session.channel_states =
+                vkUser.session.channel_states || {};
               vkUser.session.channel_states.email = "START";
               await ydb.saveUser(vkUser);
 
@@ -1818,32 +1966,36 @@ export async function handleVkWebhook(event, context) {
 
                 // Обновляем основной профиль: добавляем vk_id (число, без префикса)
                 emailRecord.vk_id = Number(message.from_id);
-                emailRecord.session.channels = emailRecord.session.channels || {};
+                emailRecord.session.channels =
+                  emailRecord.session.channels || {};
                 emailRecord.session.channels.vk = {
                   enabled: true,
                   configured: true,
                   linked_at: Date.now(),
                 };
-                emailRecord.session.channel_states = emailRecord.session.channel_states || {};
+                emailRecord.session.channel_states =
+                  emailRecord.session.channel_states || {};
                 emailRecord.session.channel_states.vk = "START";
 
                 // Мержим dialog_history
                 if (vkUser.session?.dialog_history?.length) {
-                  emailRecord.session.dialog_history = emailRecord.session.dialog_history || [];
+                  emailRecord.session.dialog_history =
+                    emailRecord.session.dialog_history || [];
                   emailRecord.session.dialog_history.push(
                     ...vkUser.session.dialog_history.slice(-10),
                   );
                   if (emailRecord.session.dialog_history.length > 20) {
-                    emailRecord.session.dialog_history = emailRecord.session.dialog_history.slice(-20);
+                    emailRecord.session.dialog_history =
+                      emailRecord.session.dialog_history.slice(-20);
                   }
                 }
 
                 await ydb.mergeUsers(emailRecord, vkUser.id, "email_match");
                 // Перезагружаем выжившего пользователя
                 vkUser = await ydb.getUser(emailRecord.id);
-                adaptStateForChannel(vkUser, 'vk');
+                adaptStateForChannel(vkUser, "vk");
                 // Обновить контекст, если уже создан
-                if (typeof vkCtx !== 'undefined') vkCtx.dbUser = vkUser;
+                if (typeof vkCtx !== "undefined") vkCtx.dbUser = vkUser;
               }
 
               // Отправляем приветственное письмо
@@ -1937,23 +2089,33 @@ export async function handleVkWebhook(event, context) {
             }
 
             // === ПРОВЕРКА ИИ-ПОДПИСКИ (SaaS) И ВЫЗОВ НЕЙРОСЕТИ ===
-            const isAiActive = await ydb.isOwnerAiActive(vkUser, null, String(vkGroupId));
-            
+            const isAiActive = await ydb.isOwnerAiActive(
+              vkUser,
+              null,
+              String(vkGroupId),
+            );
+
             // 1. СНАЧАЛА достаем настройки бота (владельца VK группы)
             const botInfo = await ydb.getBotInfoByVkGroup(String(vkGroupId));
-            let ownerSettings = { custom_prompt: "", ai_provider: "polza", ai_model: "openai/gpt-4o-mini", custom_api_key: "", user_daily_limit: 0 };
-            
+            let ownerSettings = {
+              custom_prompt: "",
+              ai_provider: "polza",
+              ai_model: "openai/gpt-4o-mini",
+              custom_api_key: "",
+              user_daily_limit: 0,
+            };
+
             if (botInfo && botInfo.owner_id) {
-                const owner = await ydb.getUser(botInfo.owner_id);
-                if (owner) {
-                    ownerSettings = {
-                        custom_prompt: owner.custom_prompt || "",
-                        ai_provider: owner.ai_provider || "polza",
-                        ai_model: owner.ai_model || "openai/gpt-4o-mini",
-                        custom_api_key: owner.custom_api_key || "",
-                        user_daily_limit: owner.user_daily_limit || 0
-                    };
-                }
+              const owner = await ydb.getUser(botInfo.owner_id);
+              if (owner) {
+                ownerSettings = {
+                  custom_prompt: owner.custom_prompt || "",
+                  ai_provider: owner.ai_provider || "polza",
+                  ai_model: owner.ai_model || "openai/gpt-4o-mini",
+                  custom_api_key: owner.custom_api_key || "",
+                  user_daily_limit: owner.user_daily_limit || 0,
+                };
+              }
             }
 
             // 2. ТЕПЕРЬ проверяем допуск: либо оплачена подписка, либо вставлен личный ключ
@@ -1962,39 +2124,43 @@ export async function handleVkWebhook(event, context) {
               return await vkCtx.reply(
                 "🤖 <b>ИИ-консультант в режиме ожидания</b>\n\n" +
                   "Владелец системы ещё не активировал нейромозг для этого канала.\n\n" +
-                  "Воспользуйтесь меню навигации 👇"
+                  "Воспользуйтесь меню навигации 👇",
               );
             }
 
             // Проверяем дневные лимиты
             const today = new Date().toISOString().split("T")[0];
             if (vkUser.session.ai_date !== today) {
-                vkUser.session.ai_count = 0;
-                vkUser.session.ai_date = today;
+              vkUser.session.ai_count = 0;
+              vkUser.session.ai_date = today;
             }
-            
-            const currentLimit = ownerSettings.user_daily_limit || (vkUser.bought_tripwire ? 30 : 3);
+
+            const currentLimit =
+              ownerSettings.user_daily_limit ||
+              (vkUser.bought_tripwire ? 30 : 3);
             if (vkUser.session.ai_count >= currentLimit) {
-                return await vkCtx.reply("⏳ На сегодня лимит вопросов ИИ исчерпан. Пожалуйста, продолжите завтра или используйте меню ниже 👇");
+              return await vkCtx.reply(
+                "⏳ На сегодня лимит вопросов ИИ исчерпан. Пожалуйста, продолжите завтра или используйте меню ниже 👇",
+              );
             }
 
             // Формируем конфиг и вызываем ИИ
             const botConfig = {
-                ai_provider: ownerSettings.ai_provider,
-                ai_model: ownerSettings.ai_model,
-                custom_api_key: ownerSettings.custom_api_key,
-                custom_prompt: ownerSettings.custom_prompt
+              ai_provider: ownerSettings.ai_provider,
+              ai_model: ownerSettings.ai_model,
+              custom_api_key: ownerSettings.custom_api_key,
+              custom_prompt: ownerSettings.custom_prompt,
             };
 
             // Подгружаем askNeuroGenAI из context (который мы прокинули из index.js)
             if (askNeuroGenAI) {
-                vkUser.session.ai_count = (vkUser.session.ai_count || 0) + 1;
-                await ydb.saveUser(vkUser);
-                
-                const aiResponse = await askNeuroGenAI(txt, vkUser, botConfig);
-                if (aiResponse) {
-                    return await vkCtx.reply(aiResponse);
-                }
+              vkUser.session.ai_count = (vkUser.session.ai_count || 0) + 1;
+              await ydb.saveUser(vkUser);
+
+              const aiResponse = await askNeuroGenAI(txt, vkUser, botConfig);
+              if (aiResponse) {
+                return await vkCtx.reply(aiResponse);
+              }
             }
 
             // === ДЕФОЛТ: Если состояние не распознано или ИИ вернул null ===
