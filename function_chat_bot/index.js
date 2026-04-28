@@ -1318,16 +1318,49 @@ export const handler = async (event) => {
       errorMsg.includes("Unavailable");
 
     if (isTransient) {
-      log.error("[HANDLER] Transient error (will retry)", err, {
-        error: errorMsg,
-      });
+      log.error("[HANDLER] Transient error (will retry)", err, { error: errorMsg });
+    } else {
+      log.error("[HANDLER] Permanent error (stopping retries)", err, { error: errorMsg });
+    }
+
+    // === 🚨 PANIC ALERT: Уведомление администратора в Telegram ===
+    try {
+      const adminId = process.env.ADMIN_TELEGRAM_ID;
+      const botToken = process.env.BOT_TOKEN;
+      
+      // Отправляем алерт только если задан админ и это реальная ошибка (не просто юзер забанил бота)
+      if (adminId && botToken && !errorMsg.includes("bot was blocked")) {
+        const alertMsg =
+          `🚨 <b>СИСТЕМНЫЙ СБОЙ (PANIC ALERT)</b>\n\n` +
+          `<b>Тип:</b> ${isTransient ? "Временная (Будет Retry)" : "Критическая (Упало)"}\n` +
+          `<b>Метод:</b> ${event.httpMethod || "CRON/WEBHOOK"}\n` +
+          `<b>Действие:</b> ${action || "Unknown"}\n\n` +
+          `<b>Ошибка:</b>\n<code>${errorMsg.substring(0, 500)}</code>\n\n` +
+          `<b>Trace ID:</b> <code>${traceId}</code>\n` +
+          `<i>Срочно проверьте логи в Yandex Cloud!</i>`;
+
+        // Отправляем напрямую через fetch, чтобы не зависеть от инстанса Telegraf (который мог упасть)
+        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: adminId,
+            text: alertMsg,
+            parse_mode: 'HTML'
+          })
+        }).catch(e => console.error("Не удалось отправить Panic Alert:", e));
+      }
+    } catch (alertErr) {
+      console.error("Сбой системы алертов:", alertErr);
+    }
+    // =========================================================
+
+    // Возвращаем ответ Яндексу
+    if (isTransient) {
       return { statusCode: 500, headers: corsHeaders, body: "retry" };
     } else {
-      log.error("[HANDLER] Permanent error (stopping retries)", err, {
-        error: errorMsg,
-      });
       return {
-        statusCode: 200,
+        statusCode: 200, // Возвращаем 200, чтобы Яндекс не долбил нас ретраями при фатальных ошибках кода
         headers: corsHeaders,
         body: JSON.stringify({ error: "Internal Server Error handled" }),
       };

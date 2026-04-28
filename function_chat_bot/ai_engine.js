@@ -768,6 +768,20 @@ ${historyContext}
     if (!response.ok) {
       const errorText = await response.text();
       console.error("[OPENROUTER API ERROR]", response.status, errorText);
+      
+      // 🚨 АЛЕРТ: Баланс исчерпан или провайдер лежит
+      if (process.env.ADMIN_TELEGRAM_ID && process.env.BOT_TOKEN) {
+        fetch(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: process.env.ADMIN_TELEGRAM_ID,
+            text: `🤖 <b>ОШИБКА ИИ-ЯДРА!</b>\n\n<b>Код:</b> ${response.status}\n<b>Провайдер:</b> ${provider}\n<b>Ответ:</b> <code>${errorText.substring(0, 200)}</code>`,
+            parse_mode: 'HTML'
+          })
+        }).catch(()=>{});
+      }
+      
       return null;
     }
 
@@ -789,6 +803,20 @@ ${historyContext}
     return formattedResponse;
   } catch (error) {
     console.error("[AI ENGINE] Generation error:", error.message);
+    
+    // 🚨 АЛЕРТ: Таймаут или обрыв сети
+    if (process.env.ADMIN_TELEGRAM_ID && process.env.BOT_TOKEN) {
+      fetch(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: process.env.ADMIN_TELEGRAM_ID,
+          text: `🤖 <b>СЕТЕВАЯ ОШИБКА ИИ!</b>\n\n<b>Текст:</b> <code>${error.message}</code>\n<i>Возможно таймаут при запросе к нейросети.</i>`,
+          parse_mode: 'HTML'
+        })
+      }).catch(()=>{});
+    }
+    
     return null;
   }
 }

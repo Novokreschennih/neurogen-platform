@@ -1,8 +1,10 @@
 /**
- * Payment Webhook Handler
- * Обрабатывает входящие платежи от SetHubble
+ * Payment Webhook Handler (OMNICHANNEL)
+ * Обрабатывает входящие платежи от SetHubble (Telegram, Web, Email)
  * action: params.action === "payment"
  */
+
+import crypto from "crypto"; // Для генерации ID заглушек
 
 export async function handlePaymentWebhook(event, context) {
   const {
@@ -37,152 +39,163 @@ export async function handlePaymentWebhook(event, context) {
       ? JSON.parse(bodyStr)
       : context.querystring.parse(bodyStr);
   } catch (e) {
-    console.error("[PAYMENT ERROR] Невозможно распарсить тело запроса", e);
+    console.error("[PAYMENT ERROR] Невозможно распарсить тело", e);
     return response(400, "invalid_json");
   }
 
-  const hubTelegramId = data.hub_telegram_id || params.hub_telegram_id;
+  // === 1. ПАРСИНГ ДАННЫХ ИЗ SETHUBBLE ===
+  let hubTelegramId = data.hub_telegram_id || params.hub_telegram_id;
+  let hubEmail = data.hub_email || params.hub_email;
   const hubProductId = data.hub_id || params.hub_id;
+  const hubRef = data.hub_refferal || params.hub_refferal || "p_qdr";
+  const hubName = data.hub_fname || params.hub_fname || "Новый Партнер";
 
-  console.log(`[PAYMENT DEBUG] hub_id: ${hubProductId}`);
-  console.log(`[PAYMENT DEBUG] PRODUCT_ID_PRO: ${PRODUCT_ID_PRO}`);
-  console.log(`[PAYMENT DEBUG] PRODUCT_ID_PRO_40: ${PRODUCT_ID_PRO_40}`);
-  console.log(`[PAYMENT DEBUG] Match: ${hubProductId === PRODUCT_ID_PRO}`);
-
-  if (!hubTelegramId) {
-    log.warn("[PAYMENT] Missing hub_telegram_id", { data });
-    return response(200, "ignored_no_id");
-  }
-
-  if (!/^\d+$/.test(String(hubTelegramId))) {
-    log.error("[PAYMENT] Invalid hub_telegram_id format", { hubTelegramId });
-    return response(400, "invalid_id_format");
-  }
+  // Очистка пустых значений (SetHubble может прислать "0")
+  if (hubTelegramId === "0" || hubTelegramId === 0) hubTelegramId = null;
+  if (hubEmail === "0") hubEmail = null;
 
   if (!hubProductId || typeof hubProductId !== "string") {
-    log.warn("[PAYMENT] Missing or invalid hub_id", { hubProductId });
+    log.warn("[PAYMENT] Missing hub_id", { hubProductId });
     return response(400, "invalid_product_id");
   }
 
-  let u = await ydb.findUser({ tg_id: Number(hubTelegramId) });
+  if (!hubTelegramId && !hubEmail) {
+    log.error("[PAYMENT] Оплата без TG и без Email (невозможно связать)", { data });
+    return response(200, "ignored_no_identifiers");
+  }
 
+  // === 2. ПОИСК ПОЛЬЗОВАТЕЛЯ (OMNI-RESOLVER) ===
+  let u = null;
+
+  // Ищем по TG (если есть)
+  if (hubTelegramId && /^\d+$/.test(String(hubTelegramId))) {
+    u = await ydb.findUser({ tg_id: Number(hubTelegramId) });
+  }
+
+  // Если по TG не нашли, но есть Email — ищем по Email
+  if (!u && hubEmail) {
+    u = await ydb.findUser({ email: hubEmail });
+  }
+
+  // === 3. СОЗДАНИЕ ЗАГЛУШКИ (Если вообще нет в базе) ===
   if (!u) {
-    console.log(`[PAYMENT] User ${hubTelegramId} not found. Creating stub user to save PRO status.`);
+    console.log(`[PAYMENT] User not found. Creating stub user from webhook data.`);
     u = {
-      tg_id: Number(hubTelegramId),
+      id: crypto.randomUUID(),
+      tg_id: hubTelegramId ? Number(hubTelegramId) : 0,
+      email: hubEmail ? hubEmail.toLowerCase() : "",
+      user_id: hubTelegramId ? String(hubTelegramId) : (hubEmail || "web_stub"),
+      first_name: hubName,
       state: "Delivery_1",
       bought_tripwire: false,
       session: { tags: ["created_from_payment"] },
       purchases: [],
-      partner_id: "p_qdr"
+      partner_id: hubRef
     };
+
+    // Если есть email, сразу помечаем канал как настроенный
+    if (hubEmail) {
+      u.session.channels = { email: { configured: true, enabled: true, subscribed: true } };
+    }
   }
 
-  if (u) {
-    if (!u.purchases.includes(hubProductId)) u.purchases.push(hubProductId);
+  // === 4. ОБРАБОТКА ОПЛАТЫ ===
+  if (!u.purchases.includes(hubProductId)) u.purchases.push(hubProductId);
 
-    if (hubProductId === PRODUCT_ID_PRO || hubProductId === PRODUCT_ID_PRO_40) {
-      console.log(`>>> [PAYMENT] User ${u.user_id} activated PRO mode! 💰`);
-      u.bought_tripwire = true;
-      u.state = "Delivery_1";
+  // === ПРОДАЖА PRO-СТАТУСА ===
+  if (hubProductId === PRODUCT_ID_PRO || hubProductId === PRODUCT_ID_PRO_40) {
+    console.log(`>>> [PAYMENT] User ${u.user_id} activated PRO mode! 💰`);
+    u.bought_tripwire = true;
+    u.state = "Delivery_1";
 
-      if (!u.pin_code) {
-        u.pin_code = generatePin(4);
-        console.log(`>>> [PIN] Generated PIN ${u.pin_code} for user ${u.user_id}`);
-      }
+    if (!u.pin_code) {
+      u.pin_code = generatePin(4);
+      console.log(`>>> [PIN] Generated PIN ${u.pin_code} for user ${u.user_id}`);
+    }
 
-      await ydb.saveUser(u);
+    await ydb.saveUser(u);
 
-      const saleMsg =
-        `💰 <b>У ТЕБЯ НОВАЯ ОПЛАТА PRO!</b>\n\n` +
-        `🔥 <b>Лид:</b> <a href="tg://user?id=${u.user_id}">${u.first_name || "Без имени"}</a> только что активировал PRO-статус в твоем боте!\n` +
-        `💸 <b>Твоя комиссия 50%</b> уже отправлена в твой кошелек SetHubble.\n\n` +
-        `<i>Проверь баланс и статистику в CRM-дашборде.</i>`;
+    // Уведомление партнеру (владельцу)
+    const saleMsg =
+      `💰 <b>У ТЕБЯ НОВАЯ ОПЛАТА PRO!</b>\n\n` +
+      `🔥 <b>Лид:</b> ${u.first_name || "Без имени"}\n` +
+      `💸 <b>Твоя комиссия 50%</b> уже отправлена в твой кошелек SetHubble.\n\n` +
+      `<i>Проверь баланс и статистику в CRM-дашборде.</i>`;
+    await notifyBotOwner(u.bot_token, saleMsg, bot);
 
-      await notifyBotOwner(u.bot_token, saleMsg, bot);
+    // Переводим лида на шаг выдачи
+    await sendStepToUser(u.bot_token || MAIN_TOKEN, u.user_id, u.state, u);
 
-      await sendStepToUser(u.bot_token || MAIN_TOKEN, u.user_id, u.state, u);
+    // === УВЕДОМЛЕНИЕ ЛИДУ (OMNICHANNEL) ===
+    const proCongratsText = 
+      `🎉 <b>ПОЗДРАВЛЯЮ С PRO-СТАТУСОМ!</b>\n\n` +
+      `Ты в элите! Теперь у тебя есть доступ ко всем инструментам NeuroGen.\n\n` +
+      `<b>✅ ДОСТУП: БЕССРОЧНЫЙ</b>\n` +
+      `<b>🔥 ТВОИ ВОЗМОЖНОСТИ:</b>\n` +
+      `• 50% комиссия с личных продаж (вместо 25%)\n` +
+      `• Пассивный доход 5% до 5-го уровня\n` +
+      `• 8 ИИ-приложений NeuroGen в подарок\n` +
+      `• CRM-дашборд для управления лидами\n\n` +
+      `<b>🔐 ТВОЙ ПЕРСОНАЛЬНЫЙ PIN-КОД:</b>\n` +
+      `<code>${u.pin_code}</code>\n\n` +
+      `<i>Сохрани этот PIN-код! Он понадобится для входа в ИИ-приложения (Инструменты).</i>`;
 
+    if (u.tg_id) {
+      // Отправляем в Telegram
       try {
-        await bot.telegram.sendMessage(
-          u.user_id,
-          `🔐 <b>ТВОЙ ПЕРСОНАЛЬНЫЙ PIN-КОД</b>\n\n` +
-            `Для доступа ко всем ИИ-приложениям NeuroGen:\n\n` +
-            `<b>Telegram ID:</b> <code>${u.user_id}</code>\n` +
-            `<b>PIN-код:</b> <code>${u.pin_code}</code>\n\n` +
-            `<i>Сохрани эти данные! Они понадобятся для входа.</i>`,
-          { parse_mode: "HTML" },
-        );
-      } catch (err) {
-        log.error(`[PIN SEND FAILED] Can't send PIN to user ${u.user_id}`, err);
-      }
-
-      await bot.telegram.sendMessage(
-        u.user_id,
-        `🎉 <b>ПОЗДРАВЛЯЮ С PRO-СТАТУСОМ!</b>\n\n` +
-          `Ты в элите! Теперь у тебя есть доступ ко всем инструментам NeuroGen.\n\n` +
-          `<b>✅ ДОСТУП: БЕССРОЧНЫЙ</b>\n` +
-          `Ты купил PRO один раз — пользуешься всегда!\n\n` +
-          `<b>🔥 ТВОИ ВОЗМОЖНОСТИ:</b>\n` +
-          `• 50% комиссия с личных продаж (вместо 25%)\n` +
-          `• Пассивный доход 5% до 5-го уровня\n` +
-          `• 8 ИИ-приложений NeuroGen в подарок\n` +
-          `• CRM-дашборд для управления лидами\n` +
-          `• Доступ к PRO-обучению\n\n` +
-          `<b>🎁 ТВОИ ИНСТРУМЕНТЫ:</b>\n` +
-          `🎬 Viral Video — сценарии для роликов\n` +
-          `🤖 Bot Scenarios — сценарии для ботов\n` +
-          `🏗 Master Architect — стратегия\n` +
-          `🌐 Landing Pages — генератор сайтов\n` +
-          `🎨 Web Design — Style Transfer\n` +
-          `📢 Ads — рекламные объявления\n` +
-          `🚀 Deploy — публикация сайтов\n` +
-          `✍️ Monetization — нейро-копирайтинг\n\n` +
-          `<b>👇 ЧТО ДЕЛАТЬ ДАЛЬШЕ:</b>\n` +
-          `1️⃣ Жми /apps — получишь ссылки на все приложения\n` +
-          `2️⃣ Сохрани PIN-код (он для прямого входа)\n` +
-          `3️⃣ Начни PRO-обучение в приложении\n\n` +
-          `<b>🔐 КАК ВХОДИТЬ:</b>\n` +
-          `• <b>Быстро:</b> нажми /apps → кликни на ссылку\n` +
-          `• <b>Напрямую:</b> открой приложение → введи PIN\n\n` +
-          `<i>💡 Не передавай ссылки друзьям — в каждом приложении есть реф-ссылка на SetHubble. Если друг зарегистрируется по ней, ты потеряешь комиссию с его оборота!</i>`,
-        {
+        await bot.telegram.sendMessage(u.tg_id, proCongratsText, {
           parse_mode: "HTML",
           reply_markup: {
             inline_keyboard: [
               [{ text: "🧠 ОТКРЫТЬ ИИ-ПРИЛОЖЕНИЯ", callback_data: "apps_menu" }],
-              [{ text: "🎓 НАЧАТЬ PRO-ОБУЧЕНИЕ", callback_data: "Training_Pro_Main" }],
-              [{ text: "📊 МОЙ ПРОФИЛЬ", callback_data: "EDIT_PROFILE" }],
+              [{ text: "🎓 НАЧАТЬ PRO-ОБУЧЕНИЕ", callback_data: "Training_Pro_Main" }]
             ],
           },
-        },
-      );
-    } else if (hubProductId === PRODUCT_ID_AI_SUBSCRIPTION) {
-      console.log(`>>> [AI SUBSCRIPTION] Processing payment for user ${u.user_id}`);
-      const currentExpiry = u.ai_active_until || Date.now();
-      u.ai_active_until = Math.max(currentExpiry, Date.now()) + (30 * 24 * 60 * 60 * 1000);
-      await ydb.saveUser(u);
-      console.log(`>>> [AI SUBSCRIPTION] Extended until ${new Date(u.ai_active_until).toISOString()}`);
-
-      const expiryDate = new Date(u.ai_active_until).toLocaleDateString("ru-RU", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      });
-
-      await bot.telegram.sendMessage(
-        u.user_id,
-        `🤖 <b>ИИ-подписка активирована!</b>\n\n` +
-          `Подписка на ИИ-консультанта NeuroGen действует до <b>${expiryDate}</b>.\n\n` +
-          `Доступен в ботах Telegram, VK, а также на Web-платформе (Telegram, VK, Web) сроком 30 дней.`,
-        { parse_mode: "HTML" },
-      );
-    } else {
-      console.log(`>>> [PAYMENT] User ${u.user_id} registered FREE product`);
-      await ydb.saveUser(u);
+        });
+      } catch (err) {
+        log.error(`[PIN SEND FAILED] Can't send PIN to TG ${u.tg_id}`, err);
+      }
+    } else if (u.email) {
+      // Отправляем на Email, если Телеграма нет
+      try {
+        const { sendEmail } = await import("../email/email_service.js");
+        await sendEmail({
+          to: u.email,
+          subject: "🎉 Ваш PRO-статус активирован! (PIN-код внутри)",
+          text: proCongratsText.replace(/<[^>]*>?/gm, ""), // Чистим HTML для text-версии
+          html: proCongratsText.replace(/\n/g, "<br>")      // Делаем красивые переносы для HTML
+        });
+        console.log(`[PAYMENT] Sent PRO congratulations and PIN to email: ${u.email}`);
+      } catch (err) {
+        log.error(`[PIN SEND FAILED] Can't send PIN to Email ${u.email}`, err);
+      }
     }
-  } else {
-    log.warn("[PAYMENT] User not found", { hubTelegramId });
+  } 
+  
+  // === ИИ ПОДПИСКА (SAAS) ===
+  else if (hubProductId === PRODUCT_ID_AI_SUBSCRIPTION) {
+    console.log(`>>> [AI SUBSCRIPTION] Processing payment for user ${u.user_id}`);
+    const currentExpiry = u.ai_active_until || Date.now();
+    u.ai_active_until = Math.max(currentExpiry, Date.now()) + (30 * 24 * 60 * 60 * 1000);
+    await ydb.saveUser(u);
+
+    const expiryDate = new Date(u.ai_active_until).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
+    const subText = `🤖 <b>ИИ-подписка активирована!</b>\n\nПодписка на ИИ-консультанта NeuroGen действует до <b>${expiryDate}</b>.\nДоступна в ботах Telegram, VK и на Web-платформе.`;
+
+    if (u.tg_id) {
+      try { await bot.telegram.sendMessage(u.tg_id, subText, { parse_mode: "HTML" }); } catch (e) {}
+    } else if (u.email) {
+      try {
+        const { sendEmail } = await import("../email/email_service.js");
+        await sendEmail({ to: u.email, subject: "🤖 ИИ-подписка NeuroGen активирована!", text: subText, html: subText.replace(/\n/g, "<br>") });
+      } catch (e) {}
+    }
+  } 
+  
+  // === БЕСПЛАТНАЯ РЕГИСТРАЦИЯ ===
+  else {
+    console.log(`>>> [PAYMENT] User ${u.user_id} registered FREE product`);
+    await ydb.saveUser(u);
   }
 
   return response(200, "ok");
