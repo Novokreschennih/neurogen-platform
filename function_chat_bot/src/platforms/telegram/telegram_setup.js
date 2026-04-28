@@ -171,6 +171,17 @@ export function setupTelegramHandlers(bot, context) {
     await ydb.saveUser(user);
   });
 
+  // ГЛОБАЛЬНЫЙ ПЕРЕХВАТЧИК: Удаляем кнопки после нажатия
+  bot.on("callback_query", async (ctx, next) => {
+    try {
+      // Стираем клавиатуру у сообщения, на которое нажал пользователь
+      await ctx.editMessageReplyMarkup(undefined);
+    } catch (e) {
+      // Игнорируем ошибку (если сообщение старое или кнопки уже нет)
+    }
+    return next(); // Передаем управление дальше экшенам
+  });
+
   // Регистрация команд и действий
   const actionsContext = { renderStep, getKeyboard, ydb, scenario, log, MAIN_TOKEN, isMainBot, token, AI_PRO_LIMIT: context.AI_PRO_LIMIT, AI_FREE_LIMIT: context.AI_FREE_LIMIT, askNeuroGenAI: context.askNeuroGenAI, getOrCreatePin, generateToken, notifyBotOwner, event: context.event };
   registerTelegramActions(bot, actionsContext);
@@ -178,8 +189,12 @@ export function setupTelegramHandlers(bot, context) {
   // Мягкий старт
   bot.start(async (ctx) => {
     if (ctx.dbUser.state && ctx.dbUser.state !== "START" && !ctx.dbUser.state.startsWith("WAIT_")) {
+      // ИСПРАВЛЕНИЕ: Сохраняем реальный стейт ПЕРЕД тем, как показать окно возврата
+      ctx.dbUser.saved_state = ctx.dbUser.state;
+      await ydb.saveUser(ctx.dbUser);
       return renderStep(ctx, "RESUME_GATE", token);
     }
+    ctx.dbUser.saved_state = "";
     await renderStep(ctx, "START", token);
   });
 
