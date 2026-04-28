@@ -338,7 +338,7 @@ export async function handleVkWebhook(event, context) {
         if (!vkUser.session.channels) vkUser.session.channels = {};
         if (!vkUser.session.channels.vk) vkUser.session.channels.vk = {};
         vkUser.session.channels.vk.group_id = String(vkGroupId);
-        await ydb.saveUser(vkUser);
+        // Промежуточное сохранение удалено — пользователь сохранится в конце роутера
         log.info(`[VK DEBUG] callbackData:`, { callbackData, vkUserState: vkUser.state, savedState: vkUser.saved_state });
         log.info(`[VK] resolveUser result`, {
           found: !!vkUser,
@@ -855,7 +855,7 @@ export async function handleVkWebhook(event, context) {
           vkUser.bot_token = "VK_CENTRAL_GROUP";
         }
         vkUser.last_seen = Date.now();
-        await ydb.saveUser(vkUser);
+        // Промежуточное сохранение удалено — пользователь сохранится в конце роутера
 
         if (!vkUser.session || typeof vkUser.session !== "object")
           vkUser.session = { tags: [], source: "vkontakte" };
