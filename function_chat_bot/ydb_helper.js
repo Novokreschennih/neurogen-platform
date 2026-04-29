@@ -152,6 +152,7 @@ export async function findUser(criteria) {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       return await driver.tableClient.withSession(async (session) => {
+        let viewClause = "";
         let whereClause = "";
         let params = {};
         let declareType = "Utf8";
@@ -160,18 +161,23 @@ export async function findUser(criteria) {
           whereClause = "id = $search_val";
           params = { $search_val: TypedValues.utf8(String(criteria.id)) };
         } else if (criteria.tg_id) {
+          // ИСПОЛЬЗУЕМ ИНДЕКС VIEW
+          viewClause = "VIEW idx_tg_id";
           whereClause = "tg_id = $search_val";
           params = { $search_val: TypedValues.uint64(String(criteria.tg_id)) };
           declareType = "Uint64";
         } else if (criteria.email) {
+          viewClause = "VIEW idx_email";
           whereClause = "email = $search_val";
           params = {
             $search_val: TypedValues.utf8(String(criteria.email).toLowerCase()),
           };
         } else if (criteria.web_id) {
+          viewClause = "VIEW idx_web_id";
           whereClause = "web_id = $search_val";
           params = { $search_val: TypedValues.utf8(String(criteria.web_id)) };
         } else if (criteria.vk_id) {
+          viewClause = "VIEW idx_vk_id";
           whereClause = "vk_id = $search_val";
           params = { $search_val: TypedValues.uint64(String(criteria.vk_id)) };
           declareType = "Uint64";
@@ -179,9 +185,10 @@ export async function findUser(criteria) {
           return null;
         }
 
+        // Подставляем VIEW в запрос
         const query = `
           DECLARE $search_val AS ${declareType};
-          SELECT ${USER_FIELDS} FROM users WHERE ${whereClause};
+          SELECT ${USER_FIELDS} FROM users ${viewClause} WHERE ${whereClause};
         `;
 
         const { resultSets } = await session.executeQuery(query, params);
@@ -212,7 +219,7 @@ export async function verifyEmailCode(email, code) {
       const query = `
         DECLARE $email AS Utf8;
         DECLARE $code AS Utf8;
-        SELECT ${USER_FIELDS} FROM users WHERE email = $email LIMIT 1;
+        SELECT ${USER_FIELDS} FROM users VIEW idx_email WHERE email = $email LIMIT 1;
       `;
       const { resultSets } = await session.executeQuery(query, {
         $email: TypedValues.utf8(email.toLowerCase()),
@@ -278,16 +285,19 @@ export async function getUser(userId) {
         query = `DECLARE $id AS Utf8; SELECT ${USER_FIELDS} FROM users WHERE id = $id;`;
         params = { $id: TypedValues.utf8(userId) };
       } else if (/^\d{3,20}$/.test(userId)) {
-        query = `DECLARE $id AS Uint64; SELECT ${USER_FIELDS} FROM users WHERE tg_id = $id OR vk_id = $id LIMIT 1;`;
+        // Добавили VIEW idx_tg_id
+        query = `DECLARE $id AS Uint64; SELECT ${USER_FIELDS} FROM users VIEW idx_tg_id WHERE tg_id = $id OR vk_id = $id LIMIT 1;`;
         params = { $id: TypedValues.uint64(userId) };
       } else if (
         /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(userId)
       ) {
-        query = `DECLARE $email AS Utf8; SELECT ${USER_FIELDS} FROM users WHERE email = $email;`;
+        // Добавили VIEW idx_email
+        query = `DECLARE $email AS Utf8; SELECT ${USER_FIELDS} FROM users VIEW idx_email WHERE email = $email;`;
         params = { $email: TypedValues.utf8(userId.toLowerCase()) };
       } else {
         const cleanId = userId.replace(/^(vk:|email:|web:)/, "");
-        query = `DECLARE $wid AS Utf8; SELECT ${USER_FIELDS} FROM users WHERE web_id = $wid OR id = $wid LIMIT 1;`;
+        // Добавили VIEW idx_web_id
+        query = `DECLARE $wid AS Utf8; SELECT ${USER_FIELDS} FROM users VIEW idx_web_id WHERE web_id = $wid OR id = $wid LIMIT 1;`;
         params = { $wid: TypedValues.utf8(cleanId) };
       }
 
@@ -576,7 +586,7 @@ export async function getBotInfoByVkGroup(groupId) {
   if (!groupId) return null;
   try {
     return await driver.tableClient.withSession(async (session) => {
-      const query = `DECLARE $gid AS Utf8; SELECT user_id, sh_user_id, sh_ref_tail, bot_username FROM bots WHERE vk_group_id = $gid;`;
+      const query = `DECLARE $gid AS Utf8; SELECT user_id, sh_user_id, sh_ref_tail, bot_username FROM bots VIEW idx_bots_vk_group_id WHERE vk_group_id = $gid;`;
       const { resultSets } = await session.executeQuery(query, {
         $gid: TypedValues.utf8(String(groupId)),
       });
@@ -608,7 +618,7 @@ export async function getPartnerStats(ownerId) {
 
       const utf8Type = TypedValues.utf8("").type;
       const userRes = await session.executeQuery(
-        `DECLARE $ts AS List<Utf8>; SELECT COUNT(*) as t, COUNT_IF(bought_tripwire = true) as s FROM users WHERE partner_id IN $ts;`,
+        `DECLARE $ts AS List<Utf8>; SELECT COUNT(*) as t, COUNT_IF(bought_tripwire = true) as s FROM users VIEW idx_partner_id WHERE partner_id IN $ts;`,
         { $ts: TypedValues.list(utf8Type, tails) },
       );
       const statsRow = userRes.resultSets[0].rows[0];
@@ -639,7 +649,7 @@ export async function getUserReferrals(userId) {
       const userRes = await session.executeQuery(
         `DECLARE $ts AS List<Utf8>;
          SELECT id, tg_id, first_name, last_seen, bought_tripwire
-         FROM users
+         FROM users VIEW idx_partner_id
          WHERE partner_id IN $ts
          ORDER BY last_seen DESC LIMIT 50;`,
         { $ts: TypedValues.list(utf8Type, tails) },
@@ -673,7 +683,7 @@ export async function getBotUsers(botToken, limit = 100, offset = 0) {
     return await driver.tableClient.withSession(async (session) => {
       const { resultSets } = await session.executeQuery(
         `DECLARE $bt AS Utf8; DECLARE $l AS Uint64; DECLARE $o AS Uint64;
-         SELECT ${USER_FIELDS} FROM users WHERE bot_token = $bt ORDER BY last_seen DESC LIMIT $l OFFSET $o;`,
+         SELECT ${USER_FIELDS} FROM users VIEW idx_bot_token WHERE bot_token = $bt ORDER BY last_seen DESC LIMIT $l OFFSET $o;`,
         {
           $bt: TypedValues.utf8(String(botToken)),
           $l: TypedValues.uint64(String(limit)),
@@ -692,7 +702,7 @@ export async function getBotUsersCount(botToken) {
   try {
     return await driver.tableClient.withSession(async (session) => {
       const { resultSets } = await session.executeQuery(
-        `DECLARE $bt AS Utf8; SELECT COUNT(*) as cnt FROM users WHERE bot_token = $bt;`,
+        `DECLARE $bt AS Utf8; SELECT COUNT(*) as cnt FROM users VIEW idx_bot_token WHERE bot_token = $bt;`,
         { $bt: TypedValues.utf8(String(botToken)) },
       );
       if (!resultSets[0] || resultSets[0].rows.length === 0) return 0;
@@ -709,6 +719,7 @@ export async function getUsersByPartner(partnerId, limit = 10000, offset = 0) {
       const { resultSets } = await session.executeQuery(
         `DECLARE $pid AS Utf8; DECLARE $l AS Uint64; DECLARE $o AS Uint64;
          SELECT ${USER_FIELDS} FROM users
+         VIEW idx_partner_id
          WHERE partner_id = $pid
          ORDER BY last_seen DESC LIMIT $l OFFSET $o;`,
         {
@@ -729,7 +740,7 @@ export async function getPartnerUsersCount(partnerId) {
   try {
     return await driver.tableClient.withSession(async (session) => {
       const { resultSets } = await session.executeQuery(
-        `DECLARE $pid AS Utf8; SELECT COUNT(*) as cnt FROM users WHERE partner_id = $pid;`,
+        `DECLARE $pid AS Utf8; SELECT COUNT(*) as cnt FROM users VIEW idx_partner_id WHERE partner_id = $pid;`,
         { $pid: TypedValues.utf8(String(partnerId)) },
       );
       if (!resultSets[0] || resultSets[0].rows.length === 0) return 0;
@@ -745,7 +756,7 @@ export async function getPartnerStatsByFunnel(partnerId) {
     return await driver.tableClient.withSession(async (session) => {
       const { resultSets } = await session.executeQuery(
         `DECLARE $pid AS Utf8;
-         SELECT state, bought_tripwire, COUNT(*) AS cnt FROM users WHERE partner_id = $pid GROUP BY state, bought_tripwire;`,
+         SELECT state, bought_tripwire, COUNT(*) AS cnt FROM users VIEW idx_partner_id WHERE partner_id = $pid GROUP BY state, bought_tripwire;`,
         { $pid: TypedValues.utf8(String(partnerId)) },
       );
 
@@ -779,7 +790,7 @@ export async function getBotStats(botToken) {
     return await driver.tableClient.withSession(async (session) => {
       const { resultSets } = await session.executeQuery(
         `DECLARE $bt AS Utf8;
-         SELECT state, bought_tripwire, COUNT(*) AS cnt FROM users WHERE bot_token = $bt GROUP BY state, bought_tripwire;`,
+         SELECT state, bought_tripwire, COUNT(*) AS cnt FROM users VIEW idx_bot_token WHERE bot_token = $bt GROUP BY state, bought_tripwire;`,
         { $bt: TypedValues.utf8(String(botToken)) },
       );
       let total = 0,
@@ -840,7 +851,7 @@ export async function getStaleUsers(hoursAgo = 1, limit = 50, offset = 0) {
       const cutoff = Date.now() - hoursAgo * 60 * 60 * 1000;
       const { resultSets } = await session.executeQuery(
         `DECLARE $c AS Uint64; DECLARE $l AS Uint64; DECLARE $o AS Uint64;
-         SELECT ${USER_FIELDS} FROM users WHERE last_seen < $c ORDER BY last_seen ASC LIMIT $l OFFSET $o;`,
+         SELECT ${USER_FIELDS} FROM users VIEW idx_last_seen WHERE last_seen < $c ORDER BY last_seen ASC LIMIT $l OFFSET $o;`,
         {
           $c: TypedValues.uint64(String(cutoff)),
           $l: TypedValues.uint64(String(limit)),
@@ -988,7 +999,7 @@ export async function isOwnerAiActive(leadUser, botToken, vkGroupId) {
       const ownerRows = await driver.tableClient.withSession(
         async (session) => {
           const { resultSets } = await session.executeQuery(
-            `DECLARE $tail AS Utf8; SELECT id, ai_active_until FROM users WHERE sh_ref_tail = $tail LIMIT 1;`,
+            `DECLARE $tail AS Utf8; SELECT id, ai_active_until FROM users VIEW idx_sh_ref_tail WHERE sh_ref_tail = $tail LIMIT 1;`,
             { $tail: TypedValues.utf8(String(leadUser.partner_id)) },
           );
           return resultSets[0]?.rows || [];
@@ -1144,7 +1155,7 @@ export async function getUserByRefTail(tail) {
   if (!tail) return null;
   try {
     return await driver.tableClient.withSession(async (session) => {
-      const query = `DECLARE $tail AS Utf8; SELECT ${USER_FIELDS} FROM users WHERE sh_ref_tail = $tail LIMIT 1;`;
+      const query = `DECLARE $tail AS Utf8; SELECT ${USER_FIELDS} FROM users VIEW idx_sh_ref_tail WHERE sh_ref_tail = $tail LIMIT 1;`;
       const { resultSets } = await session.executeQuery(query, {
         $tail: TypedValues.utf8(String(tail)),
       });
