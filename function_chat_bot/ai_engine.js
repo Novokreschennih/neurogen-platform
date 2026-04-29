@@ -831,7 +831,7 @@ export function addToDialogHistory(
   currentHistory,
   role,
   content,
-  maxHistory = 10,
+  maxHistory = 4,
 ) {
   const newMessage = {
     role,

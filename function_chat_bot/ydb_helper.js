@@ -308,9 +308,15 @@ export async function saveUser(user) {
     tgId = Number(user.user_id);
   }
 
+  // === ИСПРАВЛЕНИЕ: Jitter (размазывание нагрузки) ===
+  // Добавляем случайную паузу от 10 до 50 мс перед попыткой сохранения.
+  // Это предотвращает одновременный удар по базе от нескольких контейнеров
+  // и размазывает пиковые всплески запросов во времени.
+  await new Promise(res => setTimeout(res, 10 + Math.random() * 40));
+
   // Retry logic for RESOURCE_EXHAUSTED errors
-  const maxRetries = 3;
-  const baseDelayMs = 500;
+  const maxRetries = 4;
+  const baseDelayMs = 400;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
