@@ -2089,7 +2089,7 @@ export async function handleVkWebhook(event, context) {
             }
 
             // === ПРОВЕРКА ИИ-ПОДПИСКИ (SaaS) И ВЫЗОВ НЕЙРОСЕТИ ===
-            const isAiActive = await ydb.isOwnerAiActive(
+            const isOwnerAiActive = await ydb.isOwnerAiActive(
               vkUser,
               null,
               String(vkGroupId),
@@ -2118,26 +2118,35 @@ export async function handleVkWebhook(event, context) {
               }
             }
 
-            // 2. ТЕПЕРЬ проверяем допуск: либо оплачена подписка, либо вставлен личный ключ
-            const hasCustomKey = !!ownerSettings.custom_api_key;
-            if (!isAiActive && !hasCustomKey) {
+            // 2. ПРОВЕРЯЕМ ДОПУСК: ТОЛЬКО оплаченная подписка дает право на ИИ!
+            if (!isOwnerAiActive) {
               return await vkCtx.reply(
                 "🤖 <b>ИИ-консультант в режиме ожидания</b>\n\n" +
-                  "Владелец системы ещё не активировал нейромозг для этого канала.\n\n" +
+                  "Владелец системы ещё не активировал нейромозг (SaaS-подписку).\n\n" +
                   "Воспользуйтесь меню навигации 👇",
               );
             }
 
-            // Проверяем дневные лимиты
+            // 3. Проверяем дневные лимиты (чтобы не жгли наши деньги)
+            // Если партнер вставил свой ключ (custom_api_key) и поставил лимит 0, значит лимита нет.
+            // Если ключа нет (используется наш системный), жестко ограничиваем: 30 для PRO, 3 для FREE.
+            const hasCustomKey = !!ownerSettings.custom_api_key;
+            let currentLimit = ownerSettings.user_daily_limit;
+
+            if (!hasCustomKey) {
+              // Защита нашего бюджета: принудительно ставим системный лимит
+              currentLimit = vkUser.bought_tripwire ? 30 : 3;
+            } else if (!currentLimit) {
+              // Свой ключ, лимит не указан = безлимит
+              currentLimit = 99999;
+            }
+
             const today = new Date().toISOString().split("T")[0];
             if (vkUser.session.ai_date !== today) {
               vkUser.session.ai_count = 0;
               vkUser.session.ai_date = today;
             }
 
-            const currentLimit =
-              ownerSettings.user_daily_limit ||
-              (vkUser.bought_tripwire ? 30 : 3);
             if (vkUser.session.ai_count >= currentLimit) {
               return await vkCtx.reply(
                 "⏳ На сегодня лимит вопросов ИИ исчерпан. Пожалуйста, продолжите завтра или используйте меню ниже 👇",

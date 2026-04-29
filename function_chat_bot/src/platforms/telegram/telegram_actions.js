@@ -173,10 +173,13 @@ export function registerTelegramActions(bot, ctx) {
 
     // v7.1: Generate JWT for universal auth
     const { generateToken } = await import("../../utils/jwt_utils.js");
-    const jwtToken = generateToken({
-      uid: ctx.dbUser.tg_id,
-      first_name: ctx.dbUser.first_name,
-    }, { expiresIn: "7d" });
+    const jwtToken = generateToken(
+      {
+        uid: ctx.dbUser.tg_id,
+        first_name: ctx.dbUser.first_name,
+      },
+      { expiresIn: "7d" },
+    );
 
     const mod3Done = ctx.dbUser.session?.mod3_done;
     const isPro = ctx.dbUser.bought_tripwire;
@@ -299,18 +302,25 @@ export function registerTelegramActions(bot, ctx) {
 
     const buttons = [];
     if (isPro) {
-      const crmUrl = process.env.CRM_WEB_APP_URL || "https://novokreschennih.github.io/crm-dashboard/";
-      
+      const crmUrl =
+        process.env.CRM_WEB_APP_URL ||
+        "https://novokreschennih.github.io/crm-dashboard/";
+
       // Генерируем JWT токен для CRM
-      const jwtToken = generateToken({ 
-        uid: user.tg_id || user.id, 
-        first_name: user.first_name 
-      }, { expiresIn: "7d" });
+      const jwtToken = generateToken(
+        {
+          uid: user.tg_id || user.id,
+          first_name: user.first_name,
+        },
+        { expiresIn: "7d" },
+      );
 
       buttons.push([
         {
           text: "📊 ОТКРЫТЬ CRM-ДАШБОРД",
-          web_app: { url: `${crmUrl}?token=${jwtToken}&bot_token=${user.bot_token || ""}` },
+          web_app: {
+            url: `${crmUrl}?token=${jwtToken}&bot_token=${user.bot_token || ""}`,
+          },
         },
       ]);
     } else {
@@ -710,7 +720,10 @@ export function registerTelegramActions(bot, ctx) {
       if (!u.email && !u.session.email) {
         u.state = "WAIT_FUNNEL_EMAIL";
         await ydb.saveUser(u);
-        await ctx.reply("✅ <b>Аккаунт SetHubble подтверждён!</b>\n\nОстался последний технический шаг перед стартом обучения.", { parse_mode: "HTML", protect_content: true });
+        await ctx.reply(
+          "✅ <b>Аккаунт SetHubble подтверждён!</b>\n\nОстался последний технический шаг перед стартом обучения.",
+          { parse_mode: "HTML", protect_content: true },
+        );
         return renderStep(ctx, "WAIT_FUNNEL_EMAIL", token);
       }
 
@@ -727,7 +740,10 @@ export function registerTelegramActions(bot, ctx) {
     if (u.state === "WAIT_FUNNEL_EMAIL") {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(txt)) {
-        return ctx.reply("❌ Это не похоже на email. Пожалуйста, проверь на опечатки и отправь еще раз:", { protect_content: true });
+        return ctx.reply(
+          "❌ Это не похоже на email. Пожалуйста, проверь на опечатки и отправь еще раз:",
+          { protect_content: true },
+        );
       }
 
       const emailRecord = await ydb.findUser({ email: txt });
@@ -736,15 +752,23 @@ export function registerTelegramActions(bot, ctx) {
       u.session.email = u.email;
       u.session.email_verified = true;
       if (!u.session.channels) u.session.channels = {};
-      u.session.channels.email = { enabled: true, configured: true, subscribed: true };
+      u.session.channels.email = {
+        enabled: true,
+        configured: true,
+        subscribed: true,
+      };
 
       await ydb.saveUser(u);
 
       if (emailRecord && emailRecord.id !== u.id) {
-        log.info("[TG FUNNEL] Merging email record into TG user", { email: txt, tgUserId: u.id });
+        log.info("[TG FUNNEL] Merging email record into TG user", {
+          email: txt,
+          tgUserId: u.id,
+        });
         emailRecord.tg_id = Number(ctx.from.id);
         if (u.session?.dialog_history) {
-          emailRecord.session.dialog_history = emailRecord.session.dialog_history || [];
+          emailRecord.session.dialog_history =
+            emailRecord.session.dialog_history || [];
           emailRecord.session.dialog_history.push(...u.session.dialog_history);
         }
         await ydb.mergeUsers(emailRecord, u.id, "funnel_email_match");
@@ -797,7 +821,9 @@ export function registerTelegramActions(bot, ctx) {
 
           try {
             if (u.session.old_bot_token) {
-              await fetch(`https://api.telegram.org/bot${u.session.old_bot_token}/deleteWebhook`).catch(() => {});
+              await fetch(
+                `https://api.telegram.org/bot${u.session.old_bot_token}/deleteWebhook`,
+              ).catch(() => {});
               const oldLeads = await ydb.getBotUsers(u.session.old_bot_token);
               for (const lead of oldLeads) {
                 lead.bot_token = txt;
@@ -1092,7 +1118,13 @@ export function registerTelegramActions(bot, ctx) {
     try {
       // v7.1: Получаем настройки из bots (per-bot limits) и owner settings из users (AI config)
       const botSettings = await ydb.getBotInfo(token);
-      let ownerSettings = { custom_prompt: "", ai_provider: "polza", ai_model: "openai/gpt-4o-mini", custom_api_key: "", user_daily_limit: 0 };
+      let ownerSettings = {
+        custom_prompt: "",
+        ai_provider: "polza",
+        ai_model: "openai/gpt-4o-mini",
+        custom_api_key: "",
+        user_daily_limit: 0,
+      };
 
       if (botSettings?.owner_id) {
         const owner = await ydb.getUser(botSettings.owner_id);
@@ -1107,19 +1139,15 @@ export function registerTelegramActions(bot, ctx) {
         }
       }
 
-      // v7.0: Проверка доступа к ИИ — личный ключ партнёра ИЛИ активная подписка
-      const hasCustomKey = !!ownerSettings.custom_api_key;
+      // === ПРОВЕРКА ИИ-ПОДПИСКИ (SaaS) ===
+      // ТОЛЬКО оплаченная подписка дает право на ИИ!
       const isOwnerAiActive = await ydb.isOwnerAiActive(u, token, null);
-      const hasAiAccess =
-        hasCustomKey || isOwnerAiActive || u.ai_active_until > Date.now();
 
-      if (!hasAiAccess) {
+      if (!isOwnerAiActive) {
         return ctx.reply(
-          `🤖 <b>Интеллект бота не активирован.</b>\n\n` +
-            `Чтобы я мог отвечать вашим клиентам, выберите действие в меню <b>Мой профиль -> Настройка ИИ</b>:\n\n` +
-            `1️⃣ Оплатите подписку (100 руб/мес)\n` +
-            `2️⃣ Подключите личный API-ключ Polza.ai (ваша реф. ссылка)\n\n` +
-            `📖 <i>Подробнее: Мой профиль -> Настройка ИИ</i>`,
+          `🤖 <b>ИИ-консультант в режиме ожидания</b>\n\n` +
+            `Владелец системы ещё не активировал нейромозг (SaaS-подписку).\n\n` +
+            `Воспользуйтесь меню навигации 👇`,
           {
             parse_mode: "HTML",
             protect_content: true,
@@ -1132,40 +1160,40 @@ export function registerTelegramActions(bot, ctx) {
         );
       }
 
-const today = new Date().toISOString().split("T")[0];
+      // === ПРОВЕРКА ДНЕВНЫХ ЛИМИТОВ ===
+      // Если партнер вставил свой ключ (custom_api_key) и поставил лимит 0, значит лимита нет.
+      // Если ключа нет (используется наш системный), жестко ограничиваем: 30 для PRO, 3 для FREE.
+      const hasCustomKey = !!ownerSettings.custom_api_key;
+      let currentLimit = ownerSettings.user_daily_limit;
 
+      if (!hasCustomKey) {
+        // Защита нашего бюджета: принудительно ставим системный лимит
+        currentLimit = u.bought_tripwire ? 30 : 3;
+      } else if (!currentLimit) {
+        // Свой ключ, лимит не указан = безлимит
+        currentLimit = 99999;
+      }
+
+      const today = new Date().toISOString().split("T")[0];
       if (u.session.ai_count === undefined) u.session.ai_count = 0;
       if (u.session.ai_date !== today) {
         u.session.ai_count = 0;
         u.session.ai_date = today;
       }
 
-      // v7.1: Вычисляем лимит (owner -> bot -> global)
-      const defaultLimit = u.bought_tripwire ? AI_PRO_LIMIT : AI_FREE_LIMIT;
-      const currentLimit = (ownerSettings.user_daily_limit || botSettings?.user_daily_limit) || defaultLimit;
-
       if (u.session.ai_count >= currentLimit) {
-        const limitMsg = u.bought_tripwire
-          ? `📚 <b>Лимит консультаций на сегодня.</b>\n\nДневной лимит (${AI_PRO_LIMIT} вопросов) достигнут. Завтра продолжим отвечать на вопросы. А пока — применяй знания на практике 👇`
-          : `📚 <b>Лимит вопросов консультанту.</b>\n\nТы использовал ${AI_FREE_LIMIT} бесплатных вопроса. Если нужно больше - активируй PRO-статус.`;
-
-        return ctx.reply(limitMsg, {
-          parse_mode: "HTML",
-          protect_content: true,
-          reply_markup: {
-            inline_keyboard: [
-              u.bought_tripwire
-                ? []
-                : [
-                    {
-                      text: "💎 АКТИВИРОВАТЬ PRO",
-                      callback_data: "Offer_Tripwire",
-                    },
-                  ],
-              [{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }],
-            ].filter((row) => row.length > 0),
+        return ctx.reply(
+          "⏳ На сегодня лимит вопросов ИИ исчерпан. Пожалуйста, продолжите завтра или используйте меню ниже 👇",
+          {
+            parse_mode: "HTML",
+            protect_content: true,
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }],
+              ],
+            },
           },
-        });
+        );
       }
 
       u.session.ai_count += 1;
@@ -1190,8 +1218,12 @@ const today = new Date().toISOString().split("T")[0];
 
       // v7.1: Формируем botConfig для AI Engine v3.0 (приоритет — ownerSettings, fallback — botSettings для лимитов)
       const botConfig = {
-        ai_provider: ownerSettings.ai_provider || botSettings?.ai_provider || "polza",
-        ai_model: ownerSettings.ai_model || botSettings?.ai_model || "openai/gpt-4o-mini",
+        ai_provider:
+          ownerSettings.ai_provider || botSettings?.ai_provider || "polza",
+        ai_model:
+          ownerSettings.ai_model ||
+          botSettings?.ai_model ||
+          "openai/gpt-4o-mini",
         custom_api_key: ownerSettings.custom_api_key || "",
         custom_prompt: ownerSettings.custom_prompt || "",
       };

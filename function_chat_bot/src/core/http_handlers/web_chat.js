@@ -3,10 +3,14 @@
  * Обрабатывает всё: Email-лиды, кнопки воронки, верификацию и умный чат с ИИ.
  */
 import crypto from "crypto";
-import { validateEmail, validatePartnerId, validateWebSessionId } from "../../utils/validator.js";
+import {
+  validateEmail,
+  validatePartnerId,
+  validateWebSessionId,
+} from "../../utils/validator.js";
 import scenario from "../../scenarios/scenario_tg.js";
-import { resolveUser } from '../../core/omni_resolver.js';
-import { adaptStateForChannel } from '../../scenarios/common/step_order.js';
+import { resolveUser } from "../../core/omni_resolver.js";
+import { adaptStateForChannel } from "../../scenarios/common/step_order.js";
 
 export async function handleWebChat(event, context) {
   const { action, log, corsHeaders, ydb } = context;
@@ -21,20 +25,24 @@ export async function handleWebChat(event, context) {
     // --- 0. ЗАГРУЗКА ИЛИ СОЗДАНИЕ ПОЛЬЗОВАТЕЛЯ ---
     const webSessionId = validateWebSessionId(payload.sessionId);
     if (!webSessionId) {
-      return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ error: "Invalid Session ID" }) };
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: "Invalid Session ID" }),
+      };
     }
     const payloadEmail = payload.email ? validateEmail(payload.email) : null;
     const partnerId = payload.partner_id || payload.referrer || "p_qdr";
-    const firstName = payloadEmail ? payloadEmail.split('@')[0] : 'WebUser';
+    const firstName = payloadEmail ? payloadEmail.split("@")[0] : "WebUser";
 
-    let webUser = await resolveUser('web', {
+    let webUser = await resolveUser("web", {
       web_id: webSessionId,
       email: payloadEmail,
       partner_id: partnerId,
-      first_name: firstName
+      first_name: firstName,
     });
 
-    adaptStateForChannel(webUser, 'web');
+    adaptStateForChannel(webUser, "web");
     webUser.last_seen = Date.now();
     await ydb.saveUser(webUser);
 
@@ -47,7 +55,8 @@ export async function handleWebChat(event, context) {
     webUser.first_name = webUser.first_name || firstName;
     if (!webUser.session) webUser.session = {};
     if (!Array.isArray(webUser.session.tags)) webUser.session.tags = [];
-    if (!Array.isArray(webUser.session.dialog_history)) webUser.session.dialog_history = [];
+    if (!Array.isArray(webUser.session.dialog_history))
+      webUser.session.dialog_history = [];
     if (!webUser.session.channel_states) webUser.session.channel_states = {};
 
     // ============================================================
@@ -148,17 +157,17 @@ export async function handleWebChat(event, context) {
             stepKey: "START",
             text: startStep.text(links, webUser, info),
             image: startStep.image,
-            buttons:
-              (typeof startStep.buttons === "function"
-                ? startStep.buttons(links, webUser, info)
-                : startStep.buttons)?.map(row =>
-                row.map(btn => {
-                  if (btn.url && btn.url.includes("module-")) {
-                    return { ...btn, url: btn.url + "&web=1" };
-                  }
-                  return btn;
-                })
-              ),
+            buttons: (typeof startStep.buttons === "function"
+              ? startStep.buttons(links, webUser, info)
+              : startStep.buttons
+            )?.map((row) =>
+              row.map((btn) => {
+                if (btn.url && btn.url.includes("module-")) {
+                  return { ...btn, url: btn.url + "&web=1" };
+                }
+                return btn;
+              }),
+            ),
             neuroCoins: webUser.session?.xp || 0,
           }),
         };
@@ -175,17 +184,17 @@ export async function handleWebChat(event, context) {
               ? step.text(links, webUser, info)
               : step.text,
           image: step.image,
-          buttons:
-            (typeof step.buttons === "function"
-              ? step.buttons(links, webUser, info)
-              : step.buttons)?.map(row =>
-              row.map(btn => {
-                if (btn.url && btn.url.includes("module-")) {
-                  return { ...btn, url: btn.url + "&web=1" };
-                }
-                return btn;
-              })
-            ),
+          buttons: (typeof step.buttons === "function"
+            ? step.buttons(links, webUser, info)
+            : step.buttons
+          )?.map((row) =>
+            row.map((btn) => {
+              if (btn.url && btn.url.includes("module-")) {
+                return { ...btn, url: btn.url + "&web=1" };
+              }
+              return btn;
+            }),
+          ),
           neuroCoins: webUser.session?.xp || 0,
         }),
       };
@@ -206,10 +215,10 @@ export async function handleWebChat(event, context) {
       const verificationCode = crypto.randomUUID().split("-")[0].toUpperCase();
       const codeExpires = Date.now() + 24 * 60 * 60 * 1000;
 
-      const user = await resolveUser('email', {
+      const user = await resolveUser("email", {
         email: email,
         partner_id: partnerId,
-        first_name: email.split('@')[0]
+        first_name: email.split("@")[0],
       });
 
       user.session.email_verification_code = verificationCode;
@@ -224,8 +233,12 @@ export async function handleWebChat(event, context) {
       };
       await ydb.saveUser(user);
 
-      const { sendEmail, templates } = await import("../email/email_service.js");
-      await sendEmail({ to: email, ...templates.emailVerification(user, verificationCode) });
+      const { sendEmail, templates } =
+        await import("../email/email_service.js");
+      await sendEmail({
+        to: email,
+        ...templates.emailVerification(user, verificationCode),
+      });
 
       return {
         statusCode: 200,
@@ -402,8 +415,11 @@ export async function handleWebChat(event, context) {
 
         // === TRIAL PERIOD: 3 дня бесплатного ИИ для новых партнёров ===
         if (!u.ai_active_until || u.ai_active_until < Date.now()) {
-          u.ai_active_until = Date.now() + (3 * 24 * 60 * 60 * 1000);
-          log.info("[TRIAL PERIOD] Added 3 days AI trial for new partner", { userId: u.id, aiUntil: new Date(u.ai_active_until).toISOString() });
+          u.ai_active_until = Date.now() + 3 * 24 * 60 * 60 * 1000;
+          log.info("[TRIAL PERIOD] Added 3 days AI trial for new partner", {
+            userId: u.id,
+            aiUntil: new Date(u.ai_active_until).toISOString(),
+          });
         }
 
         await ydb.saveUser(u);
@@ -489,13 +505,19 @@ export async function handleWebChat(event, context) {
         }
       }
 
-// --- Д. Чат с ИИ (Универсальный AI Engine v3.0) ---
+      // --- Д. Чат с ИИ (Универсальный AI Engine v3.0) ---
 
       // 1. Проверка активности ИИ-подписки владельца канала (SaaS)
-      const isAiActive = await ydb.isOwnerAiActive(webUser, null, null);
+      const isOwnerAiActive = await ydb.isOwnerAiActive(webUser, null, null);
 
       // 2. Получаем настройки владельца (по partner_id)
-      let ownerSettings = { custom_prompt: "", ai_provider: "polza", ai_model: "openai/gpt-4o-mini", custom_api_key: "", user_daily_limit: 0 };
+      let ownerSettings = {
+        custom_prompt: "",
+        ai_provider: "polza",
+        ai_model: "openai/gpt-4o-mini",
+        custom_api_key: "",
+        user_daily_limit: 0,
+      };
 
       if (webUser.partner_id) {
         try {
@@ -506,7 +528,7 @@ export async function handleWebChat(event, context) {
               ai_provider: owner.ai_provider || "polza",
               ai_model: owner.ai_model || "openai/gpt-4o-mini",
               custom_api_key: owner.custom_api_key || "",
-              user_daily_limit: owner.user_daily_limit || 0
+              user_daily_limit: owner.user_daily_limit || 0,
             };
           }
         } catch (e) {
@@ -514,33 +536,46 @@ export async function handleWebChat(event, context) {
         }
       }
 
-      // Проверяем допуск: либо личный ключ, либо оплачена подписка
-      const hasCustomKey = !!ownerSettings.custom_api_key;
-      if (!isAiActive && !hasCustomKey) {
+      // 3. ПРОВЕРЯЕМ ДОПУСК: ТОЛЬКО оплаченная подписка дает право на ИИ!
+      if (!isOwnerAiActive) {
         return {
           statusCode: 200,
           headers: corsHeaders,
           body: JSON.stringify({
-            answer: "🤖 <b>ИИ-консультант в режиме ожидания</b>\n\nВладелец системы ещё не активировал подписку на ИИ-консультанта.\n\nОбратитесь к владельцу для активации 👇",
+            answer:
+              "🤖 <b>ИИ-консультант в режиме ожидания</b>\n\nВладелец системы ещё не активировал нейромозг (SaaS-подписку).\n\nВоспользуйтесь меню навигации 👇",
             sessionId: webSessionId,
           }),
         };
       }
 
-      // 3. Проверка дневных лимитов (Web-лимит)
+      // 4. Проверка дневных лимитов (чтобы не жгли наши деньги)
+      // Если партнер вставил свой ключ (custom_api_key) и поставил лимит 0, значит лимита нет.
+      // Если ключа нет (используется наш системный), жестко ограничиваем: 30 для PRO, 3 для FREE.
+      const hasCustomKey = !!ownerSettings.custom_api_key;
+      let currentLimit = ownerSettings.user_daily_limit;
+
+      if (!hasCustomKey) {
+        // Защита нашего бюджета: принудительно ставим системный лимит
+        currentLimit = webUser.bought_tripwire ? 30 : 3;
+      } else if (!currentLimit) {
+        // Свой ключ, лимит не указан = безлимит
+        currentLimit = 99999;
+      }
+
       const today = new Date().toISOString().split("T")[0];
       if (webUser.session.ai_date !== today) {
         webUser.session.ai_count = 0;
         webUser.session.ai_date = today;
       }
 
-      const currentLimit = ownerSettings.user_daily_limit || (webUser.bought_tripwire ? 30 : 3);
       if (webUser.session.ai_count >= currentLimit) {
         return {
           statusCode: 200,
           headers: corsHeaders,
           body: JSON.stringify({
-            answer: "⏳ <b>Лимит консультаций исчерпан.</b> На сегодня я ответил на все вопросы. Возвращайтесь завтра!",
+            answer:
+              "⏳ <b>Лимит консультаций исчерпан.</b> На сегодня я ответил на все вопросы. Возвращайтесь завтра!",
             sessionId: webSessionId,
           }),
         };
@@ -551,26 +586,46 @@ export async function handleWebChat(event, context) {
         ai_provider: ownerSettings.ai_provider,
         ai_model: ownerSettings.ai_model,
         custom_api_key: ownerSettings.custom_api_key,
-        custom_prompt: ownerSettings.custom_prompt
+        custom_prompt: ownerSettings.custom_prompt,
       };
 
       const aiEngineModule = await import("../../ai_engine.js");
 
       // Очистка истории
       const currentHistory = webUser.session?.dialog_history || [];
-      const cleanedHistory = aiEngineModule.cleanupDialogHistory(currentHistory, 24);
+      const cleanedHistory = aiEngineModule.cleanupDialogHistory(
+        currentHistory,
+        24,
+      );
 
       try {
         // Увеличиваем счетчик
         webUser.session.ai_count = (webUser.session.ai_count || 0) + 1;
 
-        const aiResponse = await aiEngineModule.generateAIResponse(txt, webUser, webUser.state, cleanedHistory, botConfig);
+        const aiResponse = await aiEngineModule.generateAIResponse(
+          txt,
+          webUser,
+          webUser.state,
+          cleanedHistory,
+          botConfig,
+        );
 
-        const aiAnswer = aiResponse || "🤖 Я немного задумался. Повтори еще раз!";
+        const aiAnswer =
+          aiResponse || "🤖 Я немного задумался. Повтори еще раз!";
 
         // Сохраняем историю
-        const updatedHistory = aiEngineModule.addToDialogHistory(cleanedHistory, "user", txt, 10);
-        const finalHistory = aiEngineModule.addToDialogHistory(updatedHistory, "assistant", aiAnswer, 10);
+        const updatedHistory = aiEngineModule.addToDialogHistory(
+          cleanedHistory,
+          "user",
+          txt,
+          10,
+        );
+        const finalHistory = aiEngineModule.addToDialogHistory(
+          updatedHistory,
+          "assistant",
+          aiAnswer,
+          10,
+        );
         webUser.session.dialog_history = finalHistory;
         await ydb.saveUser(webUser);
 

@@ -2,7 +2,7 @@
  * Partner API Handler
  * Обрабатывает запросы на получение партнерских ссылок (для Promo-Kit WebApp)
  * action: params.action === "get_partner_link" или "update_ai_settings"
- * 
+ *
  * Поддерживает универсальную JWT-авторизацию:
  * - x-telegram-initdata (Telegram WebApp)
  * - Authorization: Bearer <jwt_token> (VK, Web)
@@ -26,8 +26,9 @@ export async function handlePartnerApi(event, context) {
   // v7.1: Universal authorization
   let telegramId = null;
   let firstName = "Партнёр";
-  
-  const authHeader = getHeader(headers, "authorization") || getHeader(headers, "Authorization");
+
+  const authHeader =
+    getHeader(headers, "authorization") || getHeader(headers, "Authorization");
   const initData = getHeader(headers, "x-telegram-initdata");
 
   // Priority: 1. JWT token (VK/Web), 2. Telegram initData
@@ -117,6 +118,7 @@ export async function handlePartnerApi(event, context) {
           clicks,
           is_pro: user.bought_tripwire,
           partner_id: user.sh_ref_tail,
+          ai_active_until: user.ai_active_until || 0,
         },
       });
     } catch (error) {
@@ -147,7 +149,13 @@ export async function handlePartnerApi(event, context) {
         aiSettings = {};
       }
 
-      const { custom_prompt, ai_provider, ai_model, custom_api_key, user_daily_limit } = aiSettings;
+      const {
+        custom_prompt,
+        ai_provider,
+        ai_model,
+        custom_api_key,
+        user_daily_limit,
+      } = aiSettings;
 
       // Update user AI settings
       user.custom_prompt = custom_prompt || "";

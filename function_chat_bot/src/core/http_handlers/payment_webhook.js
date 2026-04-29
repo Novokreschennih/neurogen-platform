@@ -172,25 +172,41 @@ export async function handlePaymentWebhook(event, context) {
     }
   } 
   
-  // === ИИ ПОДПИСКА (SAAS) ===
+  // === ИИ ПОДПИСКА (SAAS - ЕЖЕМЕСЯЧНАЯ) ===
   else if (hubProductId === PRODUCT_ID_AI_SUBSCRIPTION) {
     console.log(`>>> [AI SUBSCRIPTION] Processing payment for user ${u.user_id}`);
+    
+    // Берем текущее время или остаток подписки (чтобы дни не сгорали, а суммировались при продлении)
     const currentExpiry = u.ai_active_until || Date.now();
+    
+    // ДОБАВЛЯЕМ 30 ДНЕЙ (в миллисекундах)
     u.ai_active_until = Math.max(currentExpiry, Date.now()) + (30 * 24 * 60 * 60 * 1000);
     await ydb.saveUser(u);
 
+    console.log(`>>> [AI SUBSCRIPTION] Extended until ${new Date(u.ai_active_until).toISOString()}`);
+
     const expiryDate = new Date(u.ai_active_until).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
-    const subText = `🤖 <b>ИИ-подписка активирована!</b>\n\nПодписка на ИИ-консультанта NeuroGen действует до <b>${expiryDate}</b>.\nДоступна в ботах Telegram, VK и на Web-платформе.`;
+
+    const subText =
+      `🤖 <b>ИИ-Интеллект успешно оплачен!</b>\n\n` +
+      `Ваша подписка на движок NeuroGen активна до <b>${expiryDate}</b>.\n` +
+      `Умный помощник продолжает общаться с вашими клиентами 24/7 во всех каналах.\n\n` +
+      `<i>Настроить характер бота и лимиты можно в разделе: \nИнструменты -> Promo-Kit -> Интеллект.</i>`;
 
     if (u.tg_id) {
       try { await bot.telegram.sendMessage(u.tg_id, subText, { parse_mode: "HTML" }); } catch (e) {}
     } else if (u.email) {
       try {
         const { sendEmail } = await import("../email/email_service.js");
-        await sendEmail({ to: u.email, subject: "🤖 ИИ-подписка NeuroGen активирована!", text: subText, html: subText.replace(/\n/g, "<br>") });
+        await sendEmail({
+          to: u.email,
+          subject: "🤖 Подписка NeuroGen продлена!",
+          text: subText.replace(/<[^>]*>?/gm, ""),
+          html: subText.replace(/\n/g, "<br>")
+        });
       } catch (e) {}
     }
-  } 
+  }
   
   // === БЕСПЛАТНАЯ РЕГИСТРАЦИЯ ===
   else {

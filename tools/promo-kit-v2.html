@@ -747,6 +747,28 @@
           document.getElementById("badge-free").classList.remove("hidden");
         }
 
+        // === ПРОВЕРКА ПОДПИСКИ (Блокировка вкладки ИИ) ===
+        // Если ai_active_until (из userData) меньше текущего времени, блокируем
+        const isAiActive = userData.ai_active_until && (userData.ai_active_until > Date.now());
+        
+        if (!isAiActive) {
+          // Находим контейнер с настройками
+          const aiContainer = document.getElementById("content-ai");
+          if (aiContainer) {
+            // Очищаем внутренности и ставим заглушку
+            aiContainer.innerHTML = `
+              <div class="glass-panel rounded-3xl p-8 text-center border-red-500/30 bg-red-900/10">
+                <div class="text-5xl mb-4">🤖</div>
+                <h2 class="text-2xl font-black text-white mb-2 uppercase">Интеллект отключен</h2>
+                <p class="text-sm text-gray-400 mb-6">Чтобы ваш бот мог общаться с клиентами 24/7 и закрывать сделки, активируйте SaaS-подписку на нейросеть.</p>
+                <a href="https://t.me/sethubble_biz_bot" target="_blank" class="inline-block bg-gradient-to-r from-red-500 to-orange-500 text-white font-bold py-3 px-8 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-red-500/20">
+                  ⚡️ ОПЛАТИТЬ ПОДПИСКУ (30 дней)
+                </a>
+              </div>
+            `;
+          }
+        }
+
         // === ЗАГРУЗКА НАСТРОЕК ИИ ===
         if (userData.ai_provider) {
           document.getElementById("ai-provider").value = userData.ai_provider;
