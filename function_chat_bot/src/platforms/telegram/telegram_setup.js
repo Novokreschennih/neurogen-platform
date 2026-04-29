@@ -168,7 +168,8 @@ export function setupTelegramHandlers(bot, context) {
     }
 
     await next();
-    await ydb.saveUser(user);
+    // saveUser не вызываем здесь — оно уже вызывается в telegram_actions.js и ai_engine.js
+    // там, где это действительно нужно. Это устраняет дублирующую запись в БД.
   });
 
   // ГЛОБАЛЬНЫЙ ПЕРЕХВАТЧИК: Удаляем кнопки после нажатия

@@ -728,6 +728,8 @@ this.style.background =
   }
 
   // === ЭКСПОРТ ДЛЯ HTML ===
+  window.loadWebStep = loadWebStep;
+
   window.toggleChannel = function(el) {
     const ch = el.dataset.channel;
     if (selectedChannels.has(ch)) {

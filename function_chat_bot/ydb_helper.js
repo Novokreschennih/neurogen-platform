@@ -28,7 +28,22 @@ export const driver = new Driver({
   endpoint: process.env.YDB_ENDPOINT,
   database: process.env.YDB_DATABASE,
   authService: getCredentialsFromEnv(),
+  // === ИСПРАВЛЕНИЕ: ЖЕСТКИЕ ЛИМИТЫ ДЛЯ SERVERLESS ===
+  poolSettings: {
+    minLimit: 1,      // Не держим кучу сессий про запас
+    maxLimit: 10,     // Максимум 10 сессий на 1 контейнер
+    keepAlivePeriod: 30000 // Пинговать раз в 30 сек
+  }
 });
+
+// Хелпер для определения временных ошибок сети и YDB
+function isTransientYdbError(e) {
+  const msg = e.message || String(e);
+  return msg.includes("RESOURCE_EXHAUSTED") ||
+         msg.includes("UNAVAILABLE") ||
+         msg.includes("Connection dropped") ||
+         msg.includes("Session is busy");
+}
 
 let driverInitialized = false;
 
@@ -175,10 +190,10 @@ export async function findUser(criteria) {
         return mapUser(resultSets[0].rows[0]);
       });
     } catch (e) {
-      const isResourceExhausted = e.message?.includes("RESOURCE_EXHAUSTED");
-      if (isResourceExhausted && attempt < maxRetries) {
+      // ИСПОЛЬЗУЕМ НАШ НОВЫЙ ХЕЛПЕР
+      if (isTransientYdbError(e) && attempt < maxRetries) {
         const delay = baseDelayMs * Math.pow(2, attempt);
-        log.warn(`[findUser] RESOURCE_EXHAUSTED, retry ${attempt+1}/${maxRetries} in ${delay}ms`);
+        log.warn(`[findUser] Transient error, retry ${attempt+1}/${maxRetries} in ${delay}ms`);
         await new Promise(res => setTimeout(res, delay));
         continue;
       }
@@ -293,9 +308,15 @@ export async function saveUser(user) {
     tgId = Number(user.user_id);
   }
 
+  // === ИСПРАВЛЕНИЕ: Jitter (размазывание нагрузки) ===
+  // Добавляем случайную паузу от 10 до 50 мс перед попыткой сохранения.
+  // Это предотвращает одновременный удар по базе от нескольких контейнеров
+  // и размазывает пиковые всплески запросов во времени.
+  await new Promise(res => setTimeout(res, 10 + Math.random() * 40));
+
   // Retry logic for RESOURCE_EXHAUSTED errors
-  const maxRetries = 3;
-  const baseDelayMs = 500;
+  const maxRetries = 4;
+  const baseDelayMs = 400;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
@@ -361,20 +382,15 @@ export async function saveUser(user) {
         return { success: true, id: userId, version: newVersion };
       });
     } catch (e) {
-      const errMsg = e.message || String(e);
-      const isResourceExhausted = errMsg.includes("RESOURCE_EXHAUSTED");
-
-      if (isResourceExhausted && attempt < maxRetries) {
+      // ИСПОЛЬЗУЕМ НАШ НОВЫЙ ХЕЛПЕР
+      if (isTransientYdbError(e) && attempt < maxRetries) {
         const delay = baseDelayMs * Math.pow(2, attempt);
-        log.warn(
-          `[saveUser] RESOURCE_EXHAUSTED, retry ${attempt + 1}/${maxRetries} in ${delay}ms`,
-          { userId },
-        );
+        log.warn(`[saveUser] Transient error, retry ${attempt + 1}/${maxRetries} in ${delay}ms`, { userId });
         await new Promise((res) => setTimeout(res, delay));
         continue;
       }
 
-      log.error(`Failed to save user`, errMsg, { userId, attempt });
+      log.error(`Failed to save user`, e.message || String(e), { userId, attempt });
       return { success: false };
     }
   }
