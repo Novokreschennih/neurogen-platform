@@ -35,29 +35,46 @@ export async function handleWebChat(event, context) {
     const partnerId = payload.partner_id || payload.referrer || "p_qdr";
     const firstName = payloadEmail ? payloadEmail.split("@")[0] : "WebUser";
 
-    let webUser = await resolveUser("web", {
-      web_id: webSessionId,
-      email: payloadEmail,
-      partner_id: partnerId,
-      first_name: firstName,
-    });
+    // ОПТИМИЗАЦИЯ: Сначала делаем 1 быстрый запрос по индексу web_id
+    let webUser = await ydb.findUser({ web_id: webSessionId });
+    let needsSave = false;
 
-    adaptStateForChannel(webUser, "web");
-    webUser.last_seen = Date.now();
-    await ydb.saveUser(webUser);
-
-    // Записываем клик по рефке
-    if (partnerId && partnerId !== "p_qdr") {
-      await ydb.recordLinkClick(partnerId, webUser.id, "WEB_LEAD");
+    // Если юзера нет ИЛИ у него появился email, которого не было раньше -> вызываем Omni-Resolver
+    if (!webUser || (payloadEmail && !webUser.email)) {
+      log.info("[WEB CHAT] User not found or new email. Running Omni-Resolver.");
+      webUser = await resolveUser("web", {
+        web_id: webSessionId,
+        email: payloadEmail,
+        partner_id: partnerId,
+        first_name: firstName,
+      });
+      needsSave = true;
     }
 
-    // Лечим сессию, если она пустая или битая
-    webUser.first_name = webUser.first_name || firstName;
-    if (!webUser.session) webUser.session = {};
-    if (!Array.isArray(webUser.session.tags)) webUser.session.tags = [];
-    if (!Array.isArray(webUser.session.dialog_history))
-      webUser.session.dialog_history = [];
-    if (!webUser.session.channel_states) webUser.session.channel_states = {};
+    // Лечим сессию и адаптируем стейт (только в памяти)
+    const oldState = webUser.state;
+    adaptStateForChannel(webUser, "web");
+    if (oldState !== webUser.state) needsSave = true;
+
+    if (!webUser.first_name) { webUser.first_name = firstName; needsSave = true; }
+    if (!webUser.session) { webUser.session = {}; needsSave = true; }
+    if (!Array.isArray(webUser.session.tags)) { webUser.session.tags = []; needsSave = true; }
+    if (!Array.isArray(webUser.session.dialog_history)) { webUser.session.dialog_history = []; needsSave = true; }
+    if (!webUser.session.channel_states) { webUser.session.channel_states = {}; needsSave = true; }
+
+    webUser.last_seen = Date.now();
+
+    // Записываем клик по рефке (только для новых юзеров, 1 раз)
+    if (!webUser.session.click_recorded && partnerId && partnerId !== "p_qdr") {
+      await ydb.recordLinkClick(partnerId, webUser.id, "WEB_LEAD");
+      webUser.session.click_recorded = true;
+      needsSave = true;
+    }
+
+    // Сохраняем ТОЛЬКО если были реальные изменения (экономим YDB RU)
+    if (needsSave || payload.action === "click-button" || payload.action === "get-web-step") {
+      await ydb.saveUser(webUser);
+    }
 
     // ============================================================
     // 1. ЛОГИКА КНОПОК ВОРОНКИ (RENDER STEPS)
