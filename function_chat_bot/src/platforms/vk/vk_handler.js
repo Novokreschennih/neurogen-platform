@@ -309,10 +309,12 @@ export async function handleVkWebhook(event, context) {
           );
           const stopData = await stopResp.json();
           if (stopData.error) {
-            log.error(
-              `[VK] Ошибка API при остановке спиннера:`,
-              JSON.stringify(stopData.error),
-            );
+            if (!JSON.stringify(stopData.error).includes("invalid event_id")) {
+                log.warn(
+                  `[VK] Ошибка API при остановке спиннера:`,
+                  JSON.stringify(stopData.error),
+                );
+            }
           } else {
             log.info(`[VK] Спиннер остановлен`, {
               response: stopData.response,
@@ -358,6 +360,10 @@ export async function handleVkWebhook(event, context) {
         }
 
         const translateKb = (tgOpts, addMainMenu = true) => {
+          // ИСПРАВЛЕНИЕ: Блокируем inline-кнопки на главном меню
+          if (vkUser.state === "MAIN_MENU") {
+            return null;
+          }
           if (!tgOpts?.reply_markup?.inline_keyboard) return null;
           const vkBtns = tgOpts.reply_markup.inline_keyboard.map((row) =>
             row
@@ -432,129 +438,37 @@ export async function handleVkWebhook(event, context) {
             });
           },
           replyWithPhoto: async (photoUrl, opts = {}) => {
-            const cap = (opts.caption || "").replace(/<[^>]*>?/gm, "");
+            // ВК сам отлично парсит картинки из ссылок в тексте.
+            // Не тратим время на загрузку файлов, чтобы уложиться в 5 секунд.
+            let captionText = opts.caption || "";
+            captionText = captionText.replace(/<[^>]*>?/gm, "");
+            
+            const params = new URLSearchParams();
+            params.append("access_token", process.env.VK_GROUP_TOKEN);
+            params.append("v", "5.199");
+            // Универсально для message_event и message_new
+            params.append("user_id", String(userId));
+            params.append("random_id", String(Math.floor(Math.random() * 2147483647)));
+            
+            // Добавляем ссылку на картинку в конец текста (ВК сгенерирует красивое превью)
+            params.append("message", `${captionText}\n\n&#128247; Фото: ${photoUrl}`);
 
-            try {
-              // Скачиваем фото
-              log.info(`[VK PHOTO EVENT] Downloading photo`, { url: photoUrl });
-              const photoResp = await fetch(photoUrl);
-              if (!photoResp.ok) throw new Error(`HTTP ${photoResp.status}`);
-              const photoBuffer = Buffer.from(await photoResp.arrayBuffer());
-
-              // Получаем URL для загрузки
-              const uploadResp = await fetch(
-                `https://api.vk.com/method/photos.getMessagesUploadServer?access_token=${process.env.VK_GROUP_TOKEN}&v=5.199`,
-              );
-              const uploadData = await uploadResp.json();
-              const uploadUrl = uploadData.response?.upload_url;
-              if (!uploadUrl) throw new Error("No upload URL");
-
-              // Загружаем фото через multipart/form-data (ручное формирование без form-data пакета)
-              const boundary = `----VKBoundary${Math.random().toString(36).slice(2)}`;
-              const header = `--${boundary}\r\nContent-Disposition: form-data; name="photo"; filename="photo.jpg"\r\nContent-Type: image/jpeg\r\n\r\n`;
-              const footer = `\r\n--${boundary}--\r\n`;
-              const formBuffer = Buffer.concat([
-                Buffer.from(header),
-                photoBuffer,
-                Buffer.from(footer),
-              ]);
-              const contentType = `multipart/form-data; boundary=${boundary}`;
-
-              const upResp = await fetch(uploadUrl, {
-                method: "POST",
-                headers: { "Content-Type": contentType },
-                body: formBuffer,
-              });
-              const uploadResult = await upResp.json();
-              log.info(`[VK PHOTO EVENT] Upload result`, {
-                status: upResp.status,
-                hasPhoto: !!uploadResult.photo,
-                hasServer: !!uploadResult.server,
-                hasHash: !!uploadResult.hash,
-                error: uploadResult.error || null,
-              });
-
-              if (
-                uploadResult.photo &&
-                uploadResult.server &&
-                uploadResult.hash
-              ) {
-                // Сохраняем фото
-                const saveResp = await fetch(
-                  `https://api.vk.com/method/photos.saveMessagesPhoto?access_token=${process.env.VK_GROUP_TOKEN}&v=5.199&server=${uploadResult.server}&photo=${uploadResult.photo}&hash=${uploadResult.hash}`,
-                  { method: "POST" },
-                );
-                const saveData = await saveResp.json();
-                log.info(`[VK PHOTO EVENT] saveMessagesPhoto result`, {
-                  hasResponse: !!saveData.response,
-                  responseLength: Array.isArray(saveData.response)
-                    ? saveData.response.length
-                    : 0,
-                  rawResponse: JSON.stringify(saveData.response).substring(
-                    0,
-                    300,
-                  ),
-                  error: saveData.error || null,
-                });
-                const savedPhoto = saveData.response?.[0];
-                log.info(`[VK PHOTO EVENT] savedPhoto check`, {
-                  hasId: !!savedPhoto?.id,
-                  id: savedPhoto?.id,
-                  ownerId: savedPhoto?.owner_id,
-                  accessKey: savedPhoto?.access_key,
-                });
-
-                if (savedPhoto?.id) {
-                  // Формат: photo{owner_id}_{media_id} (access_key не нужен для своих фото)
-                  const attachment = `photo${savedPhoto.owner_id}_${savedPhoto.id}`;
-                  const sendParams = new URLSearchParams();
-                  sendParams.append("access_token", process.env.VK_GROUP_TOKEN);
-                  sendParams.append("v", "5.199");
-                  sendParams.append("user_id", String(userId));
-                  sendParams.append(
-                    "random_id",
-                    String(Math.floor(Math.random() * 2147483647)),
-                  );
-                  sendParams.append("attachment", attachment);
-                  if (cap) sendParams.append("message", cap);
-
-                  // VK поддерживает attachment + keyboard в одном сообщении!
-                  if (opts?.reply_markup?.inline_keyboard) {
-                    const vkKb = translateKb(opts);
-                    if (vkKb) sendParams.append("keyboard", vkKb);
-                  }
-
-                  log.info(`[VK PHOTO EVENT] Sending photo`, {
-                    attachment,
-                    hasAccessKey: !!savedPhoto.access_key,
-                    hasKeyboard: !!opts?.reply_markup?.inline_keyboard,
-                  });
-
-                  const sendResp = await fetch(
-                    "https://api.vk.com/method/messages.send",
-                    { method: "POST", body: sendParams },
-                  );
-                  const sendResult = await sendResp.json();
-                  if (sendResult.error) {
-                    log.warn(`[VK PHOTO EVENT] Send error`, sendResult.error);
-                    throw new Error(
-                      `VK send error: ${sendResult.error.error_msg}`,
-                    );
-                  }
-
-                  log.info(`[VK PHOTO EVENT] Photo + keyboard sent`, {
-                    photoId: savedPhoto.id,
-                    msgId: sendResult.response,
-                  });
-                  return;
-                }
-              }
-            } catch (e) {
-              log.warn("[VK PHOTO EVENT] Upload failed:", e.message);
+            if (opts?.reply_markup?.inline_keyboard) {
+              const vkKb = translateKb(opts);
+              if (vkKb) params.append("keyboard", vkKb);
+            } else {
+               const mainMenuKb = getVkMainMenuKeyboard(vkUser, String(userId));
+               params.append("keyboard", mainMenuKb);
             }
 
-            // Фолбэк: просто текст
-            await vkCtx.reply(`${cap}\n\n${photoUrl}`, opts);
+            try {
+              await fetch("https://api.vk.com/method/messages.send", {
+                method: "POST",
+                body: params,
+              });
+            } catch (e) {
+              log.error("[VK PHOTO SEND] Fetch error:", e.message);
+            }
           },
           editMessageText: async () => {},
           editMessageCaption: async () => {},
@@ -1011,123 +925,37 @@ export async function handleVkWebhook(event, context) {
             } catch (sendErr) {}
           },
           replyWithPhoto: async (photoUrl, opts = {}) => {
+            // ВК сам отлично парсит картинки из ссылок в тексте.
+            // Не тратим время на загрузку файлов, чтобы уложиться в 5 секунд.
             let captionText = opts.caption || "";
             captionText = captionText.replace(/<[^>]*>?/gm, "");
+            
+            const params = new URLSearchParams();
+            params.append("access_token", process.env.VK_GROUP_TOKEN);
+            params.append("v", "5.199");
+            // Универсально для message_event и message_new
+            params.append("user_id", String(message?.from_id || userId));
+            params.append("random_id", String(Math.floor(Math.random() * 2147483647)));
+            
+            // Добавляем ссылку на картинку в конец текста (ВК сгенерирует красивое превью)
+            params.append("message", `${captionText}\n\n&#128247; Фото: ${photoUrl}`);
 
-            try {
-              // Скачиваем фото
-              log.info(`[VK PHOTO] Downloading photo`, { url: photoUrl });
-              const photoResp = await fetch(photoUrl);
-              if (!photoResp.ok) throw new Error(`HTTP ${photoResp.status}`);
-              const photoBuffer = Buffer.from(await photoResp.arrayBuffer());
-              log.info(`[VK PHOTO] Downloaded`, { size: photoBuffer.length });
-
-              // Получаем URL для загрузки
-              const uploadResp = await fetch(
-                `https://api.vk.com/method/photos.getMessagesUploadServer?access_token=${process.env.VK_GROUP_TOKEN}&v=5.199`,
-              );
-              const uploadData = await uploadResp.json();
-              const uploadUrl = uploadData.response?.upload_url;
-              if (!uploadUrl) {
-                log.warn(`[VK PHOTO] No upload URL from VK API`, {
-                  uploadData: JSON.stringify(uploadData).substring(0, 300),
-                });
-                throw new Error("No upload URL");
-              }
-              log.info(`[VK PHOTO] Got upload URL`);
-
-              // Загружаем фото через multipart/form-data (ручное формирование без form-data пакета)
-              const boundary = `----VKBoundary${Math.random().toString(36).slice(2)}`;
-              const header = `--${boundary}\r\nContent-Disposition: form-data; name="photo"; filename="photo.jpg"\r\nContent-Type: image/jpeg\r\n\r\n`;
-              const footer = `\r\n--${boundary}--\r\n`;
-              const formBuffer = Buffer.concat([
-                Buffer.from(header),
-                photoBuffer,
-                Buffer.from(footer),
-              ]);
-              const contentType = `multipart/form-data; boundary=${boundary}`;
-
-              const upResp = await fetch(uploadUrl, {
-                method: "POST",
-                headers: { "Content-Type": contentType },
-                body: formBuffer,
-              });
-              const uploadResult = await upResp.json();
-              log.info(`[VK PHOTO] Upload result`, {
-                status: upResp.status,
-                hasPhoto: !!uploadResult.photo,
-                hasServer: !!uploadResult.server,
-                hasHash: !!uploadResult.hash,
-                error: uploadResult.error || null,
-              });
-
-              if (
-                uploadResult.photo &&
-                uploadResult.server &&
-                uploadResult.hash
-              ) {
-                // Сохраняем фото
-                const saveResp = await fetch(
-                  `https://api.vk.com/method/photos.saveMessagesPhoto?access_token=${process.env.VK_GROUP_TOKEN}&v=5.199&server=${uploadResult.server}&photo=${uploadResult.photo}&hash=${uploadResult.hash}`,
-                  { method: "POST" },
-                );
-                const saveData = await saveResp.json();
-                const savedPhoto = saveData.response?.[0];
-
-                if (savedPhoto?.id) {
-                  // Формат: photo{owner_id}_{media_id} (access_key не нужен для своих фото)
-                  const attachment = `photo${savedPhoto.owner_id}_${savedPhoto.id}`;
-                  const sendParams = new URLSearchParams();
-                  sendParams.append("access_token", process.env.VK_GROUP_TOKEN);
-                  sendParams.append("v", "5.199");
-                  sendParams.append("user_id", String(message.from_id));
-                  sendParams.append(
-                    "random_id",
-                    String(Math.floor(Math.random() * 2147483647)),
-                  );
-                  sendParams.append("attachment", attachment);
-                  if (captionText) sendParams.append("message", captionText);
-
-                  // Keyboard в том же сообщении
-                  if (opts?.reply_markup?.inline_keyboard) {
-                    const vkKb = translateKeyboard(opts);
-                    if (vkKb) sendParams.append("keyboard", vkKb);
-                  }
-
-                  log.info(`[VK PHOTO] Sending photo + caption + keyboard`, {
-                    attachment,
-                    captionLength: captionText?.length || 0,
-                    hasKeyboard: !!opts?.reply_markup?.inline_keyboard,
-                  });
-
-                  const sendResp = await fetch(
-                    "https://api.vk.com/method/messages.send",
-                    { method: "POST", body: sendParams },
-                  );
-                  const sendResult = await sendResp.json();
-                  if (sendResult.error) {
-                    log.warn(`[VK PHOTO] Send error`, sendResult.error);
-                    throw new Error(
-                      `VK send error: ${sendResult.error.error_msg}`,
-                    );
-                  }
-
-                  log.info(`[VK] Photo + keyboard sent`, {
-                    msgId: sendResult.response,
-                  });
-                  return;
-                }
-              }
-            } catch (e) {
-              log.warn("[VK] Photo upload failed:", e.message, {
-                photoUrl,
-                stack: e.stack,
-              });
+            if (opts?.reply_markup?.inline_keyboard) {
+              const vkKb = translateKeyboard(opts);
+              if (vkKb) params.append("keyboard", vkKb);
+            } else {
+               const mainMenuKb = getVkMainMenuKeyboard(vkUser, String(message?.from_id || userId));
+               params.append("keyboard", mainMenuKb);
             }
 
-            // Фолбэк: просто текст (без фото)
-            log.info(`[VK PHOTO] Fallback to text`, { photoUrl });
-            await vkCtx.reply(captionText, opts);
+            try {
+              await fetch("https://api.vk.com/method/messages.send", {
+                method: "POST",
+                body: params,
+              });
+            } catch (e) {
+              log.error("[VK PHOTO SEND] Fetch error:", e.message);
+            }
           },
           editMessageText: async (replyText, opts = {}) =>
             await vkCtx.reply(replyText, opts),
