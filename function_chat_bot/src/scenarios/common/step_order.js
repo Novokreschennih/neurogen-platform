@@ -14,6 +14,7 @@ const FUNNEL_STEPS = [
   "Theory_Mod1", "Theory_Mod2", "Theory_Mod3", "Theory_Mod4", "Theory_Mod5", "Theory_Reward_Spoilers",
   "Training_Main", "Module_1_Strategy", "Module_2_Online", "Module_2_Reward_PromoKit",
   "Module_3_Offline", "Lesson_Final_Comparison",
+  "ACADEMY_MENU",
   "Offer_Tripwire", "FAQ_PRO", "Tripwire_Features", "Tripwire_Math",
   "Delivery_1",
   "Training_Pro_Main", "Training_Pro_P1_1", "Training_Pro_P1_2", "Training_Pro_P1_3", "Training_Pro_P1_4", "Training_Pro_P1_5",

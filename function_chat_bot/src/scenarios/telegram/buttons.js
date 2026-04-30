@@ -206,18 +206,21 @@ export const telegramButtons = {
   // === Theory_Mod1 ===
   Theory_Mod1: [
         [{ text: "➡️ ЭТАП 2: ТЕНЕВОЙ ПАРТНЕР", callback_data: "Theory_Mod2" }],
+
         [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
       ],
 
   // === Theory_Mod2 ===
   Theory_Mod2: [
         [{ text: "➡️ УРОК 3: ОНЛАЙН-БИЗНЕС", callback_data: "Theory_Mod3" }],
+  
         [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
       ],
 
   // === Theory_Mod3 ===
   Theory_Mod3: [
         [{ text: "➡️ УРОК 4: ОФЛАЙН-БИЗНЕС", callback_data: "Theory_Mod4" }],
+
         [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
       ],
 
@@ -229,6 +232,7 @@ export const telegramButtons = {
             callback_data: "Theory_Mod5",
           },
         ],
+
         [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
       ],
 
@@ -240,6 +244,7 @@ export const telegramButtons = {
             callback_data: "THEORY_COURSE_COMPLETE",
           },
         ],
+
       ],
 
   // === Theory_Reward_Spoilers ===
@@ -750,7 +755,10 @@ export const telegramButtons = {
           ]);
         }
 
-        // 5. Назад
+        // 5. Академия (всегда доступна для зарегистрированных)
+        r.push([{ text: "📚 АКАДЕМИЯ", callback_data: "ACADEMY_MENU" }]);
+
+        // 6. Назад
         r.push([{ text: "🔙 НАЗАД", callback_data: "MAIN_MENU" }]);
 
         return r;
@@ -1506,6 +1514,9 @@ export const telegramButtons = {
           ]);
         }
 
+        // Академия (всегда для зарегистрированных — доступ ко всем статьям)
+        r.push([{ text: "📚 АКАДЕМИЯ", callback_data: "ACADEMY_MENU" }]);
+
         // Инструменты (всегда для зарегистрированных)
         r.push([{ text: "🎒 ИНСТРУМЕНТЫ", callback_data: "TOOLS_MENU" }]);
 
@@ -1635,6 +1646,74 @@ export const telegramButtons = {
         }
 
         r.push([{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }]);
+        return r;
+      },
+
+  // === ACADEMY_MENU: Постоянный доступ ко всем статьям и урокам ===
+  ACADEMY_MENU: (links, user, info) => {
+        const botName = info?.bot_username || "sethubble_biz_bot";
+        const theoryDone = user.session?.theory_complete;
+        const mod1Done = user.session?.mod1_done;
+        const mod2Done = user.session?.mod2_done;
+        const mod3Done = user.session?.mod3_done;
+
+        const r = [];
+
+        // --- ТЕОРИЯ (inline, в бо��е) ---
+        r.push([
+          {
+            text: `📖 База: SetHubble ${theoryDone ? "✅" : ""}`,
+            callback_data: "Theory_Mod1",
+          },
+        ]);
+        r.push([
+          {
+            text: `📖 Архитектура партнёров ${theoryDone ? "✅" : ""}`,
+            callback_data: "Theory_Mod2",
+          },
+        ]);
+        r.push([
+          {
+            text: `📖 Инструменты Онлайн ${theoryDone ? "✅" : ""}`,
+            callback_data: "Theory_Mod3",
+          },
+        ]);
+        r.push([
+          {
+            text: `📖 Решения Офлайн ${theoryDone ? "✅" : ""}`,
+            callback_data: "Theory_Mod4",
+          },
+        ]);
+        r.push([
+          {
+            text: `📖 Математика богатства ${theoryDone ? "✅" : ""}`,
+            callback_data: "Theory_Mod5",
+          },
+        ]);
+
+        // --- ПРАКТИКА (статьи на сайте) ---
+        r.push([
+          {
+            text: `🔗 Модуль 1 — Стратегия ${mod1Done ? "✅" : ""}`,
+            url: `${ACADEMY_BASE_URL}/module-1/?bot=${botName}`,
+          },
+        ]);
+        r.push([
+          {
+            text: `🔗 Модуль 2 — ИИ-Воронки ${mod2Done ? "✅" : ""}`,
+            url: `${ACADEMY_BASE_URL}/module-2/?bot=${botName}`,
+          },
+        ]);
+        r.push([
+          {
+            text: `🔗 Модуль 3 — Офлайн-Сети ${mod3Done ? "✅" : ""}`,
+            url: `${ACADEMY_BASE_URL}/module-3/?bot=${botName}`,
+          },
+        ]);
+
+        // --- НАЗАД ---
+        r.push([{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }]);
+
         return r;
       },
 };

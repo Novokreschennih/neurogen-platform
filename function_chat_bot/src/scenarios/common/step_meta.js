@@ -97,6 +97,9 @@ export const stepMeta = {
   // === Offer_Tripwire ===
   Offer_Tripwire: {image: `${STORAGE_BUCKET_URL}/offer_pro.jpg`, tag: "offer_pro"},
 
+  // === ACADEMY_MENU ===
+  ACADEMY_MENU: {tag: "academy_menu"},
+
   // === FAQ_PRO ===
   FAQ_PRO: {tag: "faq_pro"},
 

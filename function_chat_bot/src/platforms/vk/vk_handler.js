@@ -1,5 +1,6 @@
 import { resolveUser } from "../../core/omni_resolver.js";
 import { adaptStateForChannel } from "../../scenarios/common/step_order.js";
+import { getVkPhotoAttachment } from "../../utils/vk_photo_cache.js";
 
 /**
  * VK Webhook Handler
@@ -438,20 +439,24 @@ export async function handleVkWebhook(event, context) {
             });
           },
           replyWithPhoto: async (photoUrl, opts = {}) => {
-            // ВК сам отлично парсит картинки из ссылок в тексте.
-            // Не тратим время на загрузку файлов, чтобы уложиться в 5 секунд.
             let captionText = opts.caption || "";
             captionText = captionText.replace(/<[^>]*>?/gm, "");
             
             const params = new URLSearchParams();
             params.append("access_token", process.env.VK_GROUP_TOKEN);
             params.append("v", "5.199");
-            // Универсально для message_event и message_new
             params.append("user_id", String(userId));
             params.append("random_id", String(Math.floor(Math.random() * 2147483647)));
-            
-            // Добавляем ссылку на картинку в конец текста (ВК сгенерирует красивое превью)
-            params.append("message", `${captionText}\n\n&#128247; Фото: ${photoUrl}`);
+
+            // Пытаемся загрузить фото через VK API для красивого отображения
+            const attachment = await getVkPhotoAttachment(photoUrl, process.env.VK_GROUP_TOKEN);
+            if (attachment) {
+              params.append("attachment", attachment);
+              params.append("message", captionText);
+            } else {
+              // Fallback: ссылка в тексте, если загрузка не удалась
+              params.append("message", `${captionText}\n\n&#128247; Фото: ${photoUrl}`);
+            }
 
             if (opts?.reply_markup?.inline_keyboard) {
               const vkKb = translateKb(opts);
@@ -925,20 +930,24 @@ export async function handleVkWebhook(event, context) {
             } catch (sendErr) {}
           },
           replyWithPhoto: async (photoUrl, opts = {}) => {
-            // ВК сам отлично парсит картинки из ссылок в тексте.
-            // Не тратим время на загрузку файлов, чтобы уложиться в 5 секунд.
             let captionText = opts.caption || "";
             captionText = captionText.replace(/<[^>]*>?/gm, "");
             
             const params = new URLSearchParams();
             params.append("access_token", process.env.VK_GROUP_TOKEN);
             params.append("v", "5.199");
-            // Универсально для message_event и message_new
             params.append("user_id", String(message?.from_id || userId));
             params.append("random_id", String(Math.floor(Math.random() * 2147483647)));
-            
-            // Добавляем ссылку на картинку в конец текста (ВК сгенерирует красивое превью)
-            params.append("message", `${captionText}\n\n&#128247; Фото: ${photoUrl}`);
+
+            // Пытаемся загрузить фото через VK API для красивого отображения
+            const attachment = await getVkPhotoAttachment(photoUrl, process.env.VK_GROUP_TOKEN);
+            if (attachment) {
+              params.append("attachment", attachment);
+              params.append("message", captionText);
+            } else {
+              // Fallback: ссылка в тексте, если загрузка не удалась
+              params.append("message", `${captionText}\n\n&#128247; Фото: ${photoUrl}`);
+            }
 
             if (opts?.reply_markup?.inline_keyboard) {
               const vkKb = translateKeyboard(opts);

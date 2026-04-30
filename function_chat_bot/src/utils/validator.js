@@ -130,22 +130,15 @@ export function validateStartPayload(raw) {
   if (parts[1]) {
     const content = parts[1];
 
-    // Format: partnerId|web:uuid (pipe separator)
+    // ВАЖНО: сначала проверяем явные префиксы, потом regex/догадки!
+    // Порядок: web: > web_ > w > e > base64-угадайка > fallback
+
+    // Format: partnerId|web:uuid (pipe separator, web: + длинный UUID)
     if (content.startsWith("web:")) {
       const wId = content.substring(4);
       if (wId.length > 5 && wId.length < 100) result.webId = wId;
     }
-    // Format: partnerId|base64 (pipe separator, raw base64 without prefix)
-    else if (content.match(/^[A-Za-z0-9+/=_-]{8,}$/)) {
-      try {
-        const enc = content.replace(/-/g, "+").replace(/_/g, "/");
-        const padded = enc + "=".repeat((4 - (enc.length % 4)) % 4);
-        const decoded = Buffer.from(padded, "base64").toString("utf8");
-        const email = validateEmail(decoded);
-        if (email) result.email = email;
-      } catch (e) {}
-    }
-    // Format: partnerId__web_... (double underscore separator, used by web app)
+    // Format: partnerId__web_... (double underscore, web app)
     else if (content.startsWith("web_")) {
       result.webId = content;
     }
@@ -164,7 +157,18 @@ export function validateStartPayload(raw) {
         if (email) result.email = email;
       } catch (e) {}
     }
-    // Fallback: long content without known prefix → try base64 decode for email
+    // Format: partnerId|base64 (pipe separator, raw base64 without prefix)
+    // Догадка по regex — ТОЛЬКО если не сработали явные префиксы выше
+    else if (content.match(/^[A-Za-z0-9+/=_-]{8,}$/)) {
+      try {
+        const enc = content.replace(/-/g, "+").replace(/_/g, "/");
+        const padded = enc + "=".repeat((4 - (enc.length % 4)) % 4);
+        const decoded = Buffer.from(padded, "base64").toString("utf8");
+        const email = validateEmail(decoded);
+        if (email) result.email = email;
+      } catch (e) {}
+    }
+    // Fallback: long content without known prefix → сохраняем как webId
     else if (content.length > 15) {
       result.webId = content;
     }
