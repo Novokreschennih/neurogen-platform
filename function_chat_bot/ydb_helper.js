@@ -185,6 +185,11 @@ export async function findUser(criteria) {
           viewClause = "VIEW idx_web_id";
           whereClause = "web_id = $search_val";
           params = { $search_val: TypedValues.utf8(String(criteria.web_id)) };
+        } else if (criteria.sh_user_id) {
+          // ✅ v7.2: Поиск по SetHubble ID (омниканальное слияние)
+          viewClause = "VIEW idx_sh_user_id";
+          whereClause = "sh_user_id = $search_val";
+          params = { $search_val: TypedValues.utf8(String(criteria.sh_user_id)) };
         } else if (criteria.vk_id) {
           viewClause = "VIEW idx_vk_id";
           whereClause = "vk_id = $search_val";

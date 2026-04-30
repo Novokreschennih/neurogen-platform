@@ -55,13 +55,14 @@ export async function resolveUser(channel, ids) {
   if (ids.vk_id) searchCrits.push({ vk_id: ids.vk_id });
   if (ids.web_id) searchCrits.push({ web_id: ids.web_id });
   if (ids.email) searchCrits.push({ email: ids.email });
+  if (ids.sh_user_id) searchCrits.push({ sh_user_id: ids.sh_user_id }); // ✅ v7.2: слияние по SetHubble ID
 
   // ОПТИМИЗАЦИЯ: Параллельный поиск вместо последовательного
-  const foundPromises = searchCrits.map(crit => ydb.findUser(crit));
+  const foundPromises = searchCrits.map((crit) => ydb.findUser(crit));
   const foundResults = await Promise.all(foundPromises);
 
   // Убираем дубли и null
-  const found = foundResults.filter(u => u !== null);
+  const found = foundResults.filter((u) => u !== null);
   const uniqueFound = [];
   const seenIds = new Set();
   for (const u of found) {
@@ -99,7 +100,8 @@ export async function resolveUser(channel, ids) {
     const bestIdx = getFunnelIndex(best.state);
     const curIdx = getFunnelIndex(cur.state);
     if (curIdx > bestIdx) return cur;
-    if (curIdx === bestIdx && (cur.last_seen || 0) > (best.last_seen || 0)) return cur;
+    if (curIdx === bestIdx && (cur.last_seen || 0) > (best.last_seen || 0))
+      return cur;
     return best;
   });
 
@@ -108,7 +110,9 @@ export async function resolveUser(channel, ids) {
     if (u.id !== main.id) {
       mergeUserData(main, u);
       // Fire-and-forget: не ждем слияния, чтобы быстрее ответить юзеру
-      ydb.mergeUsers(main, u.id, "omni_resolve").catch(e => log.warn("[MERGE ERR]", e.message));
+      ydb
+        .mergeUsers(main, u.id, "omni_resolve")
+        .catch((e) => log.warn("[MERGE ERR]", e.message));
     }
   }
 
