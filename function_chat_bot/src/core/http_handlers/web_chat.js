@@ -89,6 +89,21 @@ export async function handleWebChat(event, context) {
       needsSave = true;
     }
 
+    // === B2B MODE: маршрутизация ЛПР (офлайн-бизнес) ===
+    // Если в payload пришёл role=b2b (из /join/?role=b2b), ставим пользователю
+    // соответствующую роль и начальный шаг B2B_START (только для новых сессий)
+    if (
+      payload.role === "b2b" &&
+      (!webUser.session.role || webUser.state === "START")
+    ) {
+      webUser.session.role = "b2b";
+      webUser.state = "B2B_START";
+      webUser.saved_state = "B2B_START";
+      webUser.session.last_activity = Date.now();
+      needsSave = true;
+      log.info(`[WEB CHAT B2B] User ${webUser.id} routed to B2B_START`);
+    }
+
     // ============================================================
     // 1. ЛОГИКА КНОПОК ВОРОНКИ (RENDER STEPS)
     // ============================================================
@@ -131,6 +146,18 @@ export async function handleWebChat(event, context) {
               buttons: [[{ text: "🔙 ОТМЕНА", callback_data: "MAIN_MENU" }]],
             }),
           };
+        }
+        if (targetCallback === "GO_TO_MODULE_2") {
+          targetCallback = "Module_2_Online";
+          needsSave = true;
+        }
+        if (targetCallback === "GO_TO_MODULE_3") {
+          targetCallback = "Module_3_Offline";
+          needsSave = true;
+        }
+        if (targetCallback === "GO_TO_FINAL") {
+          targetCallback = "Lesson_Final_Comparison";
+          needsSave = true;
         }
         if (targetCallback === "SETUP_BOT_START") {
           webUser.state = "WAIT_BOT_TOKEN";
@@ -464,7 +491,7 @@ export async function handleWebChat(event, context) {
         WAIT_SECRET_2: {
           word: "облако",
           xp: 30,
-          next: "WAIT_BOT_TOKEN",
+          next: "Module_3_Offline",
           flag: "mod2_done",
           awardKey: "mod2",
         },

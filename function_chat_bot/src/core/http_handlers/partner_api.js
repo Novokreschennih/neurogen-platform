@@ -100,6 +100,7 @@ export async function handlePartnerApi(event, context) {
 
       // v7.2: Landing page is the primary share link (higher conversion)
       const joinLink = `https://sethubble.ru/join/?page=${partnerTail}`;
+      const b2bRefLink = `https://sethubble.ru/join/?page=${partnerTail}&role=b2b`;
       const botDirectLink = `https://t.me/${botUsername}`;
 
       const referrals = await ydb.getUserReferrals(telegramId);
@@ -109,6 +110,7 @@ export async function handlePartnerApi(event, context) {
       return response(200, {
         success: true,
         refLink: joinLink,
+        b2bRefLink,
         botDirectLink,
         botName: botUsername,
         user: {

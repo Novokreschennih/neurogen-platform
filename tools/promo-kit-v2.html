@@ -679,6 +679,7 @@
           if (data.success) {
             userData = data.user;
             refLink = data.refLink;
+            b2bRefLink = data.b2bRefLink || null;
             botName = data.botName;
             userData.is_pro = data.user.is_pro || false;
             initUI();
@@ -718,7 +719,9 @@
 
         // Landing URL
         const landingUrl = `https://sethubble.ru/join/?page=${secureToken}`;
+        const b2bLandingUrl = `https://sethubble.ru/join/?page=${secureToken}&role=b2b`;
         refLink = landingUrl;
+        b2bRefLink = b2bLandingUrl;
 
         // Вставка ссылок
         document.getElementById("botLinkDisplay").textContent = landingUrl;
@@ -793,7 +796,7 @@
           document.getElementById("ai-limit").value = userData.user_daily_limit;
         }
 
-        generateQR(landingUrl);
+        generateQR(b2bRefLink || landingUrl);
       }
 
       function generateQR(url) {
@@ -853,18 +856,21 @@
       });
 
       document.getElementById("shareBtn").addEventListener("click", () => {
-        const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(refLink)}&text=${encodeURIComponent("🤖 Мой ИИ-помощник работает 24/7. Попробуй: ")}`;
+        const shareLink = b2bRefLink || refLink;
+        const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(shareLink)}&text=${encodeURIComponent("🤖 Мой ИИ-помощник работает 24/7. Попробуй: ")}`;
         if (tg.openTelegramLink) tg.openTelegramLink(shareUrl);
         else window.open(shareUrl, "_blank");
       });
 
       document.getElementById("openMySiteBtn").addEventListener("click", () => {
-        if (tg.openLink) tg.openLink(refLink);
-        else window.open(refLink, "_blank");
+        const link = b2bRefLink || refLink;
+        if (tg.openLink) tg.openLink(link);
+        else window.open(link, "_blank");
       });
 
       document.getElementById("createPdfBtn").addEventListener("click", () => {
-        const pdfAppUrl = `https://qr2pdf.vercel.app/?link=${encodeURIComponent(refLink)}`;
+        const pdfLink = b2bRefLink || refLink;
+        const pdfAppUrl = `https://qr2pdf.vercel.app/?link=${encodeURIComponent(pdfLink)}`;
         if (tg.openLink) tg.openLink(pdfAppUrl);
         else window.open(pdfAppUrl, "_blank");
       });
