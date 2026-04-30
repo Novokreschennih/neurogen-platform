@@ -1,9 +1,15 @@
 import crypto from "crypto";
 import pkg from "ydb-sdk";
+import { LRUCache } from "lru-cache";
 import { log } from "./src/utils/logger.js";
 import { runMigrations } from "./src/utils/db_migrations.js";
 
 const { Driver, getCredentialsFromEnv, TypedValues } = pkg;
+
+// ОПТИМИЗАЦИЯ: Кэш для настроек ботов (TTL 5 минут)
+const botInfoCache = new LRUCache({ max: 50, ttl: 5 * 60 * 1000 });
+// ОПТИМИЗАЦИЯ: Кэш для статуса подписки ИИ владельца (TTL 1 минута)
+const ownerAiCache = new LRUCache({ max: 50, ttl: 60 * 1000 });
 
 export { log };
 
@@ -408,6 +414,128 @@ export async function saveUser(user) {
   return { success: false };
 }
 
+/**
+ * ОПТИМИЗАЦИЯ: Частичное обновление пользователя — UPDATE только указанных полей.
+ * Вместо полного UPSERT всех 28 колонок (saveUser) обновляет только то, что реально изменилось.
+ * Это снижает нагрузку на YDB и уменьшает объём передаваемых данных.
+ *
+ * @param {string} userId - ID пользователя
+ * @param {Object} fields - Объект с полями для обновления { state, last_seen, session, ... }
+ * @param {number} expectedVersion - Ожидаемая версия для optimistic lock (session_version)
+ * @returns {Promise<boolean>} true если обновление успешно
+ */
+export async function partialUpdateUser(userId, fields, expectedVersion) {
+  if (!userId || !fields || Object.keys(fields).length === 0) return false;
+  try {
+    return await driver.tableClient.withSession(async (session) => {
+      const setClauses = [];
+      const params = {
+        $id: TypedValues.utf8(String(userId)),
+      };
+
+      if (fields.state !== undefined) {
+        setClauses.push("state = $st");
+        params.$st = TypedValues.utf8(String(fields.state));
+      }
+      if (fields.last_seen !== undefined) {
+        setClauses.push("last_seen = $ls");
+        params.$ls = TypedValues.uint64(String(fields.last_seen));
+      }
+      if (fields.session !== undefined) {
+        setClauses.push("session = $js");
+        params.$js = TypedValues.json(JSON.stringify(fields.session));
+      }
+      if (fields.saved_state !== undefined) {
+        setClauses.push("saved_state = $sv");
+        params.$sv = TypedValues.utf8(String(fields.saved_state));
+      }
+      if (fields.email !== undefined) {
+        setClauses.push("email = $em");
+        params.$em = TypedValues.utf8(String(fields.email).toLowerCase());
+      }
+      if (fields.bot_token !== undefined) {
+        setClauses.push("bot_token = $bt");
+        params.$bt = TypedValues.utf8(String(fields.bot_token));
+      }
+      if (fields.tg_id !== undefined) {
+        setClauses.push("tg_id = $tg");
+        params.$tg = TypedValues.uint64(String(fields.tg_id));
+      }
+      if (fields.vk_id !== undefined) {
+        setClauses.push("vk_id = $vk");
+        params.$vk = TypedValues.uint64(String(fields.vk_id));
+      }
+      if (fields.web_id !== undefined) {
+        setClauses.push("web_id = $wb");
+        params.$wb = TypedValues.utf8(String(fields.web_id));
+      }
+      if (fields.last_reminder_time !== undefined) {
+        setClauses.push("last_reminder_time = $lrt");
+        params.$lrt = TypedValues.uint64(String(fields.last_reminder_time));
+      }
+      if (fields.reminders_count !== undefined) {
+        setClauses.push("reminders_count = $rc");
+        params.$rc = TypedValues.uint64(String(fields.reminders_count));
+      }
+      if (fields.bought_tripwire !== undefined) {
+        setClauses.push("bought_tripwire = $br");
+        params.$br = TypedValues.bool(Boolean(fields.bought_tripwire));
+      }
+      if (fields.purchases !== undefined) {
+        setClauses.push("purchases = $pur");
+        params.$pur = TypedValues.json(JSON.stringify(fields.purchases));
+      }
+      if (fields.partner_id !== undefined) {
+        setClauses.push("partner_id = $pid");
+        params.$pid = TypedValues.utf8(String(fields.partner_id));
+      }
+      if (fields.first_name !== undefined) {
+        setClauses.push("first_name = $fn");
+        params.$fn = TypedValues.utf8(String(fields.first_name));
+      }
+      if (fields.ai_active_until !== undefined) {
+        setClauses.push("ai_active_until = $aiUntil");
+        params.$aiUntil = TypedValues.uint64(String(fields.ai_active_until));
+      }
+      if (fields.tariff !== undefined) {
+        setClauses.push("tariff = $tr");
+        params.$tr = TypedValues.utf8(String(fields.tariff));
+      }
+      if (fields.pin_code !== undefined) {
+        setClauses.push("pin_code = $pc");
+        params.$pc = TypedValues.utf8(String(fields.pin_code));
+      }
+
+      // Всегда обновляем session_version (оптимистичная блокировка)
+      const newVersion = (expectedVersion || 0) + 1;
+      setClauses.push("session_version = $newVer");
+      params.$newVer = TypedValues.uint64(String(newVersion));
+
+      if (setClauses.length === 1) {
+        // Только session_version — ничего не изменилось
+        return false;
+      }
+
+      const whereClause = expectedVersion
+        ? "WHERE id = $id AND session_version = $expVer"
+        : "WHERE id = $id";
+      if (expectedVersion) {
+        params.$expVer = TypedValues.uint64(String(expectedVersion));
+      }
+
+      const query = `
+        DECLARE $id AS Utf8;
+        UPDATE users SET ${setClauses.join(", ")} ${whereClause};
+      `;
+      await session.executeQuery(query, params);
+      return true;
+    });
+  } catch (e) {
+    log.warn(`[partialUpdateUser] Failed for ${userId}: ${e.message}`);
+    return false;
+  }
+}
+
 export async function mergeUsers(
   surviving,
   deletedUserId,
@@ -521,6 +649,9 @@ export async function registerPartnerBot(
         $twl: TypedValues.utf8(String(twLink)),
         $vkgid: TypedValues.utf8(String(vkGroupId)),
       });
+
+      // Инвалидация кэша после регистрации бота
+      if (token) botInfoCache.delete(token);
     });
   } catch (e) {
     log.error(`Failed to register partner bot`, e.message || String(e));
@@ -543,6 +674,9 @@ export async function updatePartnerBot(token, updates) {
         params[`$${key}`] = TypedValues.utf8(String(value));
       });
       await session.executeQuery(query, params);
+
+      // Инвалидация кэша после обновления бота
+      botInfoCache.delete(token);
     });
   } catch (e) {
     log.error(`Failed to update partner bot`, e.message || String(e));
@@ -551,6 +685,11 @@ export async function updatePartnerBot(token, updates) {
 
 export async function getBotInfo(token) {
   if (!isValidBotToken(token)) return null;
+
+  // ОПТИМИЗАЦИЯ: Читаем из кэша
+  const cached = botInfoCache.get(token);
+  if (cached) return cached;
+
   try {
     return await driver.tableClient.withSession(async (session) => {
       // v7.0: Added AI columns (ai_provider, ai_model, custom_api_key, custom_prompt, user_daily_limit)
@@ -560,7 +699,7 @@ export async function getBotInfo(token) {
       });
       if (!resultSets[0] || resultSets[0].rows.length === 0) return null;
       const r = resultSets[0].rows[0];
-      return {
+      const botData = {
         owner_id: r.items[0].textValue,
         sh_user_id: r.items[1]?.textValue || "",
         sh_ref_tail: r.items[2]?.textValue || "",
@@ -575,6 +714,10 @@ export async function getBotInfo(token) {
           ? Number(r.items[9].uint64Value)
           : 0,
       };
+
+      // ОПТИМИЗАЦИЯ: Пишем в кэш
+      botInfoCache.set(token, botData);
+      return botData;
     });
   } catch (e) {
     log.error(`Failed to get bot info`, e.message || String(e));
@@ -584,6 +727,12 @@ export async function getBotInfo(token) {
 
 export async function getBotInfoByVkGroup(groupId) {
   if (!groupId) return null;
+
+  // ОПТИМИЗАЦИЯ: Читаем из кэша (используем тот же кэш, ключ = "vk:" + groupId)
+  const cacheKey = `vk:${groupId}`;
+  const cached = botInfoCache.get(cacheKey);
+  if (cached) return cached;
+
   try {
     return await driver.tableClient.withSession(async (session) => {
       const query = `DECLARE $gid AS Utf8; SELECT user_id, sh_user_id, sh_ref_tail, bot_username FROM bots VIEW idx_bots_vk_group_id WHERE vk_group_id = $gid;`;
@@ -592,12 +741,16 @@ export async function getBotInfoByVkGroup(groupId) {
       });
       if (!resultSets[0] || resultSets[0].rows.length === 0) return null;
       const r = resultSets[0].rows[0];
-      return {
+      const botData = {
         owner_id: r.items[0].textValue,
         sh_user_id: r.items[1]?.textValue || "",
         sh_ref_tail: r.items[2]?.textValue || "",
         bot_username: r.items[3]?.textValue || "",
       };
+
+      // ОПТИМИЗАЦИЯ: Пишем в кэш
+      botInfoCache.set(cacheKey, botData);
+      return botData;
     });
   } catch (e) {
     return null;
@@ -972,6 +1125,43 @@ export function isAdmin(telegramId) {
 }
 
 /**
+ * ОПТИМИЗАЦИЯ: Легкий запрос только для проверки даты подписки ИИ владельца.
+ * Вместо загрузки всего профиля пользователя (getUser) запрашиваем только одно поле.
+ * Результат кэшируется на 60 секунд.
+ *
+ * @param {string} ownerId - ID владельца бота
+ * @returns {Promise<number>} timestamp окончания подписки или 0
+ */
+export async function getOwnerAiStatus(ownerId) {
+  if (!ownerId) return 0;
+
+  const cached = ownerAiCache.get(String(ownerId));
+  if (cached !== undefined) return cached;
+
+  try {
+    return await driver.tableClient.withSession(async (session) => {
+      const query = `DECLARE $id AS Utf8; SELECT ai_active_until FROM users WHERE id = $id;`;
+      const { resultSets } = await session.executeQuery(query, {
+        $id: TypedValues.utf8(String(ownerId)),
+      });
+
+      let activeUntil = 0;
+      if (resultSets[0] && resultSets[0].rows.length > 0) {
+        activeUntil = resultSets[0].rows[0].items[0]?.uint64Value
+          ? Number(resultSets[0].rows[0].items[0].uint64Value)
+          : 0;
+      }
+
+      ownerAiCache.set(String(ownerId), activeUntil);
+      return activeUntil;
+    });
+  } catch (e) {
+    log.error(`Failed to get owner AI status`, e.message || String(e));
+    return 0;
+  }
+}
+
+/**
  * Проверить, активна ли ИИ-подписка владельца канала (омниканальная проверка)
  * @param {object} leadUser - пользователь-лид (из любого канала)
  * @param {string|null} botToken - токен Telegram бота (для TG канала)
@@ -983,12 +1173,12 @@ export async function isOwnerAiActive(leadUser, botToken, vkGroupId) {
     let ownerId = null;
     const MAIN_TOKEN = process.env.BOT_TOKEN;
 
-    // 1. Пытаемся найти владельца через Telegram бота
+    // 1. Пытаемся найти владельца через Telegram бота (теперь из кэша!)
     if (botToken && botToken !== "VK_CENTRAL_GROUP") {
       const botInfo = await getBotInfo(botToken);
       if (botInfo) ownerId = botInfo.owner_id;
     }
-    // 2. Пытаемся найти владельца через VK группу
+    // 2. Пытаемся найти владельца через VK группу (теперь из кэша!)
     else if (vkGroupId) {
       const botInfo = await getBotInfoByVkGroup(vkGroupId);
       if (botInfo) ownerId = botInfo.owner_id;
@@ -1017,12 +1207,10 @@ export async function isOwnerAiActive(leadUser, botToken, vkGroupId) {
       }
     }
 
-    // Если нашли owner_id (для TG/VK), проверяем его подписку
+    // ОПТИМИЗАЦИЯ: Используем легкую функцию вместо загрузки всего юзера
     if (ownerId) {
-      const owner = await getUser(ownerId);
-      if (owner && owner.ai_active_until) {
-        return owner.ai_active_until > Date.now();
-      }
+      const activeUntil = await getOwnerAiStatus(ownerId);
+      return activeUntil > Date.now();
     }
 
     // Если это главный системный бот, ИИ работает всегда
@@ -1165,5 +1353,29 @@ export async function getUserByRefTail(tail) {
   } catch (e) {
     log.error(`Failed to get user by ref tail`, e.message || String(e));
     return null;
+  }
+}
+
+/**
+ * Батчевое обновление last_seen для списка пользователей
+ * 1 запрос к БД вместо N индивидуальных saveUser
+ */
+export async function batchUpdateLastSeen(userIds) {
+  if (!userIds || userIds.length === 0) return;
+  try {
+    return await driver.tableClient.withSession(async (session) => {
+      const utf8Type = TypedValues.utf8("").type;
+      const query = `
+        DECLARE $ids AS List<Utf8>;
+        DECLARE $now AS Uint64;
+        UPDATE users SET last_seen = $now WHERE id IN $ids;
+      `;
+      await session.executeQuery(query, {
+        $ids: TypedValues.list(utf8Type, userIds),
+        $now: TypedValues.uint64(String(Date.now())),
+      });
+    });
+  } catch (e) {
+    log.error(`[BATCH UPDATE] Failed`, e.message);
   }
 }

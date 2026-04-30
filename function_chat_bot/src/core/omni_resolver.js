@@ -56,37 +56,25 @@ export async function resolveUser(channel, ids) {
   if (ids.web_id) searchCrits.push({ web_id: ids.web_id });
   if (ids.email) searchCrits.push({ email: ids.email });
 
-  const found = [];
-  for (const crit of searchCrits) {
-    const u = await ydb.findUser(crit);
-    if (u && !found.some((x) => x.id === u.id)) found.push(u);
+  // ОПТИМИЗАЦИЯ: Параллельный поиск вместо последовательного
+  const foundPromises = searchCrits.map(crit => ydb.findUser(crit));
+  const foundResults = await Promise.all(foundPromises);
+
+  // Убираем дубли и null
+  const found = foundResults.filter(u => u !== null);
+  const uniqueFound = [];
+  const seenIds = new Set();
+  for (const u of found) {
+    if (!seenIds.has(u.id)) {
+      seenIds.add(u.id);
+      uniqueFound.push(u);
+    }
   }
 
   let main;
-  if (found.length === 0) {
-    let existing = null;
-    if (ids.email) {
-      existing = await ydb.findUser({ email: ids.email });
-    }
-    if (!existing && ids.web_id) {
-      existing = await ydb.findUser({ web_id: ids.web_id });
-    }
 
-    if (existing) {
-      if (ids.tg_id && !existing.tg_id) existing.tg_id = ids.tg_id;
-      if (ids.vk_id && !existing.vk_id) existing.vk_id = ids.vk_id;
-      if (ids.web_id && !existing.web_id) existing.web_id = ids.web_id;
-      if (!existing.session) existing.session = {};
-      if (!existing.session.channels) existing.session.channels = {};
-      existing.session.channels[channel] = {
-        ...(existing.session.channels[channel] || {}),
-        enabled: true,
-        configured: true,
-      };
-      await ydb.saveUser(existing);
-      return existing;
-    }
-
+  // Если никого не нашли — создаем нового (УБРАН дублирующий поиск по email/web)
+  if (uniqueFound.length === 0) {
     main = {
       tg_id: ids.tg_id || 0,
       vk_id: ids.vk_id || 0,
@@ -96,12 +84,7 @@ export async function resolveUser(channel, ids) {
       state: "START",
       bought_tripwire: false,
       purchases: [],
-      session: {
-        tags: [],
-        dialog_history: [],
-        channels: {},
-        xp: 0,
-      },
+      session: { tags: [], dialog_history: [], channels: {}, xp: 0 },
       last_seen: Date.now(),
       first_name: ids.first_name || "Пользователь",
     };
@@ -111,22 +94,25 @@ export async function resolveUser(channel, ids) {
     return main;
   }
 
-  main = found.reduce((best, cur) => {
+  // Выбираем главного (main) по прогрессу воронки
+  main = uniqueFound.reduce((best, cur) => {
     const bestIdx = getFunnelIndex(best.state);
     const curIdx = getFunnelIndex(cur.state);
     if (curIdx > bestIdx) return cur;
-    if (curIdx === bestIdx && (cur.last_seen || 0) > (best.last_seen || 0))
-      return cur;
+    if (curIdx === bestIdx && (cur.last_seen || 0) > (best.last_seen || 0)) return cur;
     return best;
   });
 
-  for (const u of found) {
+  // Склейка профилей, если нашли несколько (Merge)
+  for (const u of uniqueFound) {
     if (u.id !== main.id) {
       mergeUserData(main, u);
-      await ydb.mergeUsers(main, u.id, "omni_resolve");
+      // Fire-and-forget: не ждем слияния, чтобы быстрее ответить юзеру
+      ydb.mergeUsers(main, u.id, "omni_resolve").catch(e => log.warn("[MERGE ERR]", e.message));
     }
   }
 
+  // Дополняем главную запись текущими IDs
   if (ids.tg_id && !main.tg_id) main.tg_id = ids.tg_id;
   if (ids.vk_id && !main.vk_id) main.vk_id = ids.vk_id;
   if (ids.web_id && !main.web_id) main.web_id = ids.web_id;
@@ -141,9 +127,6 @@ export async function resolveUser(channel, ids) {
     enabled: true,
     configured: true,
   };
-
-  // Небольшая пауза, чтобы YDB Serverless успела обработать предыдущие запросы
-  await new Promise((res) => setTimeout(res, 50));
 
   await ydb.saveUser(main);
   return main;

@@ -1,9 +1,14 @@
 /**
- * Cron Jobs Handler — v5.0 Multi-Channel
+ * Cron Jobs Handler — v5.1 Optimized
  * Обрабатывает плановые напоминания и дожимы через все каналы:
  * - Telegram (Telegraf)
  * - VK (VK API messages.send)
  * - Email (Yandex Cloud Postbox)
+ *
+ * ОПТИМИЗАЦИИ v5.1:
+ * - Убран лишний запрос checkTripwirePurchase (используем u.bought_tripwire напрямую)
+ * - Батчевое обновление last_seen для пропущенных пользователей
+ * - Только 1 saveUser на активное действие, а не на каждого пользователя
  *
  * action: params.action === "cron"
  */
@@ -31,7 +36,7 @@ export async function handleCronJobs(event, context) {
 
   if (params.action !== "cron") return null;
 
-  log.info(`[CRON] ========== ЗАПУСК CRON (v5.0 Multi-Channel) ==========`);
+  log.info(`[CRON] ========== ЗАПУСК CRON (v5.1 Optimized) ==========`);
   log.info(
     `[CRON] Критерии: неактивны > ${CRON_STALE_HOURS}ч, макс. пользователей: ${CRON_MAX_USERS_PER_RUN}`,
   );
@@ -53,6 +58,9 @@ export async function handleCronJobs(event, context) {
     });
     log.info(`[CRON] Распределение по каналам:`, byChannel);
   }
+
+  // ОПТИМИЗАЦИЯ: Массив для тех, кого мы пропустили (батчевое обновление)
+  const skippedUserIds = [];
 
   const shouldSendReminder = (user) => {
     if (user.state.startsWith("REMINDER_") || !REMIND_MAP[user.state])
@@ -89,12 +97,6 @@ export async function handleCronJobs(event, context) {
 
     if (hoursInactive < requiredDelay) return false;
     return true;
-  };
-
-  const checkTripwirePurchase = async (user) => {
-    const freshUser = await ydb.findUser({ id: user.id });
-    if (freshUser && freshUser.bought_tripwire) return true;
-    return false;
   };
 
   /**
@@ -196,6 +198,7 @@ export async function handleCronJobs(event, context) {
   for (const u of usersToProcess) {
     try {
       if (u.session?.is_banned) {
+        skippedUserIds.push(u.id);
         stats.skipped++;
         continue;
       }
@@ -204,17 +207,18 @@ export async function handleCronJobs(event, context) {
         log.debug(`[CRON] Skip user during token migration`, {
           userId: u.user_id,
         });
+        skippedUserIds.push(u.id);
         stats.skipped++;
         continue;
       }
 
       // v6.0: Пропускаем пользователей без настроенных каналов
-      // (пользователи с пустыми tg_id, vk_id, web_id, email — это дубликаты после мерджа)
       const hasChannel = u.tg_id || u.vk_id || u.web_id || u.email;
       if (!hasChannel) {
         log.debug(`[CRON] Skip user without channels (likely merge artifact)`, {
           userId: u.id,
         });
+        skippedUserIds.push(u.id);
         stats.skipped++;
         continue;
       }
@@ -267,7 +271,7 @@ export async function handleCronJobs(event, context) {
               userId: u.user_id,
               channel: primaryChannel,
             });
-            stats.skipped++;
+            actionTaken = true; // сохраняем бан
           } else {
             stats.failed++;
             const ch = sendResult.channel || primaryChannel;
@@ -279,18 +283,19 @@ export async function handleCronJobs(event, context) {
               code: sendResult.errorCode,
               channel: ch,
             });
+            skippedUserIds.push(u.id);
           }
         }
       }
       // === B. ДОЖИМЫ ===
       else if (shouldSendDozhim(u)) {
-        const boughtTripwire = await checkTripwirePurchase(u);
+        // ОПТИМИЗАЦИЯ: Убрали лишний запрос `checkTripwirePurchase` — используем u.bought_tripwire
         const isTripwireDozhim =
           u.state.includes("Tripwire") ||
           u.state === "FAQ_PRO" ||
           u.state === "Offer_Tripwire";
 
-        if (boughtTripwire && isTripwireDozhim) {
+        if (u.bought_tripwire && isTripwireDozhim) {
           sendResult = await sendWithFallback(
             u,
             "Training_Pro_Main",
@@ -313,14 +318,17 @@ export async function handleCronJobs(event, context) {
               u.session.is_banned = true;
               u.session.banned_at = Date.now();
               u.session.ban_reason = sendResult.error || "Bot blocked";
+              actionTaken = true; // сохраняем бан
               stats.skipped++;
             } else {
               stats.failed++;
               const ch = sendResult.channel || primaryChannel;
               if (stats.byChannel[ch]) stats.byChannel[ch].failed++;
+              skippedUserIds.push(u.id);
             }
           }
         } else if (u.state.includes("Plan") && u.tariff === "PAID") {
+          skippedUserIds.push(u.id);
           stats.skipped++;
         } else {
           const rule = DOZHIM_MAP[u.state];
@@ -329,6 +337,7 @@ export async function handleCronJobs(event, context) {
 
           if (next) {
             if (next.includes("Tripwire") && u.bought_tripwire) {
+              skippedUserIds.push(u.id);
               stats.skipped++;
             } else {
               sendResult = await sendWithFallback(u, next, MAX_RETRIES);
@@ -351,39 +360,48 @@ export async function handleCronJobs(event, context) {
                   u.session.is_banned = true;
                   u.session.banned_at = Date.now();
                   u.session.ban_reason = sendResult.error || "Bot blocked";
+                  actionTaken = true; // сохраняем бан
                   stats.skipped++;
                 } else {
                   stats.failed++;
                   const ch = sendResult.channel || primaryChannel;
                   if (stats.byChannel[ch]) stats.byChannel[ch].failed++;
+                  skippedUserIds.push(u.id);
                 }
               }
             }
           } else {
+            skippedUserIds.push(u.id);
             stats.skipped++;
           }
         }
       } else {
+        skippedUserIds.push(u.id);
         stats.skipped++;
       }
 
-      let attemptMade = shouldSendReminder(u) || shouldSendDozhim(u);
-
-      // === АНТИ-ЗАТОР (ОЧИСТКА ОЧЕРЕДИ) ===
-      // Сохраняем реальное время последнего действия юзера (чтобы не сломать таймеры дожимов)
-      if (!u.session.last_activity) {
-        u.session.last_activity = u.last_seen;
+      // === ОПТИМИЗАЦИЯ: Сохраняем ТОЛЬКО если было действие ===
+      if (actionTaken) {
+        // Сохраняем реальное время последнего действия юзера
+        if (!u.session.last_activity) {
+          u.session.last_activity = u.last_seen;
+        }
+        u.last_seen = Date.now();
+        await ydb.saveUser(u);
       }
-
-      // ВСЕГДА обновляем last_seen, чтобы юзер ушел в конец очереди и Крон проверил следующих!
-      u.last_seen = Date.now();
-      await ydb.saveUser(u);
 
       await new Promise((res) => setTimeout(res, CRON_USER_PAUSE_MS));
     } catch (e) {
       log.error(`[CRON ERROR User ${u.user_id}]`, e, { state: u.state });
+      skippedUserIds.push(u.id);
       stats.failed++;
     }
+  }
+
+  // ОПТИМИЗАЦИЯ: Батчевое обновление "застрявших" юзеров (1 запрос к БД вместо 50)
+  if (skippedUserIds.length > 0) {
+    await ydb.batchUpdateLastSeen(skippedUserIds);
+    log.info(`[CRON] Batch updated last_seen for ${skippedUserIds.length} users`);
   }
 
   log.info(`[CRON] ========== ИТОГИ CRON ==========`);

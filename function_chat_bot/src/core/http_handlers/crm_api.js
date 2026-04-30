@@ -60,10 +60,13 @@ export async function handleCrmApi(event, context) {
     const partner = await ydb.findUser({ tg_id: Number(auth.tgData.user.id) });
     const partnerTail = partner?.sh_ref_tail || "p_qdr";
 
-    // ИЩЕМ ЛИДОВ ПО ХВОСТУ ПАРТНЕРА, А НЕ ПО ТОКЕНУ
-    const totalCount = await ydb.getPartnerUsersCount(partnerTail);
-    const users = await ydb.getUsersByPartner(partnerTail, pageSize, offset);
-    const stats = await ydb.getPartnerStatsByFunnel(partnerTail);
+    // ОПТИМИЗАЦИЯ: Параллельный запрос к БД.
+    // Вместо 300мс + 300мс + 300мс, всё загрузится за 300мс!
+    const [totalCount, users, stats] = await Promise.all([
+      ydb.getPartnerUsersCount(partnerTail),
+      ydb.getUsersByPartner(partnerTail, pageSize, offset),
+      ydb.getPartnerStatsByFunnel(partnerTail)
+    ]);
 
     // Фильтр по каналу
     const channelFilter = data.channel || null;
@@ -390,7 +393,7 @@ export async function handleCrmApi(event, context) {
     // Обновляем настройки ИИ в профиле партнёра
     user.custom_prompt = custom_prompt || "";
     user.ai_provider = ai_provider || "polza";
-    user.ai_model = ai_model || "openai/gpt-4o-mini";
+    user.ai_model = ai_model || "deepseek/deepseek-v4-flash";
     user.custom_api_key = custom_api_key || "";
     user.user_daily_limit = user_daily_limit || 0;
 

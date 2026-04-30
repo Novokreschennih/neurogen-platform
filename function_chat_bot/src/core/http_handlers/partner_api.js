@@ -160,7 +160,7 @@ export async function handlePartnerApi(event, context) {
       // Update user AI settings
       user.custom_prompt = custom_prompt || "";
       user.ai_provider = ai_provider || "polza";
-      user.ai_model = ai_model || "openai/gpt-4o-mini";
+      user.ai_model = ai_model || "deepseek/deepseek-v4-flash";
       user.custom_api_key = custom_api_key || "";
       user.user_daily_limit = user_daily_limit || 0;
 

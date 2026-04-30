@@ -1,6 +1,6 @@
 /**
- * Web Chat Handler — v6.8 Full Production Version
- * Обрабатывает всё: Email-лиды, кнопки воронки, верификацию и умный чат с ИИ.
+ * Web Chat Handler — v7.0 Highly Optimized
+ * Оптимизация: Минимизация запросов к YDB (1 saveUser на запрос, 1 getOwner вместо 2).
  */
 import crypto from "crypto";
 import {
@@ -22,7 +22,7 @@ export async function handleWebChat(event, context) {
       : event.body || "{}";
     const payload = JSON.parse(payloadStr);
 
-    // --- 0. ЗАГРУЗКА ИЛИ СОЗДАНИЕ ПОЛЬЗОВАТЕЛЯ ---
+    // --- 0. БЫСТРАЯ ЗАГРУЗКА ИЛИ СОЗДАНИЕ ПОЛЬЗОВАТЕЛЯ ---
     const webSessionId = validateWebSessionId(payload.sessionId);
     if (!webSessionId) {
       return {
@@ -35,11 +35,10 @@ export async function handleWebChat(event, context) {
     const partnerId = payload.partner_id || payload.referrer || "p_qdr";
     const firstName = payloadEmail ? payloadEmail.split("@")[0] : "WebUser";
 
-    // ОПТИМИЗАЦИЯ: Сначала делаем 1 быстрый запрос по индексу web_id
+    // 1 быстрый запрос по индексу
     let webUser = await ydb.findUser({ web_id: webSessionId });
     let needsSave = false;
 
-    // Если юзера нет ИЛИ у него появился email, которого не было раньше -> вызываем Omni-Resolver
     if (!webUser || (payloadEmail && !webUser.email)) {
       log.info("[WEB CHAT] User not found or new email. Running Omni-Resolver.");
       webUser = await resolveUser("web", {
@@ -51,7 +50,6 @@ export async function handleWebChat(event, context) {
       needsSave = true;
     }
 
-    // Лечим сессию и адаптируем стейт (только в памяти)
     const oldState = webUser.state;
     adaptStateForChannel(webUser, "web");
     if (oldState !== webUser.state) needsSave = true;
@@ -63,17 +61,13 @@ export async function handleWebChat(event, context) {
     if (!webUser.session.channel_states) { webUser.session.channel_states = {}; needsSave = true; }
 
     webUser.last_seen = Date.now();
+    needsSave = true;
 
-    // Записываем клик по рефке (только для новых юзеров, 1 раз)
+    // ОПТИМИЗАЦИЯ: Асинхронная запись клика (Fire-and-forget)
     if (!webUser.session.click_recorded && partnerId && partnerId !== "p_qdr") {
-      await ydb.recordLinkClick(partnerId, webUser.id, "WEB_LEAD");
+      ydb.recordLinkClick(partnerId, webUser.id, "WEB_LEAD").catch(e => log.warn("[REF CLICK ERR]", e.message));
       webUser.session.click_recorded = true;
       needsSave = true;
-    }
-
-    // Сохраняем ТОЛЬКО если были реальные изменения (экономим YDB RU)
-    if (needsSave || payload.action === "click-button" || payload.action === "get-web-step") {
-      await ydb.saveUser(webUser);
     }
 
     // ============================================================
@@ -85,13 +79,12 @@ export async function handleWebChat(event, context) {
     ) {
       let targetCallback = payload.callback_data;
 
-      // --- ПЕРЕХВАТ ТЕХНИЧЕСКИХ КНОПОК (Эмуляция действий из ТГ) ---
+      // --- ПЕРЕХВАТ ТЕХНИЧЕСКИХ КНОПОК ---
       if (targetCallback) {
-        // А. Секретные слова
         if (targetCallback.startsWith("ENTER_SECRET_")) {
           const level = targetCallback.split("_")[2];
           webUser.state = `WAIT_SECRET_${level}`;
-          await ydb.saveUser(webUser);
+          if (needsSave) await ydb.saveUser(webUser);
           return {
             statusCode: 200,
             headers: corsHeaders,
@@ -103,13 +96,12 @@ export async function handleWebChat(event, context) {
             }),
           };
         }
-        // Б. Кнопки регистрации
         if (
           targetCallback === "CLICK_REG_ID" ||
           targetCallback === "FORCE_REG_UPDATE"
         ) {
           webUser.state = "WAIT_REG_ID";
-          await ydb.saveUser(webUser);
+          if (needsSave) await ydb.saveUser(webUser);
           return {
             statusCode: 200,
             headers: corsHeaders,
@@ -121,10 +113,9 @@ export async function handleWebChat(event, context) {
             }),
           };
         }
-        // В. Кнопка создания бота
         if (targetCallback === "SETUP_BOT_START") {
           webUser.state = "WAIT_BOT_TOKEN";
-          await ydb.saveUser(webUser);
+          if (needsSave) await ydb.saveUser(webUser);
           return {
             statusCode: 200,
             headers: corsHeaders,
@@ -143,13 +134,12 @@ export async function handleWebChat(event, context) {
         webUser.state = targetCallback;
         webUser.saved_state = targetCallback;
         webUser.session.last_activity = Date.now();
-        await ydb.saveUser(webUser);
+        needsSave = true;
       }
 
       const stepKey = webUser.state || "START";
       const step = scenario.steps[stepKey];
 
-      // Ссылки (динамика)
       const info = {
         sh_ref_tail: webUser.sh_ref_tail || webUser.partner_id || "p_qdr",
         sh_user_id: webUser.sh_user_id,
@@ -163,55 +153,34 @@ export async function handleWebChat(event, context) {
         webUser,
       );
 
-      // Если шага нет в сценарии — фолбэк на START (чтобы не было undefined)
-      if (!step) {
-        const startStep = scenario.steps.START;
-        return {
-          statusCode: 200,
-          headers: corsHeaders,
-          body: JSON.stringify({
-            success: true,
-            stepKey: "START",
-            text: startStep.text(links, webUser, info),
-            image: startStep.image,
-            buttons: (typeof startStep.buttons === "function"
-              ? startStep.buttons(links, webUser, info)
-              : startStep.buttons
-            )?.map((row) =>
-              row.map((btn) => {
-                if (btn.url && btn.url.includes("module-")) {
-                  return { ...btn, url: btn.url + "&web=1" };
-                }
-                return btn;
-              }),
-            ),
-            neuroCoins: webUser.session?.xp || 0,
+      const formatButtons = (stepButtons) => {
+        if (!stepButtons) return [];
+        const btns = typeof stepButtons === "function" ? stepButtons(links, webUser, info) : stepButtons;
+        return btns?.map((row) =>
+          row.map((btn) => {
+            if (btn.url && btn.url.includes("module-")) {
+              return { ...btn, url: btn.url + "&web=1" };
+            }
+            return btn;
           }),
-        };
-      }
+        );
+      };
+
+      const responseStep = step || scenario.steps.START;
+      const responseStepKey = step ? stepKey : "START";
+
+      // ОПТИМИЗАЦИЯ: Единственное сохранение перед выдачей кнопок
+      if (needsSave) await ydb.saveUser(webUser);
 
       return {
         statusCode: 200,
         headers: corsHeaders,
         body: JSON.stringify({
           success: true,
-          stepKey,
-          text:
-            typeof step.text === "function"
-              ? step.text(links, webUser, info)
-              : step.text,
-          image: step.image,
-          buttons: (typeof step.buttons === "function"
-            ? step.buttons(links, webUser, info)
-            : step.buttons
-          )?.map((row) =>
-            row.map((btn) => {
-              if (btn.url && btn.url.includes("module-")) {
-                return { ...btn, url: btn.url + "&web=1" };
-              }
-              return btn;
-            }),
-          ),
+          stepKey: responseStepKey,
+          text: typeof responseStep.text === "function" ? responseStep.text(links, webUser, info) : responseStep.text,
+          image: responseStep.image,
+          buttons: formatButtons(responseStep.buttons),
           neuroCoins: webUser.session?.xp || 0,
         }),
       };
@@ -220,7 +189,7 @@ export async function handleWebChat(event, context) {
     // ============================================================
     // 2. ОБРАБОТКА ЛИДОВ (Email Form из /join/)
     // ============================================================
-    if (payload.isEmail) {
+    if (payload.isEmail || (payload.email && !payload.message && payload.action !== "get-web-step")) {
       const email = validateEmail(payload.email);
       if (!email)
         return {
@@ -248,14 +217,15 @@ export async function handleWebChat(event, context) {
         subscribed: false,
         verified: false,
       };
+      
+      // Оптимизация: сохранение и асинхронная отправка письма
       await ydb.saveUser(user);
-
-      const { sendEmail, templates } =
-        await import("../email/email_service.js");
-      await sendEmail({
+      const { sendEmail, templates } = await import("../email/email_service.js");
+      
+      sendEmail({
         to: email,
         ...templates.emailVerification(user, verificationCode),
-      });
+      }).catch(e => log.error("Email send error", e));
 
       return {
         statusCode: 200,
@@ -269,7 +239,7 @@ export async function handleWebChat(event, context) {
     // ============================================================
     if (payload.message) {
       const txt = payload.message.trim();
-      const u = webUser; // Используем полную модель юзера, загруженную из базы
+      const u = webUser; 
 
       // --- А. Состояние ожидания ID ---
       if (u.state === "WAIT_REG_ID") {
@@ -283,7 +253,7 @@ export async function handleWebChat(event, context) {
           };
         u.sh_user_id = txt;
         u.state = "WAIT_REG_TAIL";
-        await ydb.saveUser(u); // <-- Здесь u уже содержит tg_id и vk_id из БД, так что они не затрутся
+        if (needsSave) await ydb.saveUser(u);
         return {
           statusCode: 200,
           headers: corsHeaders,
@@ -302,102 +272,37 @@ export async function handleWebChat(event, context) {
         u.sh_ref_tail = tail;
 
         const tariffQuestions = [
-          {
-            q: "Сколько компаний можно создать на тарифе 'Самолет'?",
-            a: ["1", "один"],
-          },
-          {
-            q: "Максимальная цена товара ($) на тарифе 'Ракета'?",
-            a: ["5000", "5000$"],
-          },
-          {
-            q: "Сколько уровней партнерских программ доступно на тарифе 'Шаттл'?",
-            a: ["10", "десять"],
-          },
-          {
-            q: "Какая комиссия (%) на тарифе 'Самолет'?",
-            a: ["5", "5%", "пять"],
-          },
-          {
-            q: "Какая комиссия (%) на тарифе 'Ракета'?",
-            a: ["3", "3%", "три"],
-          },
-          {
-            q: "Какая комиссия (%) на тарифе 'Шаттл'?",
-            a: ["1", "1%", "один"],
-          },
-          {
-            q: "Максимальный доход от партнерских программ ($/год) на тарифе 'Самолет'?",
-            a: ["10k", "10000", "10 000"],
-          },
-          {
-            q: "Максимальный доход от партнерских программ ($/год) на тарифе 'Ракета'?",
-            a: ["100k", "100000", "100 000"],
-          },
-          {
-            q: "Максимальный доход от партнерских программ ($/год) на тарифе 'Шаттл'?",
-            a: ["12m", "12000000", "12 000 000"],
-          },
-          {
-            q: "Доступна ли бинарная система на тарифе 'Самолет'?",
-            a: ["нет", "недоступна", "no"],
-          },
-          {
-            q: "Включена ли бинарная система на тарифе 'Ракета'?",
-            a: ["да", "только включена", "yes"],
-          },
-          {
-            q: "Есть ли полный доступ к бинарной системе на тарифе 'Шаттл'?",
-            a: ["да", "полный доступ", "yes"],
-          },
-          {
-            q: "Макс. количество продуктов /месяц на тарифе 'Самолет'?",
-            a: ["5", "пять"],
-          },
-          {
-            q: "Макс. количество продуктов /месяц на тарифе 'Ракета'?",
-            a: ["50", "пятьдесят"],
-          },
-          {
-            q: "Макс. количество продуктов /месяц на тарифе 'Шаттл'?",
-            a: ["100", "сто"],
-          },
-          {
-            q: "Авто-вывод средств на тарифе 'Самолет'?",
-            a: ["нет", "отключён", "no", "disabled"],
-          },
-          {
-            q: "Авто-вывод средств на тарифе 'Ракета'?",
-            a: ["да", "доступно", "yes", "available"],
-          },
-          {
-            q: "Авто-вывод средств на тарифе 'Шаттл'?",
-            a: ["да", "доступно", "yes", "available"],
-          },
+          { q: "Сколько компаний можно создать на тарифе 'Самолет'?", a: ["1", "один"] },
+          { q: "Максимальная цена товара ($) на тарифе 'Ракета'?", a: ["5000", "5000$"] },
+          { q: "Сколько уровней партнерских программ доступно на тарифе 'Шаттл'?", a: ["10", "десять"] },
+          { q: "Какая комиссия (%) на тарифе 'Самолет'?", a: ["5", "5%", "пять"] },
+          { q: "Какая комиссия (%) на тарифе 'Ракета'?", a: ["3", "3%", "три"] },
+          { q: "Какая комиссия (%) на тарифе 'Шаттл'?", a: ["1", "1%", "один"] },
+          { q: "Максимальный доход от партнерских программ ($/год) на тарифе 'Самолет'?", a: ["10k", "10000", "10 000"] },
+          { q: "Максимальный доход от партнерских программ ($/год) на тарифе 'Ракета'?", a: ["100k", "100000", "100 000"] },
+          { q: "Максимальный доход от партнерских программ ($/год) на тарифе 'Шаттл'?", a: ["12m", "12000000", "12 000 000"] },
+          { q: "Доступна ли бинарная система на тарифе 'Самолет'?", a: ["нет", "недоступна", "no"] },
+          { q: "Включена ли бинарная система на тарифе 'Ракета'?", a: ["да", "только включена", "yes"] },
+          { q: "Есть ли полный доступ к бинарной системе на тарифе 'Шаттл'?", a: ["да", "полный доступ", "yes"] },
+          { q: "Макс. количество продуктов /месяц на тарифе 'Самолет'?", a: ["5", "пять"] },
+          { q: "Макс. количество продуктов /месяц на тарифе 'Ракета'?", a: ["50", "пятьдесят"] },
+          { q: "Макс. количество продуктов /месяц на тарифе 'Шаттл'?", a: ["100", "сто"] },
+          { q: "Авто-вывод средств на тарифе 'Самолет'?", a: ["нет", "отключён", "no", "disabled"] },
+          { q: "Авто-вывод средств на тарифе 'Ракета'?", a: ["да", "доступно", "yes", "available"] },
+          { q: "Авто-вывод средств на тарифе 'Шаттл'?", a: ["да", "доступно", "yes", "available"] },
           { q: "Получение баллов на тарифе 'Самолет'?", a: ["нет", "no"] },
           { q: "Получение баллов на тарифе 'Ракета'?", a: ["нет", "no"] },
           { q: "Получение баллов на тарифе 'Шаттл'?", a: ["да", "yes"] },
-          {
-            q: "Макс. сумма пожертвования ($) на тарифе 'Самолет'?",
-            a: ["500", "500$"],
-          },
-          {
-            q: "Макс. сумма пожертвования ($) на тарифе 'Ракета'?",
-            a: ["5000", "5000$"],
-          },
-          {
-            q: "Макс. сумма пожертвования ($) на тарифе 'Шаттл'?",
-            a: ["300k", "300000", "300 000"],
-          },
+          { q: "Макс. сумма пожертвования ($) на тарифе 'Самолет'?", a: ["500", "500$"] },
+          { q: "Макс. сумма пожертвования ($) на тарифе 'Ракета'?", a: ["5000", "5000$"] },
+          { q: "Макс. сумма пожертвования ($) на тарифе 'Шаттл'?", a: ["300k", "300000", "300 000"] },
         ];
 
-        const randomQ =
-          tariffQuestions[Math.floor(Math.random() * tariffQuestions.length)];
+        const randomQ = tariffQuestions[Math.floor(Math.random() * tariffQuestions.length)];
         u.session.verification_question = randomQ.q;
         u.session.verification_answers = randomQ.a;
         u.state = "WAIT_VERIFICATION";
-
-        // ВАЖНО: Сохраняем пользователя (все старые данные + новые)
+        
         await ydb.saveUser(u);
 
         return {
@@ -426,17 +331,11 @@ export async function handleWebChat(event, context) {
           };
 
         u.state = "Training_Main";
-        // Чистим временные данные, не трогая старые
         delete u.session.verification_question;
         delete u.session.verification_answers;
 
-        // === TRIAL PERIOD: 3 дня бесплатного ИИ для новых партнёров ===
         if (!u.ai_active_until || u.ai_active_until < Date.now()) {
           u.ai_active_until = Date.now() + 3 * 24 * 60 * 60 * 1000;
-          log.info("[TRIAL PERIOD] Added 3 days AI trial for new partner", {
-            userId: u.id,
-            aiUntil: new Date(u.ai_active_until).toISOString(),
-          });
         }
 
         await ydb.saveUser(u);
@@ -453,27 +352,9 @@ export async function handleWebChat(event, context) {
 
       // --- Г. СЕКРЕТНЫЕ СЛОВА (ИЗ СТАТЕЙ) ---
       const secretsConfig = {
-        WAIT_SECRET_1: {
-          word: "гибрид",
-          xp: 20,
-          next: "Module_2_Online",
-          flag: "mod1_done",
-          awardKey: "mod1_awarded",
-        },
-        WAIT_SECRET_2: {
-          word: "облако",
-          xp: 30,
-          next: "WAIT_BOT_TOKEN",
-          flag: "mod2_done",
-          awardKey: "mod2",
-        },
-        WAIT_SECRET_3: {
-          word: "сарафан",
-          xp: 40,
-          next: "Lesson_Final_Comparison",
-          flag: "mod3_done",
-          awardKey: "mod3_awarded",
-        },
+        WAIT_SECRET_1: { word: "гибрид", xp: 20, next: "Module_2_Online", flag: "mod1_done", awardKey: "mod1_awarded" },
+        WAIT_SECRET_2: { word: "облако", xp: 30, next: "WAIT_BOT_TOKEN", flag: "mod2_done", awardKey: "mod2" },
+        WAIT_SECRET_3: { word: "сарафан", xp: 40, next: "Lesson_Final_Comparison", flag: "mod3_done", awardKey: "mod3_awarded" },
       };
 
       if (secretsConfig[u.state]) {
@@ -514,8 +395,7 @@ export async function handleWebChat(event, context) {
             statusCode: 200,
             headers: corsHeaders,
             body: JSON.stringify({
-              answer:
-                "❌ <b>Неверное слово.</b>\n\nЗагляни в конец статьи еще раз, найди правильное слово и пришли его мне.",
+              answer: "❌ <b>Неверное слово.</b>\n\nЗагляни в конец статьи еще раз, найди правильное слово и пришли его мне.",
               sessionId: webSessionId,
             }),
           };
@@ -524,26 +404,19 @@ export async function handleWebChat(event, context) {
 
       // --- Д. Чат с ИИ (Универсальный AI Engine v3.0) ---
 
-      // 1. Проверка активности ИИ-подписки владельца канала (SaaS)
-      const isOwnerAiActive = await ydb.isOwnerAiActive(webUser, null, null);
+      // ОПТИМИЗАЦИЯ: 1 запрос к владельцу вместо 2-х!
+      let isOwnerAiActive = false;
+      let ownerSettings = { custom_prompt: "", ai_provider: "polza", ai_model: "deepseek/deepseek-v4-flash", custom_api_key: "", user_daily_limit: 0 };
 
-      // 2. Получаем настройки владельца (по partner_id)
-      let ownerSettings = {
-        custom_prompt: "",
-        ai_provider: "polza",
-        ai_model: "openai/gpt-4o-mini",
-        custom_api_key: "",
-        user_daily_limit: 0,
-      };
-
-      if (webUser.partner_id) {
+      if (webUser.partner_id && webUser.partner_id !== "p_qdr") {
         try {
           const owner = await ydb.getUserByRefTail(webUser.partner_id);
           if (owner) {
+            isOwnerAiActive = owner.ai_active_until > Date.now();
             ownerSettings = {
               custom_prompt: owner.custom_prompt || "",
               ai_provider: owner.ai_provider || "polza",
-              ai_model: owner.ai_model || "openai/gpt-4o-mini",
+              ai_model: owner.ai_model || "deepseek/deepseek-v4-flash",
               custom_api_key: owner.custom_api_key || "",
               user_daily_limit: owner.user_daily_limit || 0,
             };
@@ -551,32 +424,28 @@ export async function handleWebChat(event, context) {
         } catch (e) {
           log.warn("[WEB AI OWNER LOOKUP ERROR]", e.message);
         }
+      } else {
+        // Если это системный бот (p_qdr), ИИ работает всегда
+        isOwnerAiActive = true;
       }
 
-      // 3. ПРОВЕРЯЕМ ДОПУСК: ТОЛЬКО оплаченная подписка дает право на ИИ!
       if (!isOwnerAiActive) {
         return {
           statusCode: 200,
           headers: corsHeaders,
           body: JSON.stringify({
-            answer:
-              "🤖 <b>ИИ-консультант в режиме ожидания</b>\n\nВладелец системы ещё не активировал нейромозг (SaaS-подписку).\n\nВоспользуйтесь меню навигации 👇",
+            answer: "🤖 <b>ИИ-консультант в режиме ожидания</b>\n\nВладелец системы ещё не активировал нейромозг (SaaS-подписку).\n\nВоспользуйтесь меню навигации 👇",
             sessionId: webSessionId,
           }),
         };
       }
 
-      // 4. Проверка дневных лимитов (чтобы не жгли наши деньги)
-      // Если партнер вставил свой ключ (custom_api_key) и поставил лимит 0, значит лимита нет.
-      // Если ключа нет (используется наш системный), жестко ограничиваем: 30 для PRO, 3 для FREE.
       const hasCustomKey = !!ownerSettings.custom_api_key;
       let currentLimit = ownerSettings.user_daily_limit;
 
       if (!hasCustomKey) {
-        // Защита нашего бюджета: принудительно ставим системный лимит
         currentLimit = webUser.bought_tripwire ? 30 : 3;
       } else if (!currentLimit) {
-        // Свой ключ, лимит не указан = безлимит
         currentLimit = 99999;
       }
 
@@ -584,21 +453,21 @@ export async function handleWebChat(event, context) {
       if (webUser.session.ai_date !== today) {
         webUser.session.ai_count = 0;
         webUser.session.ai_date = today;
+        needsSave = true;
       }
 
       if (webUser.session.ai_count >= currentLimit) {
+        if (needsSave) await ydb.saveUser(webUser);
         return {
           statusCode: 200,
           headers: corsHeaders,
           body: JSON.stringify({
-            answer:
-              "⏳ <b>Лимит консультаций исчерпан.</b> На сегодня я ответил на все вопросы. Возвращайтесь завтра!",
+            answer: "⏳ <b>Лимит консультаций исчерпан.</b> На сегодня я ответил на все вопросы. Возвращайтесь завтра!",
             sessionId: webSessionId,
           }),
         };
       }
 
-      // 4. Формируем конфиг и вызываем единый AI Engine
       const botConfig = {
         ai_provider: ownerSettings.ai_provider,
         ai_model: ownerSettings.ai_model,
@@ -608,16 +477,12 @@ export async function handleWebChat(event, context) {
 
       const aiEngineModule = await import("../../ai_engine.js");
 
-      // Очистка истории
       const currentHistory = webUser.session?.dialog_history || [];
-      const cleanedHistory = aiEngineModule.cleanupDialogHistory(
-        currentHistory,
-        24,
-      );
+      const cleanedHistory = aiEngineModule.cleanupDialogHistory(currentHistory, 24);
 
       try {
-        // Увеличиваем счетчик
         webUser.session.ai_count = (webUser.session.ai_count || 0) + 1;
+        needsSave = true;
 
         const aiResponse = await aiEngineModule.generateAIResponse(
           txt,
@@ -627,24 +492,14 @@ export async function handleWebChat(event, context) {
           botConfig,
         );
 
-        const aiAnswer =
-          aiResponse || "🤖 Я немного задумался. Повтори еще раз!";
+        const aiAnswer = aiResponse || "🤖 Я немного задумался. Повтори еще раз!";
 
-        // Сохраняем историю
-        const updatedHistory = aiEngineModule.addToDialogHistory(
-          cleanedHistory,
-          "user",
-          txt,
-          10,
-        );
-        const finalHistory = aiEngineModule.addToDialogHistory(
-          updatedHistory,
-          "assistant",
-          aiAnswer,
-          10,
-        );
+        const updatedHistory = aiEngineModule.addToDialogHistory(cleanedHistory, "user", txt, 10);
+        const finalHistory = aiEngineModule.addToDialogHistory(updatedHistory, "assistant", aiAnswer, 10);
         webUser.session.dialog_history = finalHistory;
-        await ydb.saveUser(webUser);
+        
+        // ОПТИМИЗАЦИЯ: Сохраняем 1 раз в самом конце
+        if (needsSave) await ydb.saveUser(webUser);
 
         return {
           statusCode: 200,
@@ -653,6 +508,8 @@ export async function handleWebChat(event, context) {
         };
       } catch (aiErr) {
         log.error("[WEB AI FETCH ERROR]", aiErr);
+        if (needsSave) await ydb.saveUser(webUser);
+        
         return {
           statusCode: 200,
           headers: corsHeaders,
@@ -662,9 +519,17 @@ export async function handleWebChat(event, context) {
           }),
         };
       }
-    } // Закрывает if (payload.message)
+    } 
+    
+    // Фолбэк, если ничего не сработало, но состояние поменялось
+    if (needsSave) await ydb.saveUser(webUser);
+    
+    return {
+      statusCode: 200,
+      headers: corsHeaders,
+      body: JSON.stringify({ success: true, status: "no_action" }),
+    };
   } catch (err) {
-    // Закрывает основной try в начале файла
     log.error("[WEB CHAT ERROR]", err);
     return {
       statusCode: 500,
@@ -672,4 +537,4 @@ export async function handleWebChat(event, context) {
       body: JSON.stringify({ error: "Server error" }),
     };
   }
-} // Закрывает функцию handleWebChat
+}
