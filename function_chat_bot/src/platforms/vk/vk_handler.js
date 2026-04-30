@@ -370,22 +370,32 @@ export async function handleVkWebhook(event, context) {
             row
               .map((btn) => {
                 const cbData = btn.callback_data || btn.callback;
-                if (btn.url)
+                if (btn.url) {
+                  // VK fix: rewrite TG academy URLs (?bot=) to VK format (?vk_group=)
+                  const link = btn.url.includes("?bot=")
+                    ? btn.url.replace(/\?bot=[^&]*/, `?vk_group=${process.env.VK_CENTRAL_GROUP || "237421168"}`)
+                    : btn.url;
                   return {
                     action: {
                       type: "open_link",
-                      link: btn.url,
+                      link,
                       label: btn.text.substring(0, 40),
                     },
                   };
-                else if (btn.web_app?.url)
+                }
+                else if (btn.web_app?.url) {
+                  // VK fix: rewrite TG academy URLs in web_app links too
+                  const link = btn.web_app.url.includes("?bot=")
+                    ? btn.web_app.url.replace(/\?bot=[^&]*/, `?vk_group=${process.env.VK_CENTRAL_GROUP || "237421168"}`)
+                    : btn.web_app.url;
                   return {
                     action: {
                       type: "open_link",
-                      link: btn.web_app.url,
+                      link,
                       label: btn.text.substring(0, 40),
                     },
                   };
+                }
                 else if (cbData)
                   return {
                     action: {
@@ -849,22 +859,32 @@ export async function handleVkWebhook(event, context) {
               return row
                 .map((btn) => {
                   const cbData = btn.callback_data || btn.callback;
-                  if (btn.url)
+                  if (btn.url) {
+                    // VK fix: rewrite TG academy URLs (?bot=) to VK format (?vk_group=)
+                    const link = btn.url.includes("?bot=")
+                      ? btn.url.replace(/\?bot=[^&]*/, `?vk_group=${process.env.VK_CENTRAL_GROUP || "237421168"}`)
+                      : btn.url;
                     return {
                       action: {
                         type: "open_link",
-                        link: btn.url,
+                        link,
                         label: btn.text.substring(0, 40),
                       },
                     };
-                  else if (btn.web_app?.url)
+                  }
+                  else if (btn.web_app?.url) {
+                    // VK fix: rewrite TG academy URLs in web_app links too
+                    const link = btn.web_app.url.includes("?bot=")
+                      ? btn.web_app.url.replace(/\?bot=[^&]*/, `?vk_group=${process.env.VK_CENTRAL_GROUP || "237421168"}`)
+                      : btn.web_app.url;
                     return {
                       action: {
                         type: "open_link",
-                        link: btn.web_app.url,
+                        link,
                         label: btn.text.substring(0, 40),
                       },
                     };
+                  }
                   else if (cbData)
                     return {
                       action: {

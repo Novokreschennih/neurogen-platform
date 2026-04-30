@@ -43,6 +43,8 @@ export function getLinks(
     ? `https://vk.me/club${vkGroupId}?ref=${startPayload}`
     : `https://vk.me/club${vkGroupId}`;
 
+  const joinUrl = `https://sethubble.ru/join/?page=${sh_ref_tail || startPayload}`;
+
   return {
     reg: regUrl,
     reg_free: `https://sethubble.com/ru/?s=${PRODUCT_ID_FREE}&afid=${partnerId}`,
@@ -62,5 +64,6 @@ export function getLinks(
       process.env.FREE_DISK_LINK || "https://disk.yandex.ru/d/a2Gsuwnu32eJKg",
     vk_bot: vkBotLink,
     start_payload: startPayload,
+    join: joinUrl,
   };
 }

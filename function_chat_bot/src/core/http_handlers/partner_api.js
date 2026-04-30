@@ -88,27 +88,28 @@ export async function handlePartnerApi(event, context) {
 
       let botUsername = "";
       let botToken = MAIN_TOKEN;
-      let refLink = "";
+      const partnerTail = user.sh_ref_tail || `id_${telegramId}`;
 
       if (user.session?.bot_username) {
         botUsername = user.session.bot_username;
         botToken = user.bot_token || MAIN_TOKEN;
-        refLink = `https://t.me/${botUsername}`;
       } else {
         const botInfo = await ydb.getBotInfo(MAIN_TOKEN);
         botUsername = botInfo?.bot_username || "sethubble_bot";
-        const partnerTail = user.sh_ref_tail || `id_${telegramId}`;
-        refLink = `https://t.me/${botUsername}?start=${partnerTail}`;
       }
+
+      // v7.2: Landing page is the primary share link (higher conversion)
+      const joinLink = `https://sethubble.ru/join/?page=${partnerTail}`;
+      const botDirectLink = `https://t.me/${botUsername}`;
 
       const referrals = await ydb.getUserReferrals(telegramId);
       const earnings = referrals.length * 20 * 0.25;
-      const partnerTail = user.sh_ref_tail || `id_${telegramId}`;
       const clicks = await ydb.getPartnerClicks(partnerTail);
 
       return response(200, {
         success: true,
-        refLink,
+        refLink: joinLink,
+        botDirectLink,
         botName: botUsername,
         user: {
           id: telegramId,

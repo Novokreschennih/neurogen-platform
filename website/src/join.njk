@@ -473,6 +473,7 @@ eleventyExcludeFromCollections: true
 
         const urlParams = new URLSearchParams(window.location.search);
         let encodedId = urlParams.get("page");
+        let refFromUrl = urlParams.get("ref");
 
         const fromHex = (hex) => {
           try {
@@ -491,6 +492,10 @@ eleventyExcludeFromCollections: true
         if (encodedId) {
           const decoded = fromHex(encodedId);
           partnerId = (decoded && decoded.length > 1) ? decoded.trim() : encodedId.trim();
+          if (partnerId) localStorage.setItem("neurogen_partner_id", partnerId);
+        } else if (refFromUrl) {
+          // v7.2: Support ?ref= as fallback for external shorteners and old links
+          partnerId = refFromUrl.trim();
           if (partnerId) localStorage.setItem("neurogen_partner_id", partnerId);
         }
 

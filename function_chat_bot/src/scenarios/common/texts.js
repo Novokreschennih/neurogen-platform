@@ -482,12 +482,15 @@ export const texts = {
         // Проверяем, есть ли уже настроенный бот
         if (user.session?.bot_username) {
           const botUsername = user.session?.bot_username || "твой_бот";
+          const directBotLink = `https://t.me/${botUsername}`;
+          const trafficLink = links?.join || `https://sethubble.ru/join/?page=${user.sh_ref_tail || user.partner_id || "p_qdr"}`;
           return (
             `🤖 <b>ТВОЙ ИИ-ПОМОЩНИК УЖЕ В СТРОЮ!</b>\n\n` +
             `✅ <b>Статус:</b> Активен и работает 24/7\n` +
-            `🔗 <b>Ссылка:</b> https://t.me/${botUsername}\n\n` +
-            `Твой клон уже общается с кандидатами, используя твои настройки и знания. ` +
-            `Ты хочешь <b>обновить конфигурацию</b> (изменить токен) или оставить текущую версию без изменений?`
+            `🔗 <b>Прямая ссылка на бота (для проверки):</b> ${directBotLink}\n\n` +
+            `🚀 <b>ССЫЛКА ДЛЯ ПРИВЛЕЧЕНИЯ ТРАФИКА (шери в соцсети):</b>\n` +
+            `<code>${trafficLink}</code>\n\n` +
+            `<i>Именно эту ссылку давай клиентам и вставляй в QR-коды. Она ведёт на продающий лендинг, захватывает email и автоматически направляет в нужный канал.</i>`
           );
         }
 

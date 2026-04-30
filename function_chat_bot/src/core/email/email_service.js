@@ -27,12 +27,6 @@ const POSTBOX_ENDPOINT =
 const REGION = "ru-central1";
 const SERVICE = "ses";
 
-// === КОНФИГУРАЦИЯ КАНАЛОВ ===
-const DEFAULT_BOT = "sethubble_biz_bot";
-const VK_COMMUNITY_URL =
-  process.env.VK_COMMUNITY_URL || "https://vk.com/sethubble";
-const WEB_BASE_URL = "https://sethubble.ru/ai/";
-
 // ============================================================
 // AWS SigV4 + IAM Token helpers
 // ============================================================
@@ -312,96 +306,48 @@ function getName(user) {
 }
 
 /**
- * Генерирует ссылки на подключённые каналы
+ * Генерирует ссылку на продающий лендинг /join/ с реферальной атрибуцией.
+ * Все каналы теперь ведут на единую точку входа для максимальной конверсии и захвата email.
  */
 function generateChannelLinks(user) {
   const ref = getRef(user);
-  const channels = user?.session?.channels || {};
-  const textLinks = [];
-  const htmlLinks = [];
-
-  // Telegram
-  if (channels.telegram?.enabled) {
-    const botName = channels.telegram.bot_username || DEFAULT_BOT;
-    textLinks.push(`Telegram: https://t.me/${botName}?start=${ref}`);
-    htmlLinks.push(
-      `<a href="https://t.me/${botName}?start=${ref}">📱 Telegram-бот</a>`,
-    );
-  }
-
-  // VK
-  if (channels.vk?.enabled) {
-    textLinks.push(`VK: ${VK_COMMUNITY_URL}?ref=${ref}`);
-    htmlLinks.push(`<a href="${VK_COMMUNITY_URL}?ref=${ref}">💬 ВКонтакте</a>`);
-  }
-
-  // Web
-  if (channels.web?.enabled) {
-    textLinks.push(`Web-чат: ${WEB_BASE_URL}?ref=${ref}`);
-    htmlLinks.push(
-      `<a href="${WEB_BASE_URL}?ref=${ref}">🌐 Web-чат на сайте</a>`,
-    );
-  }
-
-  // Фолбэк: если ни один канал не подключён
-  if (textLinks.length === 0) {
-    textLinks.push(`Telegram: https://t.me/${DEFAULT_BOT}?start=${ref}`);
-    htmlLinks.push(
-      `<a href="https://t.me/${DEFAULT_BOT}?start=${ref}">📱 Telegram-бот</a>`,
-    );
-  }
+  // ✅ ЕДИНАЯ ССЫЛКА НА ЛЕНДИНГ
+  const joinUrl = `https://sethubble.ru/join/?page=${ref}`;
 
   return {
-    text: textLinks.join("\n"),
-    html: htmlLinks.join(" &nbsp;|&nbsp; "),
+    text: `🔗 Перейти к настройке: ${joinUrl}`,
+    html: `
+      <a href="${joinUrl}" style="
+        display: inline-block;
+        background: linear-gradient(135deg, #06b6d4, #a855f7);
+        color: #ffffff;
+        padding: 12px 24px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: bold;
+        font-size: 15px;
+        margin: 10px 0;
+        box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+      ">🚀 Продолжить настройку</a>
+    `
   };
 }
 
 /**
- * Мягкое предложение подключить неподключённые каналы (макс. 2)
+ * Мягкое предложение подключить дополнительные каналы (теперь ведет на /join/)
  */
 function generateChannelSuggestions(user) {
   const ref = getRef(user);
-  const channels = user?.session?.channels || {};
-  const suggestions = [];
-
-  if (!channels.telegram?.enabled) {
-    suggestions.push({
-      emoji: "📱",
-      name: "Telegram",
-      url: `https://t.me/${DEFAULT_BOT}?start=${ref}`,
-    });
-  }
-  if (!channels.vk?.enabled) {
-    suggestions.push({
-      emoji: "💬",
-      name: "ВКонтакте",
-      url: `${VK_COMMUNITY_URL}?ref=${ref}`,
-    });
-  }
-  if (!channels.web?.enabled) {
-    suggestions.push({
-      emoji: "🌐",
-      name: "Web-чат",
-      url: `${WEB_BASE_URL}?ref=${ref}`,
-    });
-  }
-
-  // Максимум 2 предложения, аккуратно
-  const selected = suggestions.slice(0, 2);
-  if (selected.length === 0) return { text: "", html: "" };
-
-  const textLines = selected.map((s) => `${s.emoji} ${s.name}: ${s.url}`);
-  const htmlItems = selected.map(
-    (s) =>
-      `<li style="margin: 4px 0"><a href="${s.url}">${s.emoji} ${s.name}</a></li>`,
-  );
-
+  const joinUrl = `https://sethubble.ru/join/?page=${ref}`;
+  
   return {
-    text: `\n💡 Также можешь подключить:\n${textLines.join("\n")}`,
-    html:
-      `<p style="color: #9ca3af; font-size: 13px; margin-top: 16px">💡 Также можешь подключить:</p>` +
-      `<ul style="margin: 0; padding-left: 16px; color: #9ca3af">${htmlItems.join("")}</ul>`,
+    text: `\n💡 Хотите подключить другие каналы (VK, Email, Web)? Перейдите: ${joinUrl}`,
+    html: `
+      <p style="color: #9ca3af; font-size: 13px; margin-top: 16px; line-height: 1.4;">
+        💡 Хотите подключить дополнительные каналы?<br>
+        <a href="${joinUrl}" style="color: #06b6d4; text-decoration: none; font-weight: 500;">Нажмите здесь →</a>
+      </p>
+    `
   };
 }
 
