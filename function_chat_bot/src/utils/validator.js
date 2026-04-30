@@ -114,6 +114,9 @@ export function validateStartPayload(raw) {
   let parts;
   if (trimmed.includes("__")) {
     parts = trimmed.split("__");
+  } else if (trimmed.includes("|")) {
+    // | separator must be checked BEFORE - because UUIDs contain hyphens
+    parts = trimmed.split("|");
   } else if (trimmed.includes("-")) {
     parts = trimmed.split("-");
   } else {
@@ -121,18 +124,37 @@ export function validateStartPayload(raw) {
   }
 
   const partnerId = validatePartnerId(parts[0]);
-  const result = { partnerId: partnerId || parts[0] };
+  if (!partnerId) return null; // Безопасность: XSS-инъекции не проходят
+  const result = { partnerId };
 
   if (parts[1]) {
     const content = parts[1];
 
-    if (content.startsWith("web_")) {
+    // Format: partnerId|web:uuid (pipe separator)
+    if (content.startsWith("web:")) {
+      const wId = content.substring(4);
+      if (wId.length > 5 && wId.length < 100) result.webId = wId;
+    }
+    // Format: partnerId|base64 (pipe separator, raw base64 without prefix)
+    else if (content.match(/^[A-Za-z0-9+/=_-]{8,}$/)) {
+      try {
+        const enc = content.replace(/-/g, "+").replace(/_/g, "/");
+        const padded = enc + "=".repeat((4 - (enc.length % 4)) % 4);
+        const decoded = Buffer.from(padded, "base64").toString("utf8");
+        const email = validateEmail(decoded);
+        if (email) result.email = email;
+      } catch (e) {}
+    }
+    // Format: partnerId__web_... (double underscore separator, used by web app)
+    else if (content.startsWith("web_")) {
       result.webId = content;
     }
+    // Format: partnerId__wUUID (double underscore, compact web)
     else if (content.startsWith("w")) {
       const wId = content.substring(1);
       if (wId.length > 5) result.webId = wId;
     }
+    // Format: partnerId__eBASE64 (double underscore, encoded email)
     else if (content.startsWith("e")) {
       try {
         let enc = content.substring(1).replace(/-/g, "+").replace(/_/g, "/");
@@ -142,6 +164,7 @@ export function validateStartPayload(raw) {
         if (email) result.email = email;
       } catch (e) {}
     }
+    // Fallback: long content without known prefix → try base64 decode for email
     else if (content.length > 15) {
       result.webId = content;
     }

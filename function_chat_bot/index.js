@@ -1263,15 +1263,15 @@ export const handler = async (event) => {
       : {};
 
     if (body.update_id) {
-      // === YDB DEDUPLICATION: проверяем, не обрабатывали ли мы это сообщение ===
-      const isAlreadyProcessed = await ydb.isUpdateProcessed(
-        String(body.update_id),
-      );
-      if (isAlreadyProcessed) {
+      // ОПТИМИЗАЦИЯ: In-memory дедупликация (0 запросов к БД)
+      // Вместо двух YDB-запросов (isUpdateProcessed + markUpdateProcessed)
+      // используем LRU-кэш в памяти — это полностью снимает нагрузку на
+      // пул сессий YDB и предотвращает RESOURCE_EXHAUSTED при пиковой нагрузке.
+      if (updateCache.isProcessed(String(body.update_id))) {
         log.info(`[DEDUPLICATION] Skipping processed update ${body.update_id}`);
         return response(200, "ok");
       }
-      await ydb.markUpdateProcessed(String(body.update_id));
+      updateCache.markProcessed(String(body.update_id));
 
       log.info(`[WEBHOOK] Received update`, {
         updateId: body.update_id,

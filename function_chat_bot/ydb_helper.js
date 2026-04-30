@@ -37,7 +37,10 @@ export const driver = new Driver({
   // === ИСПРАВЛЕНИЕ: ЖЕСТКИЕ ЛИМИТЫ ДЛЯ SERVERLESS ===
   poolSettings: {
     minLimit: 1,      // Не держим кучу сессий про запас
-    maxLimit: 10,     // Максимум 10 сессий на 1 контейнер
+    maxLimit: 3,      // ОПТИМИЗАЦИЯ: 3 сессии на контейнер (было 10).
+                      // При 3+ параллельных контейнерах 10 сессий каждый
+                      // превышает глобальный лимит YDB Serverless (~20-50),
+                      // вызывая RESOURCE_EXHAUSTED.
     keepAlivePeriod: 30000 // Пинговать раз в 30 сек
   }
 });
@@ -1295,24 +1298,31 @@ export async function isUpdateProcessed(updateId) {
  * @returns {Promise<boolean>} true если успешно записан
  */
 export async function markUpdateProcessed(updateId, ttlMs = 5 * 60 * 1000) {
-  try {
-    const now = Date.now();
-    const expireAt = now + ttlMs;
-    return await driver.tableClient.withSession(async (session) => {
-      const query = `
-        DECLARE $uid AS Utf8; DECLARE $processed_at AS Uint64; DECLARE $expire_at AS Uint64;
-        UPSERT INTO processed_updates (update_id, processed_at, expire_at) VALUES ($uid, $processed_at, $expire_at);
-      `;
-      await session.executeQuery(query, {
-        $uid: TypedValues.utf8(String(updateId)),
-        $processed_at: TypedValues.uint64(String(now)),
-        $expire_at: TypedValues.uint64(String(expireAt)),
+  const maxRetries = 2;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const now = Date.now();
+      const expireAt = now + ttlMs;
+      return await driver.tableClient.withSession(async (session) => {
+        const query = `
+          DECLARE $uid AS Utf8; DECLARE $processed_at AS Uint64; DECLARE $expire_at AS Uint64;
+          UPSERT INTO processed_updates (update_id, processed_at, expire_at) VALUES ($uid, $processed_at, $expire_at);
+        `;
+        await session.executeQuery(query, {
+          $uid: TypedValues.utf8(String(updateId)),
+          $processed_at: TypedValues.uint64(String(now)),
+          $expire_at: TypedValues.uint64(String(expireAt)),
+        });
+        return true;
       });
-      return true;
-    });
-  } catch (e) {
-    log.warn(`[PROCESSED UPDATES] Mark failed: ${e.message}`);
-    return false;
+    } catch (e) {
+      if (isTransientYdbError(e) && attempt < maxRetries) {
+        await new Promise((res) => setTimeout(res, 300 * Math.pow(2, attempt)));
+        continue;
+      }
+      log.warn(`[PROCESSED UPDATES] Mark failed: ${e.message}`);
+      return false;
+    }
   }
 }
 
@@ -1379,3 +1389,4 @@ export async function batchUpdateLastSeen(userIds) {
     log.error(`[BATCH UPDATE] Failed`, e.message);
   }
 }
+
