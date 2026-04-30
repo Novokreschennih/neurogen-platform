@@ -48,7 +48,8 @@ CREATE TABLE users (
     INDEX idx_users_bot_token GLOBAL ON (bot_token),
     INDEX idx_users_partner_id GLOBAL ON (partner_id),
     INDEX idx_users_bought_tripwire GLOBAL ON (bought_tripwire),
-    INDEX idx_users_last_seen GLOBAL ON (last_seen)
+    INDEX idx_users_last_seen GLOBAL ON (last_seen),
+    INDEX idx_sh_user_id GLOBAL ON (sh_user_id)
 );
 
 -- -------------------------------------------------------------
