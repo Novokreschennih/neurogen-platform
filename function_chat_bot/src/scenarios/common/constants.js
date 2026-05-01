@@ -4,7 +4,8 @@
 
 export const PRODUCT_ID_FREE = process.env.PRODUCT_ID_FREE || "140_9d5d2";
 export const PRODUCT_ID_PRO = process.env.PRODUCT_ID_PRO || "103_97999";
-export const PRODUCT_ID_PRO_40 = process.env.PRODUCT_ID_PRO_40 || PRODUCT_ID_PRO;
+export const PRODUCT_ID_PRO_40 =
+  process.env.PRODUCT_ID_PRO_40 || PRODUCT_ID_PRO;
 
 export const TRIPWIRE_PRICE = process.env.TRIPWIRE_PRICE || "20"; // Цена со скидкой
 export const TRIPWIRE_BASE_PRICE = process.env.TRIPWIRE_BASE_PRICE || "40"; // Базовая цена
@@ -53,3 +54,76 @@ export function getProgressBar(percent) {
   const bar = "█".repeat(filled) + "░".repeat(total - filled);
   return `[${bar}] <b>${percent}%</b>`;
 }
+
+/**
+ * Секретные слова для модулей
+ * Каждый обработчик (TG/VK/Web) импортирует этот конфиг
+ */
+export const SECRETS_CONFIG = {
+  WAIT_SECRET_1: {
+    word: "гибрид",
+    xp: 20,
+    flag: "mod1_done",
+    awardKey: "mod1_awarded",
+    // next определяется каналом — см. getNextStateAfterSecret()
+  },
+  WAIT_SECRET_2: {
+    word: "облако",
+    xp: 30,
+    flag: "mod2_done",
+    awardKey: "mod2",
+  },
+  WAIT_SECRET_3: {
+    word: "сарафан",
+    xp: 40,
+    flag: "mod3_done",
+    awardKey: "mod3_awarded",
+  },
+};
+
+/**
+ * Следующий шаг после секретного слова зависит от канала
+ * VK и Web не поддерживают WAIT_BOT_TOKEN
+ */
+export function getNextStateAfterSecret(secretState, channel) {
+  if (secretState === "WAIT_SECRET_1") {
+    return "Module_2_Online"; // Все каналы
+  }
+  if (secretState === "WAIT_SECRET_2") {
+    return channel === "telegram" ? "WAIT_BOT_TOKEN" : "Module_3_Offline";
+  }
+  if (secretState === "WAIT_SECRET_3") {
+    return "Lesson_Final_Comparison"; // Все каналы
+  }
+  return "Training_Main"; // fallback
+}
+
+/**
+ * Подсказки для секретных слов
+ */
+export const SECRET_HINTS = {
+  WAIT_SECRET_1: {
+    vague:
+      "💡 Подсказка: это слово связано с тем, как SetHubble объединяет онлайн и офлайн.",
+    specific:
+      "💡 Подсказка: слово начинается на букву «Г» и означает смешение двух разных систем в одну.",
+  },
+  WAIT_SECRET_2: {
+    vague:
+      "💡 Подсказка: это слово связано с технологией, которая работает удалённо через интернет.",
+    specific:
+      "💡 Подсказка: слово начинается на «О» и ассоциируется с хранением данных в интернете.",
+  },
+  WAIT_SECRET_3: {
+    vague:
+      "💡 Подсказка: это слово связано с тем, как люди передают информацию друг другу из уст в уста.",
+    specific:
+      "💡 Подсказка: слово начинается на «С» и это то, что работает лучше любой рекламы — рекомендации знакомых.",
+  },
+};
+
+/**
+ * Максимальное количество попыток перед подсказкой и пропуском
+ */
+export const SECRET_MAX_ATTEMPTS_BEFORE_HINT = 2;
+export const SECRET_MAX_ATTEMPTS_BEFORE_SKIP = 5;

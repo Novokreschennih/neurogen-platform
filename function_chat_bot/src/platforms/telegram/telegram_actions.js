@@ -13,7 +13,17 @@
 
 import TelegrafPkg from "telegraf";
 const { Telegraf } = TelegrafPkg;
-import { detectLoop, getLoopHint } from "../../utils/ux_helpers.js";
+import {
+  detectLoop,
+  getLoopHint,
+  getSecretWordErrorResponse,
+  getNeuroCoinsStatus,
+} from "../../utils/ux_helpers.js";
+import {
+  SECRETS_CONFIG,
+  getNextStateAfterSecret,
+  SECRET_MAX_ATTEMPTS_BEFORE_SKIP,
+} from "../../scenarios/common/constants.js";
 
 export function registerTelegramActions(bot, ctx) {
   const {
@@ -499,36 +509,14 @@ export function registerTelegramActions(bot, ctx) {
       state: u.state,
       text: txt.substring(0, 30),
     });
-    const secretsConfig = {
-      WAIT_SECRET_1: {
-        word: "гибрид",
-        xp: 20,
-        next: "Module_2_Online",
-        flag: "mod1_done",
-        awardKey: "mod1_awarded",
-      },
-      WAIT_SECRET_2: {
-        word: "облако",
-        xp: 30,
-        next: "WAIT_BOT_TOKEN",
-        flag: "mod2_done",
-        awardKey: "mod2",
-      },
-      WAIT_SECRET_3: {
-        word: "сарафан",
-        xp: 40,
-        next: "Lesson_Final_Comparison",
-        flag: "mod3_done",
-        awardKey: "mod3_awarded",
-      },
-    };
+    if (SECRETS_CONFIG[u.state]) {
+      const config = SECRETS_CONFIG[u.state];
+      const nextState = getNextStateAfterSecret(u.state, "telegram");
 
-    if (secretsConfig[u.state]) {
       log.info(`[SECRET WORDS] State matched!`, {
         state: u.state,
-        word: secretsConfig[u.state].word,
+        word: config.word,
       });
-      const config = secretsConfig[u.state];
 
       if (txt.toLowerCase().trim() === config.word.toLowerCase()) {
         if (!u.session.xp_awarded) u.session.xp_awarded = {};
@@ -552,7 +540,7 @@ export function registerTelegramActions(bot, ctx) {
           );
         }
 
-        if (config.next === "WAIT_BOT_TOKEN") {
+        if (nextState === "WAIT_BOT_TOKEN") {
           u.state = "WAIT_BOT_TOKEN";
           await ydb.saveUser(u);
           return ctx.reply(
@@ -565,14 +553,39 @@ export function registerTelegramActions(bot, ctx) {
           );
         }
 
-        u.state = config.next;
+        u.state = nextState;
         await ydb.saveUser(u);
-        return renderStep(ctx, config.next, token);
+        return renderStep(ctx, nextState, token);
       } else {
-        return ctx.reply(
-          "❌ <b>Неверное слово.</b>\n\nЗагляни в конец статьи еще раз, найди правильное слово и пришли его мне.",
-          { parse_mode: "HTML", protect_content: true },
-        );
+        // Track failed attempts
+        if (!u.session.secret_attempts) u.session.secret_attempts = {};
+        u.session.secret_attempts[u.state] =
+          (u.session.secret_attempts[u.state] || 0) + 1;
+        await ydb.saveUser(u);
+
+        const attempts = u.session.secret_attempts[u.state];
+        const errorMsg = getSecretWordErrorResponse(u.state, attempts);
+
+        const level = u.state.split("_")[2];
+        const replyOpts = {
+          parse_mode: "HTML",
+          protect_content: true,
+        };
+
+        if (attempts >= SECRET_MAX_ATTEMPTS_BEFORE_SKIP) {
+          replyOpts.reply_markup = {
+            inline_keyboard: [
+              [
+                {
+                  text: "⏭ ПРОПУСТИТЬ МОДУЛЬ",
+                  callback_data: `SKIP_SECRET_${level}`,
+                },
+              ],
+            ],
+          };
+        }
+
+        return ctx.reply(errorMsg, replyOpts);
       }
     }
 
@@ -1331,6 +1344,31 @@ export function registerTelegramActions(bot, ctx) {
           `✍️ <b>ВВОД КОДА: МОДУЛЬ ${level}</b>\n\nОтправь мне секретное слово из статьи ответным сообщением:`,
           { parse_mode: "HTML", protect_content: true },
         )
+        .catch(() => {});
+    }
+
+    // === SKIP SECRET WORD MODULE ===
+    if (action.startsWith("SKIP_SECRET_")) {
+      const level = action.split("_")[2];
+      const secretState = `WAIT_SECRET_${level}`;
+      const nextState = getNextStateAfterSecret(secretState, "telegram");
+
+      // Mark module as skipped (no xp awarded)
+      ctx.dbUser.session[SECRETS_CONFIG[secretState].flag] = true;
+      ctx.dbUser.session.skipped_modules =
+        ctx.dbUser.session.skipped_modules || [];
+      ctx.dbUser.session.skipped_modules.push(secretState);
+      ctx.dbUser.state = nextState;
+      await ydb.saveUser(ctx.dbUser);
+      await ctx.answerCbQuery().catch(() => {});
+
+      // Render next step with info message
+      return ctx
+        .reply(
+          "⏭ <b>Модуль пропущен.</b>\n\n🪙 Монеты за этот модуль не начислены. Ты можешь вернуться к статье позже и ввести секретное слово для получения монет.\n\nПродолжаем 👇",
+          { parse_mode: "HTML", protect_content: true },
+        )
+        .then(() => renderStep(ctx, nextState, token))
         .catch(() => {});
     }
 

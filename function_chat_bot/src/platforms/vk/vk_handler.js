@@ -1,6 +1,12 @@
 import { resolveUser } from "../../core/omni_resolver.js";
 import { adaptStateForChannel } from "../../scenarios/common/step_order.js";
 import { getVkPhotoAttachment } from "../../utils/vk_photo_cache.js";
+import {
+  SECRETS_CONFIG,
+  getNextStateAfterSecret,
+  SECRET_MAX_ATTEMPTS_BEFORE_SKIP,
+} from "../../scenarios/common/constants.js";
+import { getSecretWordErrorResponse } from "../../utils/ux_helpers.js";
 
 /**
  * VK Webhook Handler
@@ -311,10 +317,10 @@ export async function handleVkWebhook(event, context) {
           const stopData = await stopResp.json();
           if (stopData.error) {
             if (!JSON.stringify(stopData.error).includes("invalid event_id")) {
-                log.warn(
-                  `[VK] Ошибка API при остановке спиннера:`,
-                  JSON.stringify(stopData.error),
-                );
+              log.warn(
+                `[VK] Ошибка API при остановке спиннера:`,
+                JSON.stringify(stopData.error),
+              );
             }
           } else {
             log.info(`[VK] Спиннер остановлен`, {
@@ -373,7 +379,10 @@ export async function handleVkWebhook(event, context) {
                 if (btn.url) {
                   // VK fix: rewrite TG academy URLs (?bot=) to VK format (?vk_group=)
                   const link = btn.url.includes("?bot=")
-                    ? btn.url.replace(/\?bot=[^&]*/, `?vk_group=${process.env.VK_CENTRAL_GROUP || "237421168"}`)
+                    ? btn.url.replace(
+                        /\?bot=[^&]*/,
+                        `?vk_group=${process.env.VK_CENTRAL_GROUP || "237421168"}`,
+                      )
                     : btn.url;
                   return {
                     action: {
@@ -382,11 +391,13 @@ export async function handleVkWebhook(event, context) {
                       label: btn.text.substring(0, 40),
                     },
                   };
-                }
-                else if (btn.web_app?.url) {
+                } else if (btn.web_app?.url) {
                   // VK fix: rewrite TG academy URLs in web_app links too
                   const link = btn.web_app.url.includes("?bot=")
-                    ? btn.web_app.url.replace(/\?bot=[^&]*/, `?vk_group=${process.env.VK_CENTRAL_GROUP || "237421168"}`)
+                    ? btn.web_app.url.replace(
+                        /\?bot=[^&]*/,
+                        `?vk_group=${process.env.VK_CENTRAL_GROUP || "237421168"}`,
+                      )
                     : btn.web_app.url;
                   return {
                     action: {
@@ -395,8 +406,7 @@ export async function handleVkWebhook(event, context) {
                       label: btn.text.substring(0, 40),
                     },
                   };
-                }
-                else if (cbData)
+                } else if (cbData)
                   return {
                     action: {
                       type: "callback",
@@ -451,29 +461,38 @@ export async function handleVkWebhook(event, context) {
           replyWithPhoto: async (photoUrl, opts = {}) => {
             let captionText = opts.caption || "";
             captionText = captionText.replace(/<[^>]*>?/gm, "");
-            
+
             const params = new URLSearchParams();
             params.append("access_token", process.env.VK_GROUP_TOKEN);
             params.append("v", "5.199");
             params.append("user_id", String(userId));
-            params.append("random_id", String(Math.floor(Math.random() * 2147483647)));
+            params.append(
+              "random_id",
+              String(Math.floor(Math.random() * 2147483647)),
+            );
 
             // Пытаемся загрузить фото через VK API для красивого отображения
-            const attachment = await getVkPhotoAttachment(photoUrl, process.env.VK_GROUP_TOKEN);
+            const attachment = await getVkPhotoAttachment(
+              photoUrl,
+              process.env.VK_GROUP_TOKEN,
+            );
             if (attachment) {
               params.append("attachment", attachment);
               params.append("message", captionText);
             } else {
               // Fallback: ссылка в тексте, если загрузка не удалась
-              params.append("message", `${captionText}\n\n&#128247; Фото: ${photoUrl}`);
+              params.append(
+                "message",
+                `${captionText}\n\n&#128247; Фото: ${photoUrl}`,
+              );
             }
 
             if (opts?.reply_markup?.inline_keyboard) {
               const vkKb = translateKb(opts);
               if (vkKb) params.append("keyboard", vkKb);
             } else {
-               const mainMenuKb = getVkMainMenuKeyboard(vkUser, String(userId));
-               params.append("keyboard", mainMenuKb);
+              const mainMenuKb = getVkMainMenuKeyboard(vkUser, String(userId));
+              params.append("keyboard", mainMenuKb);
             }
 
             try {
@@ -501,6 +520,25 @@ export async function handleVkWebhook(event, context) {
             `✍️ ВВОД КОДА: МОДУЛЬ ${level}\n\nОтправь мне секретное слово:`,
             {},
           );
+        }
+
+        // === SKIP SECRET WORD MODULE ===
+        if (callbackData?.startsWith("SKIP_SECRET_")) {
+          const level = callbackData.split("_")[2];
+          const secretState = `WAIT_SECRET_${level}`;
+          const nextState = getNextStateAfterSecret(secretState, "vk");
+
+          vkUser.session[SECRETS_CONFIG[secretState].flag] = true;
+          if (!vkUser.session.skipped_modules)
+            vkUser.session.skipped_modules = [];
+          vkUser.session.skipped_modules.push(secretState);
+          vkUser.state = nextState;
+          await ydb.saveUser(vkUser);
+          await vkCtx.reply(
+            "⏭ Модуль пропущен.\n\n🪙 Монеты за этот модуль не начислены. Ты можешь вернуться к статье позже и ввести секретное слово для получения монет.\n\nПродолжаем 👇",
+            {},
+          );
+          return await renderStep(vkCtx, nextState, vkToken);
         }
 
         if (callbackData === "CLICK_REG_ID") {
@@ -862,7 +900,10 @@ export async function handleVkWebhook(event, context) {
                   if (btn.url) {
                     // VK fix: rewrite TG academy URLs (?bot=) to VK format (?vk_group=)
                     const link = btn.url.includes("?bot=")
-                      ? btn.url.replace(/\?bot=[^&]*/, `?vk_group=${process.env.VK_CENTRAL_GROUP || "237421168"}`)
+                      ? btn.url.replace(
+                          /\?bot=[^&]*/,
+                          `?vk_group=${process.env.VK_CENTRAL_GROUP || "237421168"}`,
+                        )
                       : btn.url;
                     return {
                       action: {
@@ -871,11 +912,13 @@ export async function handleVkWebhook(event, context) {
                         label: btn.text.substring(0, 40),
                       },
                     };
-                  }
-                  else if (btn.web_app?.url) {
+                  } else if (btn.web_app?.url) {
                     // VK fix: rewrite TG academy URLs in web_app links too
                     const link = btn.web_app.url.includes("?bot=")
-                      ? btn.web_app.url.replace(/\?bot=[^&]*/, `?vk_group=${process.env.VK_CENTRAL_GROUP || "237421168"}`)
+                      ? btn.web_app.url.replace(
+                          /\?bot=[^&]*/,
+                          `?vk_group=${process.env.VK_CENTRAL_GROUP || "237421168"}`,
+                        )
                       : btn.web_app.url;
                     return {
                       action: {
@@ -884,8 +927,7 @@ export async function handleVkWebhook(event, context) {
                         label: btn.text.substring(0, 40),
                       },
                     };
-                  }
-                  else if (cbData)
+                  } else if (cbData)
                     return {
                       action: {
                         type: "callback",
@@ -952,29 +994,41 @@ export async function handleVkWebhook(event, context) {
           replyWithPhoto: async (photoUrl, opts = {}) => {
             let captionText = opts.caption || "";
             captionText = captionText.replace(/<[^>]*>?/gm, "");
-            
+
             const params = new URLSearchParams();
             params.append("access_token", process.env.VK_GROUP_TOKEN);
             params.append("v", "5.199");
             params.append("user_id", String(message?.from_id || userId));
-            params.append("random_id", String(Math.floor(Math.random() * 2147483647)));
+            params.append(
+              "random_id",
+              String(Math.floor(Math.random() * 2147483647)),
+            );
 
             // Пытаемся загрузить фото через VK API для красивого отображения
-            const attachment = await getVkPhotoAttachment(photoUrl, process.env.VK_GROUP_TOKEN);
+            const attachment = await getVkPhotoAttachment(
+              photoUrl,
+              process.env.VK_GROUP_TOKEN,
+            );
             if (attachment) {
               params.append("attachment", attachment);
               params.append("message", captionText);
             } else {
               // Fallback: ссылка в тексте, если загрузка не удалась
-              params.append("message", `${captionText}\n\n&#128247; Фото: ${photoUrl}`);
+              params.append(
+                "message",
+                `${captionText}\n\n&#128247; Фото: ${photoUrl}`,
+              );
             }
 
             if (opts?.reply_markup?.inline_keyboard) {
               const vkKb = translateKeyboard(opts);
               if (vkKb) params.append("keyboard", vkKb);
             } else {
-               const mainMenuKb = getVkMainMenuKeyboard(vkUser, String(message?.from_id || userId));
-               params.append("keyboard", mainMenuKb);
+              const mainMenuKb = getVkMainMenuKeyboard(
+                vkUser,
+                String(message?.from_id || userId),
+              );
+              params.append("keyboard", mainMenuKb);
             }
 
             try {
@@ -1026,6 +1080,20 @@ export async function handleVkWebhook(event, context) {
                 return await vkCtx.reply(
                   `✍️ ВВОД КОДА: МОДУЛЬ ${level}\n\nОтправь мне секретное слово:`,
                 );
+              }
+              if (callbackData.startsWith("SKIP_SECRET_")) {
+                const level = callbackData.split("_")[2];
+                const secretState = `WAIT_SECRET_${level}`;
+                const nextState = getNextStateAfterSecret(secretState, "vk");
+                vkUser.session[SECRETS_CONFIG[secretState].flag] = true;
+                if (!vkUser.session.skipped_modules) vkUser.session.skipped_modules = [];
+                vkUser.session.skipped_modules.push(secretState);
+                vkUser.state = nextState;
+                await ydb.saveUser(vkUser);
+                await vkCtx.reply(
+                  "⏭ Модуль пропущен.\n\n🪙 Монеты за этот модуль не начислены. Ты можешь вернуться к статье позже и ввести секретное слово для получения монет.\n\nПродолжаем 👇",
+                );
+                return await renderStep(vkCtx, nextState, vkToken);
               }
               switch (callbackData) {
                 case "apps_menu":
@@ -1876,32 +1944,10 @@ export async function handleVkWebhook(event, context) {
             }
 
             // === СЕКРЕТНЫЕ СЛОВА ===
-            const secretsConfig = {
-              WAIT_SECRET_1: {
-                word: "гибрид",
-                xp: 20,
-                next: "Module_2_Online",
-                flag: "mod1_done",
-                awardKey: "mod1_awarded",
-              },
-              WAIT_SECRET_2: {
-                word: "облако",
-                xp: 30,
-                next: "WAIT_BOT_TOKEN",
-                flag: "mod2_done",
-                awardKey: "mod2",
-              },
-              WAIT_SECRET_3: {
-                word: "сарафан",
-                xp: 40,
-                next: "Lesson_Final_Comparison",
-                flag: "mod3_done",
-                awardKey: "mod3_awarded",
-              },
-            };
+            if (SECRETS_CONFIG[vkUser.state]) {
+              const config = SECRETS_CONFIG[vkUser.state];
+              const nextState = getNextStateAfterSecret(vkUser.state, "vk");
 
-            if (secretsConfig[vkUser.state]) {
-              const config = secretsConfig[vkUser.state];
               if (txt.toLowerCase().trim() === config.word.toLowerCase()) {
                 if (!vkUser.session.xp_awarded) vkUser.session.xp_awarded = {};
                 const alreadyAwarded =
@@ -1920,21 +1966,40 @@ export async function handleVkWebhook(event, context) {
                   );
                 }
 
-                if (config.next === "WAIT_BOT_TOKEN") {
-                  // Для VK пропускаем создание бота — сразу к Модулю 3
-                  vkUser.state = "Module_3_Offline";
-                  await ydb.saveUser(vkUser);
-                  return await renderStep(vkCtx, "Module_3_Offline", vkToken);
+                vkUser.state = nextState;
+                await ydb.saveUser(vkUser);
+                return await renderStep(vkCtx, nextState, vkToken);
+              } else {
+                // Track failed attempts
+                if (!vkUser.session.secret_attempts)
+                  vkUser.session.secret_attempts = {};
+                vkUser.session.secret_attempts[vkUser.state] =
+                  (vkUser.session.secret_attempts[vkUser.state] || 0) + 1;
+                await ydb.saveUser(vkUser);
+
+                const attempts = vkUser.session.secret_attempts[vkUser.state];
+                const errorMsg = getSecretWordErrorResponse(
+                  vkUser.state,
+                  attempts,
+                );
+
+                const level = vkUser.state.split("_")[2];
+                const replyOpts = {};
+
+                if (attempts >= SECRET_MAX_ATTEMPTS_BEFORE_SKIP) {
+                  replyOpts.reply_markup = {
+                    inline_keyboard: [
+                      [
+                        {
+                          text: "⏭ ПРОПУСТИТЬ МОДУЛЬ",
+                          callback_data: `SKIP_SECRET_${level}`,
+                        },
+                      ],
+                    ],
+                  };
                 }
 
-                vkUser.state = config.next;
-                await ydb.saveUser(vkUser);
-                return await renderStep(vkCtx, config.next, vkToken);
-              } else {
-                return await vkCtx.reply(
-                  "❌ <b>Неверное слово.</b>\n\nЗагляни в конец статьи еще раз, найди правильное слово и пришли его мне.",
-                  {},
-                );
+                return await vkCtx.reply(errorMsg, replyOpts);
               }
             }
 

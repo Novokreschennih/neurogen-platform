@@ -11,6 +11,11 @@ import {
 import scenario from "../../scenarios/scenario_tg.js";
 import { resolveUser } from "../../core/omni_resolver.js";
 import { adaptStateForChannel } from "../../scenarios/common/step_order.js";
+import {
+  SECRETS_CONFIG,
+  getNextStateAfterSecret,
+} from "../../scenarios/common/constants.js";
+import { getSecretWordErrorResponse } from "../../utils/ux_helpers.js";
 
 export async function handleWebChat(event, context) {
   const { action, log, corsHeaders, ydb } = context;
@@ -480,32 +485,10 @@ export async function handleWebChat(event, context) {
       }
 
       // --- Г. СЕКРЕТНЫЕ СЛОВА (ИЗ СТАТЕЙ) ---
-      const secretsConfig = {
-        WAIT_SECRET_1: {
-          word: "гибрид",
-          xp: 20,
-          next: "Module_2_Online",
-          flag: "mod1_done",
-          awardKey: "mod1_awarded",
-        },
-        WAIT_SECRET_2: {
-          word: "облако",
-          xp: 30,
-          next: "Module_3_Offline",
-          flag: "mod2_done",
-          awardKey: "mod2",
-        },
-        WAIT_SECRET_3: {
-          word: "сарафан",
-          xp: 40,
-          next: "Lesson_Final_Comparison",
-          flag: "mod3_done",
-          awardKey: "mod3_awarded",
-        },
-      };
+      if (SECRETS_CONFIG[u.state]) {
+        const config = SECRETS_CONFIG[u.state];
+        const nextState = getNextStateAfterSecret(u.state, "web");
 
-      if (secretsConfig[u.state]) {
-        const config = secretsConfig[u.state];
         if (txt.toLowerCase() === config.word.toLowerCase()) {
           if (!u.session.xp_awarded) u.session.xp_awarded = {};
 
@@ -513,7 +496,7 @@ export async function handleWebChat(event, context) {
             u.session.xp = (u.session.xp || 0) + config.xp;
             u.session.xp_awarded[config.awardKey] = true;
             u.session[config.flag] = true;
-            u.state = config.next;
+            u.state = nextState;
             await ydb.saveUser(u);
             return {
               statusCode: 200,
@@ -525,7 +508,7 @@ export async function handleWebChat(event, context) {
               }),
             };
           } else {
-            u.state = config.next;
+            u.state = nextState;
             await ydb.saveUser(u);
             return {
               statusCode: 200,
@@ -538,12 +521,20 @@ export async function handleWebChat(event, context) {
             };
           }
         } else {
+          // Track failed attempts
+          if (!u.session.secret_attempts) u.session.secret_attempts = {};
+          u.session.secret_attempts[u.state] =
+            (u.session.secret_attempts[u.state] || 0) + 1;
+          await ydb.saveUser(u);
+
+          const attempts = u.session.secret_attempts[u.state];
+          const errorMsg = getSecretWordErrorResponse(u.state, attempts);
+
           return {
             statusCode: 200,
             headers: corsHeaders,
             body: JSON.stringify({
-              answer:
-                "❌ <b>Неверное слово.</b>\n\nЗагляни в конец статьи еще раз, найди правильное слово и пришли его мне.",
+              answer: errorMsg,
               sessionId: webSessionId,
             }),
           };
