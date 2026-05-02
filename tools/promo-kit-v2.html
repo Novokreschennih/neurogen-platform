@@ -4,8 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Promo-Kit | NeuroGen Partner Dashboard</title>
+    <!-- Telegram WebApp Script (не мешает обычным браузерам) -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Библиотека для генерации QR -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
     <style>
@@ -48,7 +50,6 @@
       .toast.show { opacity: 1; transform: translateY(0); }
       .toast.success { border-color: rgba(34, 197, 94, 0.5); }
       .toast.error { border-color: rgba(239, 68, 68, 0.5); }
-      .toast.info { border-color: rgba(6, 182, 212, 0.5); }
 
       /* Анимация загрузки */
       .loading-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
@@ -79,12 +80,12 @@
           </h1>
           <p class="text-xs text-gray-400">Командный Центр Партнера</p>
         </div>
-        <button onclick="switchTab('marketing')" id="tab-btn-marketing" class="w-10 h-10 rounded-full bg-gradient-to-r from-cyan-500 to-purple-600 flex items-center justify-center text-lg font-bold shadow-lg shadow-purple-500/30">
-          🏠
-        </button>
+        <div id="userAvatar" class="w-10 h-10 rounded-full bg-gradient-to-r from-cyan-500 to-purple-600 flex items-center justify-center text-lg font-bold shadow-lg shadow-purple-500/30">
+          👤
+        </div>
       </div>
       <!-- Tabs -->
-      <div class="flex gap-6 mt-3 text-xs font-bold uppercase tracking-wider">
+      <div class="flex gap-6 mt-3 text-xs font-bold uppercase tracking-wider max-w-4xl mx-auto">
         <button onclick="switchTab('marketing')" id="tab-marketing" class="pb-2 tab-active transition-all">📊 Маркетинг</button>
         <button onclick="switchTab('ai')" id="tab-ai" class="pb-2 text-gray-500 transition-all">🧠 Интеллект</button>
       </div>
@@ -98,12 +99,12 @@
         <p class="text-sm text-cyan-400 loading-pulse font-bold tracking-wider uppercase">Синхронизация с ядром...</p>
       </div>
 
-<!-- ОСНОВНОЙ КОНТЕНТ -->
+      <!-- ОСНОВНОЙ КОНТЕНТ -->
       <div id="mainContent" class="hidden space-y-6">
         
         <!-- Tab: Marketing -->
-        <div id="content-marketing" class="ai-content">        
-          <!-- ВАЖНО: БЛОК ЦЕННОСТИ СИСТЕМЫ (Что получил партнер) -->
+        <div id="content-marketing" class="ai-content active">        
+          <!-- БЛОК ЦЕННОСТИ СИСТЕМЫ -->
           <div class="glass-panel rounded-3xl p-6 md:p-8">
             <h2 class="text-2xl font-black mb-2 uppercase">Твой <span class="gradient-text">Арсенал</span></h2>
             <p class="text-sm text-gray-400 mb-6">Твоя IT-империя развернута и готова к работе. Что в твоих руках прямо сейчас:</p>
@@ -133,7 +134,7 @@
           </div>
 
           <!-- БЛОК СТАТИСТИКИ -->
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-2 gap-4 mt-6">
             <div class="glass-panel rounded-2xl p-5 border-l-4 border-cyan-500">
               <p class="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1">Всего переходов</p>
               <p id="statClicks" class="text-3xl font-black text-white">0</p>
@@ -144,7 +145,7 @@
             </div>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
             <!-- ЛЕВЫЙ СТОЛБЕЦ: ССЫЛКИ И QR -->
             <div class="glass-panel rounded-3xl p-6 text-center neon-border flex flex-col h-full justify-between">
               <div>
@@ -170,6 +171,14 @@
                 <button id="createPdfBtn" class="w-full bg-black border border-purple-500/50 hover:bg-purple-900/20 text-white font-bold py-3 px-4 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2">
                   <span>📄</span> B2B ПРЕЗЕНТАЦИЯ С QR
                 </button>
+                <div class="grid grid-cols-2 gap-3 mt-2">
+                  <button id="shareBtn" class="bg-[#2AABEE]/20 text-[#2AABEE] hover:bg-[#2AABEE]/30 border border-[#2AABEE]/30 font-bold py-3 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2">
+                    <span>📢</span> Поделиться
+                  </button>
+                  <button id="openMySiteBtn" class="bg-white text-black hover:bg-gray-200 font-bold py-3 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2">
+                    <span>🌐</span> Мой Сайт
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -237,33 +246,33 @@
                   </button>
                 </div>
                 <p id="post1" class="text-sm text-gray-300 leading-relaxed">
-                  Я только что собрал ИИ-клона в Telegram за 1 минуту без программирования. Он консультирует людей и строит мне па��тн��рскую сеть 24/7, пока я занимаюсь своими делами. Старт $0. Зайди потестить, как он работает изнутри:<br><br><span class="bot-link text-cyan-400 font-medium"></span>
+                  Я только что собрал ИИ-клона в Telegram за 1 минуту без программирования. Он консультирует людей и строит мне партнерскую сеть 24/7, пока я занимаюсь своими делами. Старт $0. Зайди потестить, как он работает изнутри:<br><br><span class="bot-link text-cyan-400 font-medium"></span>
                 </p>
               </div>
 
               <!-- Пост 2 -->
               <div class="bg-black/40 rounded-2xl p-5 border border-white/5 relative post-card" data-category="business">
                 <div class="flex justify-between items-center mb-3">
-                  <span class="text-[10px] font-bold text-purple-400 bg-purple-900/30 px-2 py-1 rounded uppercase tracking-wider">Бизнес</span>
+                  <span class="text-[10px] font-bold text-purple-400 bg-purple-900/30 px-2 py-1 rounded uppercase tracking-wider">Владельцам бизнеса</span>
                   <button onclick="copyText('post2', this)" class="text-xs font-bold bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
                     <span>📋</span> Копировать
                   </button>
                 </div>
                 <p id="post2" class="text-sm text-gray-300 leading-relaxed">
-                  Хватит платить за рекламу авансом. Система оцифровывает твоё сарафанное радио бесплатно — это будущее маркетинга. Попробуй бесплатно:<br><br><span class="bot-link text-cyan-400 font-medium"></span>
+                  Платить за рекламу до того, как пришел клиент — это прошлый век. Нашел IT-систему: твои клиенты сами приводят друзей через QR-коды, а ты платишь % только с реальных денег в кассе. Оцифрованное сарафанное радио. Посмотри, как это внедрить бесплатно:<br><br><span class="bot-link text-cyan-400 font-medium"></span>
                 </p>
               </div>
 
               <!-- Пост 3 -->
               <div class="bg-black/40 rounded-2xl p-5 border border-white/5 relative post-card" data-category="offline">
                 <div class="flex justify-between items-center mb-3">
-                  <span class="text-[10px] font-bold text-green-400 bg-green-900/30 px-2 py-1 rounded uppercase tracking-wider">Офлайн</span>
+                  <span class="text-[10px] font-bold text-green-400 bg-green-900/30 px-2 py-1 rounded uppercase tracking-wider">Блогерам</span>
                   <button onclick="copyText('post3', this)" class="text-xs font-bold bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
                     <span>📋</span> Копировать
                   </button>
                 </div>
                 <p id="post3" class="text-sm text-gray-300 leading-relaxed">
-                  Монетизируй отказников! Гениальная механика пассивного крипто-дохода для любого бизнеса. Подключай QR-коды в своём кафе/магазине и зарабатывай с продаж в сети:<br><br><span class="bot-link text-cyan-400 font-medium"></span>
+                  Знаешь, что 95% твоей аудитории никогда не купит твой продукт? Я нашел способ монетизировать этих «отказников». Даешь им бесплатный доступ в IT-экосистему, и получаешь пассивный крипто-доход с их покупок у других авторов. Тестируй механику:<br><br><span class="bot-link text-cyan-400 font-medium"></span>
                 </p>
               </div>
             </div>
@@ -271,7 +280,7 @@
         </div>
 
         <!-- Tab: AI Constructor -->
-        <div id="content-ai" class="ai-content hidden space-y-6">
+        <div id="content-ai" class="ai-content space-y-6">
           <div class="glass-panel rounded-2xl p-5 border-l-4 border-cyan-500">
             <h3 class="font-bold text-white mb-1">Глобальный Нейромозг</h3>
             <p class="text-xs text-gray-400">Настрой ИИ один раз — и он будет общаться с твоими клиентами в Telegram, VK и на сайте.</p>
@@ -296,7 +305,7 @@
 
           <!-- Constructor -->
           <div class="glass-panel rounded-3xl p-6 space-y-4">
-            <!-- НОВОЕ: Настройки Провайдера и Ключа -->
+            <!-- Настройки Провайдера и Ключа -->
             <div class="p-4 bg-purple-900/10 border border-purple-500/30 rounded-2xl mb-6 space-y-4">
               <h4 class="text-xs font-bold text-purple-400 uppercase tracking-wider mb-2">⚙️ Технические настройки ИИ</h4>
               
@@ -335,7 +344,7 @@
               </div>
             </div>
 
-            <!-- Существующие настройки характера -->
+            <!-- Настройки характера -->
             <h4 class="text-xs font-bold text-cyan-400 uppercase tracking-wider mb-2 mt-6">🎭 Характер бота</h4>
             
             <div>
@@ -381,191 +390,34 @@
             </button>
           </div>
         </div>
-      </div>
-            <div class="bg-black/40 border border-white/5 p-4 rounded-2xl">
-              <div class="text-2xl mb-2">💸</div>
-              <h3 class="font-bold text-white mb-1">Пассивный Крипто-Доход</h3>
-              <p class="text-xs text-gray-400">Право перепродажи продукта экосистемы SetHubble. Система сама дожимает лидов, ты — получаешь USDT.</p>
-            </div>
-            <div class="bg-black/40 border border-white/5 p-4 rounded-2xl">
-              <div class="text-2xl mb-2">🧠</div>
-              <h3 class="font-bold text-white mb-1">Нейросети для твоих проектов</h3>
-              <p class="text-xs text-gray-400">Доступ к ИИ-генераторам: создавай автоворонки, лендинги и вирусные сценарии для любого своего бизнеса.</p>
-            </div>
-            <div class="bg-black/40 border border-white/5 p-4 rounded-2xl">
-              <div class="text-2xl mb-2">📈</div>
-              <h3 class="font-bold text-white mb-1">O2O: Захват Офлайна</h3>
-              <p class="text-xs text-gray-400">Генерируй QR-коды для кафе, СТО и салонов красоты. Оцифруй их клиентов и зарабатывай с их покупок в сети.</p>
-            </div>
-          </div>
-        </div>
 
-        <!-- БЛОК СТАТИСТИКИ -->
-        <div class="grid grid-cols-2 gap-4">
-          <div class="glass-panel rounded-2xl p-5 border-l-4 border-cyan-500">
-            <p class="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1">Всего переходов</p>
-            <p id="statClicks" class="text-3xl font-black text-white">0</p>
-          </div>
-          <div class="glass-panel rounded-2xl p-5 border-l-4 border-purple-500 bg-purple-900/10">
-            <p class="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1">Твой Доход</p>
-            <p id="statEarnings" class="text-3xl font-black text-purple-400">$0.00</p>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <!-- ЛЕВЫЙ СТОЛБЕЦ: ССЫЛКИ И QR -->
-          <div class="glass-panel rounded-3xl p-6 text-center neon-border flex flex-col h-full justify-between">
-            <div>
-              <div class="inline-block bg-cyan-500/20 text-cyan-400 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-4 border border-cyan-500/30">Твоя Точка Входа</div>
-              <h2 class="text-xl font-bold text-white mb-6">Реферальный QR-код</h2>
-
-              <div class="flex justify-center mb-6">
-                <div id="qrcode" class="qr-container shadow-[0_0_30px_rgba(255,255,255,0.1)]"></div>
-              </div>
-
-              <div class="bg-black/50 rounded-xl p-3 mb-6 border border-white/5 break-all">
-                <p class="text-xs text-cyan-300 font-mono" id="botLinkDisplay">Загрузка...</p>
-              </div>
-            </div>
-
-            <div class="space-y-3 mt-auto">
-              <button id="copyLinkBtn" class="w-full bg-white/10 hover:bg-white/20 border border-white/10 text-white font-bold py-3 px-4 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2">
-                <span>📋</span> КОПИРОВАТЬ ССЫЛКУ
-              </button>
-              <button id="downloadQrBtn" class="w-full bg-gradient-to-r from-purple-600 to-cyan-600 hover:opacity-90 text-white font-bold py-3 px-4 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg">
-                <span>📥</span> СКАЧАТЬ ДЛЯ ПЕЧАТИ
-              </button>
-              <button id="createPdfBtn" class="w-full bg-black border border-purple-500/50 hover:bg-purple-900/20 text-white font-bold py-3 px-4 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2">
-                <span>📄</span> B2B ПРЕЗЕНТАЦИЯ С QR
-              </button>
-              <div class="grid grid-cols-2 gap-3 mt-2">
-                <button id="shareBtn" class="bg-[#2AABEE]/20 text-[#2AABEE] hover:bg-[#2AABEE]/30 border border-[#2AABEE]/30 font-bold py-3 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2">
-                  <span>✈️</span> В Telegram
-                </button>
-                <button id="openMySiteBtn" class="bg-white text-black hover:bg-gray-200 font-bold py-3 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2">
-                  <span>🌐</span> Мой Сайт
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- ПРАВЫЙ СТОЛБЕЦ: ТАРИФЫ И ВЫПЛАТЫ -->
-          <div class="glass-panel rounded-3xl p-6 flex flex-col">
-            <h2 class="text-xl font-bold mb-1 uppercase text-white">Финансовый <span class="gradient-text">Мотор</span></h2>
-            <p class="text-xs text-gray-400 mb-6">Условия твоих выплат по реферальной программе.</p>
-            
-            <div class="space-y-4">
-              <!-- ТАРИФ FREE -->
-              <div id="tariff-free" class="bg-black/40 border border-gray-700 p-5 rounded-2xl relative transition-all">
-                <div id="badge-free" class="hidden absolute -top-3 right-4 bg-green-500 text-black text-[10px] font-black px-3 py-1 rounded-full uppercase shadow-lg shadow-green-500/30">Активен</div>
-                <h3 class="text-lg font-bold text-gray-300 mb-2">Тариф FREE</h3>
-                <ul class="text-sm text-gray-400 space-y-2 mb-3">
-                  <li class="flex items-center gap-2"><span class="text-green-500">✔</span> <b>25%</b> с личных продаж</li>
-                  <li class="flex items-center gap-2"><span class="text-green-500">✔</span> <b>По 3%</b> пассива (до 3 уровня)</li>
-                </ul>
-              </div>
-
-              <!-- ТАРИФ PRO -->
-              <div id="tariff-pro" class="bg-purple-900/10 border border-purple-500/30 p-5 rounded-2xl relative transition-all">
-                <div id="badge-pro" class="hidden absolute -top-3 right-4 bg-gradient-to-r from-cyan-400 to-purple-500 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase shadow-lg">Активен</div>
-                <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2">Статус PRO <span class="text-xl">👑</span></h3>
-                <ul class="text-sm text-gray-300 space-y-2 mb-4">
-                  <li class="flex items-center gap-2"><span class="text-purple-400">🔥</span> <b>50%</b> с личных продаж (Максимум)</li>
-                  <li class="flex items-center gap-2"><span class="text-purple-400">🔥</span> <b>По 5%</b> пассива (до 5 уровня)</li>
-                  <li class="flex items-center gap-2"><span class="text-purple-400">🔥</span> Доступ к CRM и ИИ-приложениям</li>
-                </ul>
-                <a id="btn-upgrade-pro" href="https://t.me/sethubble_biz_bot" target="_blank" class="block text-center w-full bg-white text-black font-bold py-2.5 rounded-lg hover:bg-gray-200 transition-all text-sm">
-                  АКТИВИРОВАТЬ PRO
-                </a>
-              </div>
-            </div>
-            
-            <div class="mt-auto pt-6">
-               <p class="text-[11px] text-gray-500 text-center">Все начисления происходят автоматически в USDT в твоем личном кабинете SetHubble.</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- ГОТОВЫЕ ПОСТЫ -->
-        <div class="glass-panel rounded-3xl p-6 mt-6">
-          <div class="flex justify-between items-center mb-6">
-            <div>
-              <h2 class="text-xl font-bold text-white">📝 Магниты Трафика</h2>
-              <p class="text-xs text-gray-400 mt-1">Готовые посты (твоя ссылка вшита)</p>
-            </div>
-          </div>
-
-          <!-- Фильтры -->
-          <div class="flex gap-2 mb-6 overflow-x-auto no-scrollbar pb-2">
-            <button onclick="filterPosts('all')" class="px-4 py-2 bg-cyan-600 text-white rounded-xl text-xs font-bold whitespace-nowrap transition-colors">Все</button>
-            <button onclick="filterPosts('intrigue')" class="px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl text-xs font-bold whitespace-nowrap transition-colors">🎯 Интрига</button>
-            <button onclick="filterPosts('business')" class="px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl text-xs font-bold whitespace-nowrap transition-colors">💼 Бизнес</button>
-            <button onclick="filterPosts('offline')" class="px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl text-xs font-bold whitespace-nowrap transition-colors">🏪 Офлайн</button>
-          </div>
-
-          <div id="postsContainer" class="space-y-4">
-            <!-- Пост 1 -->
-            <div class="bg-black/40 rounded-2xl p-5 border border-white/5 relative post-card" data-category="intrigue">
-              <div class="flex justify-between items-center mb-3">
-                <span class="text-[10px] font-bold text-cyan-400 bg-cyan-900/30 px-2 py-1 rounded uppercase tracking-wider">Интрига</span>
-                <button onclick="copyText('post1', this)" class="text-xs font-bold bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
-                  <span>📋</span> Копировать
-                </button>
-              </div>
-              <p id="post1" class="text-sm text-gray-300 leading-relaxed">
-                Я только что собрал ИИ-клона в Telegram за 1 минуту без программирования. Он консультирует людей и строит мне партнерскую сеть 24/7, пока я занимаюсь своими делами. Старт $0. Зайди потестить, как он работает изнутри:<br><br><span class="bot-link text-cyan-400 font-medium"></span>
-              </p>
-            </div>
-
-            <!-- Пост 2 -->
-            <div class="bg-black/40 rounded-2xl p-5 border border-white/5 relative post-card" data-category="business">
-              <div class="flex justify-between items-center mb-3">
-                <span class="text-[10px] font-bold text-purple-400 bg-purple-900/30 px-2 py-1 rounded uppercase tracking-wider">Владельцам бизнеса</span>
-                <button onclick="copyText('post2', this)" class="text-xs font-bold bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
-                  <span>📋</span> Копировать
-                </button>
-              </div>
-              <p id="post2" class="text-sm text-gray-300 leading-relaxed">
-                Платить за рекламу до того, как пришел клиент — это прошлый век. Нашел IT-систему: твои клиенты сами приводят друзей через QR-коды, а ты платишь % только с реальных денег в кассе. Оцифрованное сарафанное радио. Посмотри, как это внедрить бесплатно:<br><br><span class="bot-link text-cyan-400 font-medium"></span>
-              </p>
-            </div>
-
-            <!-- Пост 3 -->
-            <div class="bg-black/40 rounded-2xl p-5 border border-white/5 relative post-card" data-category="offline">
-              <div class="flex justify-between items-center mb-3">
-                <span class="text-[10px] font-bold text-green-400 bg-green-900/30 px-2 py-1 rounded uppercase tracking-wider">Блогерам</span>
-                <button onclick="copyText('post3', this)" class="text-xs font-bold bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
-                  <span>📋</span> Копировать
-                </button>
-              </div>
-              <p id="post3" class="text-sm text-gray-300 leading-relaxed">
-                Знаешь, что 95% твоей аудитории никогда не купит твой продукт? Я нашел способ монетизировать этих «отказников». Даешь им бесплатный доступ в IT-экосистему, и получаешь пассивный крипто-доход с их покупок у других авторов. Тестируй механику:<br><br><span class="bot-link text-cyan-400 font-medium"></span>
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div class="text-center mt-8">
+        <div class="text-center mt-8 pb-4">
           <a href="https://t.me/sethubble_support" target="_blank" class="inline-flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-cyan-400 transition-colors uppercase tracking-wider">
             <span>❓</span> Служба технической поддержки
           </a>
         </div>
+        
       </div> <!-- /mainContent -->
-    </div>
+    </div> <!-- /max-w-4xl container -->
 
     <!-- JS ЛОГИКА -->
     <script>
-      // Universal Telegram WebApp (optional - for visual only in TG)
+      // Инициализация Telegram WebApp API (если открыто внутри TG)
       let tg = null;
-      try { tg = window.Telegram?.WebApp; if(tg){ tg.expand(); tg.ready(); }}catch(e){ tg = null; }
+      try { 
+        tg = window.Telegram?.WebApp; 
+        if(tg){ tg.expand(); tg.ready(); }
+      } catch(e){ tg = null; }
 
       let userData = null;
       let refLink = "";
+      let b2bRefLink = "";
       let botName = "";
-      let secureToken = "";
       let authHeaders = { "Content-Type": "application/json" };
 
-      const BACKEND_URL = new URLSearchParams(window.location.search).get("api") || "https://d5dsbah1d4ju0glmp9d0.3zvepvee.apigw.yandexcloud.net";
+      // Извлекаем URL бекенда
+      const urlParamsAPI = new URLSearchParams(window.location.search);
+      const BACKEND_URL = urlParamsAPI.get("api") || "https://d5dsbah1d4ju0glmp9d0.3zvepvee.apigw.yandexcloud.net";
 
       // Universal Toast notifications
       function showToast(message, type = "success") {
@@ -575,7 +427,10 @@
         toast.innerHTML = (type === "success" ? "✅ " : type === "error" ? "❌ " : "ℹ️ ") + message;
         container.appendChild(toast);
         setTimeout(() => toast.classList.add("show"), 10);
-        setTimeout(() => { toast.classList.remove("show"); setTimeout(() => toast.remove(), 300); }, 3000);
+        setTimeout(() => { 
+          toast.classList.remove("show"); 
+          setTimeout(() => toast.remove(), 300); 
+        }, 3000);
       }
 
       // Tab switching
@@ -618,7 +473,6 @@
         btn.disabled = true;
         btn.innerHTML = "⏳ Синхронизация...";
         
-        // Собираем все данные с формы
         const payload = {
           custom_prompt: buildAiPrompt(),
           ai_provider: document.getElementById("ai-provider").value,
@@ -653,16 +507,18 @@
         const urlParams = new URLSearchParams(window.location.search);
         const urlToken = urlParams.get("token");
         
-        // Universal auth priority: 1. JWT from URL, 2. LocalStorage, 3. Telegram initData
+        // Универсальная авторизация (Omnichannel Auth)
         if (urlToken) {
           authHeaders["Authorization"] = `Bearer ${urlToken}`;
           localStorage.setItem("neurogen_jwt", urlToken);
+          // Очищаем токен из URL для безопасности
+          window.history.replaceState({}, document.title, window.location.pathname);
         } else if (localStorage.getItem("neurogen_jwt")) {
           authHeaders["Authorization"] = `Bearer ${localStorage.getItem("neurogen_jwt")}`;
         } else if (tg?.initData) {
           authHeaders["x-telegram-initdata"] = tg.initData;
         } else {
-          document.getElementById("loadingBlock").innerHTML = '<p class="text-red-500 font-bold text-center">Доступ запрещён. Авторизуйтесь через бота.</p>';
+          document.getElementById("loadingBlock").innerHTML = '<p class="text-red-500 font-bold text-center">Доступ запрещён. Перейдите по защищенной ссылке из системы.</p>';
           return;
         }
 
@@ -692,36 +548,12 @@
         }
       }
 
-      function showFallbackMode() {
-        const urlParams = new URLSearchParams(window.location.search);
-        botName = urlParams.get("bot") || "sethubble_bot";
-        botName = botName.replace("@", "");
-        
-        const toHex = (str) => Array.from(str).map((c) => c.charCodeAt(0).toString(16).padStart(2, "0")).join("");
-        secureToken = toHex(botName);
-
-        userData = {
-          first_name: tg.initDataUnsafe?.user?.first_name || "Партнёр",
-          clicks: 0,
-          earnings: "0.00",
-          is_pro: false // Фолбэк = FREE
-        };
-        initUI();
-      }
-
       function initUI() {
         document.getElementById("loadingBlock").classList.add("hidden");
         document.getElementById("mainContent").classList.remove("hidden");
 
-        const tail = userData.partner_id || userData.sh_ref_tail || "p_qdr";
-        const toHex = (str) => Array.from(str).map((c) => c.charCodeAt(0).toString(16).padStart(2, "0")).join("");
-        secureToken = toHex(tail);
-
-        // Landing URL
-        const landingUrl = `https://sethubble.ru/join/?page=${secureToken}`;
-        const b2bLandingUrl = `https://sethubble.ru/join/?page=${secureToken}&role=b2b`;
-        refLink = landingUrl;
-        b2bRefLink = b2bLandingUrl;
+        // Landing URL Fallback
+        const landingUrl = refLink || `https://sethubble.ru/join/?page=${userData.partner_id || "p_qdr"}`;
 
         // Вставка ссылок
         document.getElementById("botLinkDisplay").textContent = landingUrl;
@@ -739,26 +571,20 @@
 
         // === ПОДСВЕТКА ТАРИФА (FREE vs PRO) ===
         if (userData.is_pro) {
-          // Включаем бейджик PRO
           document.getElementById("tariff-pro").classList.add("neon-border", "bg-purple-900/20");
           document.getElementById("badge-pro").classList.remove("hidden");
-          document.getElementById("btn-upgrade-pro").classList.add("hidden"); // Скрываем кнопку покупки
+          document.getElementById("btn-upgrade-pro").classList.add("hidden");
           document.getElementById("tariff-free").classList.add("opacity-50");
         } else {
-          // Включаем бейджик FREE
           document.getElementById("tariff-free").classList.add("border-green-500/50", "bg-green-900/10");
           document.getElementById("badge-free").classList.remove("hidden");
         }
 
         // === ПРОВЕРКА ПОДПИСКИ (Блокировка вкладки ИИ) ===
-        // Если ai_active_until (из userData) меньше текущего времени, блокируем
         const isAiActive = userData.ai_active_until && (userData.ai_active_until > Date.now());
-        
         if (!isAiActive) {
-          // Находим контейнер с настройками
           const aiContainer = document.getElementById("content-ai");
           if (aiContainer) {
-            // Очищаем внутренности и ставим заглушку
             aiContainer.innerHTML = `
               <div class="glass-panel rounded-3xl p-8 text-center border-red-500/30 bg-red-900/10">
                 <div class="text-5xl mb-4">🤖</div>
@@ -780,7 +606,6 @@
           document.getElementById("ai-model").value = userData.ai_model;
         }
         if (userData.custom_prompt) {
-          // Парсим custom_prompt и заполняем поля
           const prompt = userData.custom_prompt;
           if (prompt.includes("консультант по IT")) {
             document.getElementById("ai-role").value = "консультант по IT-бизнесу";
@@ -812,14 +637,15 @@
         });
       }
 
-      // Кнопки
+      // === КНОПКИ ДЕЙСТВИЙ (Omnichannel) ===
+      
       document.getElementById("copyLinkBtn").addEventListener("click", () => {
         navigator.clipboard.writeText(refLink).then(() => {
           const btn = document.getElementById("copyLinkBtn");
           const original = btn.innerHTML;
           btn.innerHTML = "<span>✅</span> СКОПИРОВАНО";
           btn.classList.replace("bg-white/10", "bg-green-600");
-          if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+          if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
           setTimeout(() => {
             btn.innerHTML = original;
             btn.classList.replace("bg-green-600", "bg-white/10");
@@ -850,28 +676,47 @@
             printWindow.document.write(htmlContent);
             printWindow.document.close();
             setTimeout(() => printWindow.print(), 1000);
-            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+            if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
           }
         }, 100);
       });
 
-      document.getElementById("shareBtn").addEventListener("click", () => {
+      document.getElementById("shareBtn").addEventListener("click", async () => {
         const shareLink = b2bRefLink || refLink;
-        const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(shareLink)}&text=${encodeURIComponent("🤖 Мой ИИ-помощник работает 24/7. Попробуй: ")}`;
-        if (tg.openTelegramLink) tg.openTelegramLink(shareUrl);
-        else window.open(shareUrl, "_blank");
+        const textToShare = "🤖 Мой ИИ-помощник работает 24/7. Попробуй: ";
+        
+        // 1. Попытка нативного шеринга в Telegram
+        if (tg && tg.openTelegramLink) {
+          tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(shareLink)}&text=${encodeURIComponent(textToShare)}`);
+        } 
+        // 2. Попытка нативного шеринга в iOS/Android (Web Share API)
+        else if (navigator.share) {
+          try {
+            await navigator.share({
+              title: 'NeuroGen AI',
+              text: textToShare,
+              url: shareLink
+            });
+          } catch (err) {
+            console.error('Ошибка шеринга:', err);
+          }
+        } 
+        // 3. Fallback: открытие ссылки в новом окне
+        else {
+          window.open(`https://t.me/share/url?url=${encodeURIComponent(shareLink)}&text=${encodeURIComponent(textToShare)}`, "_blank");
+        }
       });
 
       document.getElementById("openMySiteBtn").addEventListener("click", () => {
         const link = b2bRefLink || refLink;
-        if (tg.openLink) tg.openLink(link);
+        if (tg?.openLink) tg.openLink(link);
         else window.open(link, "_blank");
       });
 
       document.getElementById("createPdfBtn").addEventListener("click", () => {
         const pdfLink = b2bRefLink || refLink;
         const pdfAppUrl = `https://qr2pdf.vercel.app/?link=${encodeURIComponent(pdfLink)}`;
-        if (tg.openLink) tg.openLink(pdfAppUrl);
+        if (tg?.openLink) tg.openLink(pdfAppUrl);
         else window.open(pdfAppUrl, "_blank");
       });
 
@@ -881,7 +726,7 @@
           const original = btnElement.innerHTML;
           btnElement.innerHTML = "<span>✅</span>";
           btnElement.classList.replace("bg-white/10", "bg-green-600");
-          if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+          if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
           setTimeout(() => {
             btnElement.innerHTML = original;
             btnElement.classList.replace("bg-green-600", "bg-white/10");
@@ -907,6 +752,7 @@
         });
       }
 
+      // Запуск
       initUser();
     </script>
   </body>
