@@ -272,6 +272,15 @@ export async function handleCronJobs(event, context) {
               channel: primaryChannel,
             });
             actionTaken = true; // сохраняем бан
+          } else if (sendResult.errorCode === 404) {
+            u.session.is_banned = true;
+            u.session.banned_at = Date.now();
+            u.session.ban_reason = sendResult.error || "Chat not found (account deleted)";
+            log.warn(`[CRON] Chat not found (404)`, {
+              userId: u.user_id,
+              channel: primaryChannel,
+            });
+            actionTaken = true; // сохраняем бан
           } else {
             stats.failed++;
             const ch = sendResult.channel || primaryChannel;
@@ -320,6 +329,12 @@ export async function handleCronJobs(event, context) {
               u.session.ban_reason = sendResult.error || "Bot blocked";
               actionTaken = true; // сохраняем бан
               stats.skipped++;
+            } else if (sendResult.errorCode === 404) {
+              u.session.is_banned = true;
+              u.session.banned_at = Date.now();
+              u.session.ban_reason = sendResult.error || "Chat not found (account deleted)";
+              actionTaken = true; // сохраняем бан
+              stats.skipped++;
             } else {
               stats.failed++;
               const ch = sendResult.channel || primaryChannel;
@@ -360,6 +375,12 @@ export async function handleCronJobs(event, context) {
                   u.session.is_banned = true;
                   u.session.banned_at = Date.now();
                   u.session.ban_reason = sendResult.error || "Bot blocked";
+                  actionTaken = true; // сохраняем бан
+                  stats.skipped++;
+                } else if (sendResult.errorCode === 404) {
+                  u.session.is_banned = true;
+                  u.session.banned_at = Date.now();
+                  u.session.ban_reason = sendResult.error || "Chat not found (account deleted)";
                   actionTaken = true; // сохраняем бан
                   stats.skipped++;
                 } else {
