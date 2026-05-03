@@ -16,8 +16,7 @@ import {
   getNextStateAfterSecret,
 } from "../../scenarios/common/constants.js";
 import { getSecretWordErrorResponse } from "../../utils/ux_helpers.js";
-import { ChannelManager } from "../../core/channels/channel_manager.js";
-
+import channelManager from "../../core/channels/channel_manager.js";
 export async function handleWebChat(event, context) {
   const { action, log, corsHeaders, ydb } = context;
   if (action !== "web-chat") return null;
@@ -540,7 +539,8 @@ export async function handleWebChat(event, context) {
             statusCode: 200,
             headers: corsHeaders,
             body: JSON.stringify({
-              answer: "❌ Неверный формат токена. Токен должен выглядеть так: 123456789:ABCdefGHIjkl... Попробуй еще раз:",
+              answer:
+                "❌ Неверный формат токена. Токен должен выглядеть так: 123456789:ABCdefGHIjkl... Попробуй еще раз:",
             }),
           };
         }
@@ -558,7 +558,8 @@ export async function handleWebChat(event, context) {
           statusCode: 200,
           headers: corsHeaders,
           body: JSON.stringify({
-            answer: "✅ <b>TELEGRAM ПОДКЛЮЧЕН!</b>\n\nТвой токен сохранен. Теперь бот сможет принимать лидов из Telegram.",
+            answer:
+              "✅ <b>TELEGRAM ПОДКЛЮЧЕН!</b>\n\nТвой токен сохранен. Теперь бот сможет принимать лидов из Telegram.",
             loadNextStep: true,
           }),
         };
@@ -571,7 +572,8 @@ export async function handleWebChat(event, context) {
             statusCode: 200,
             headers: corsHeaders,
             body: JSON.stringify({
-              answer: "❌ ID сообщества VK должен состоять только из цифр. Попробуй еще раз:",
+              answer:
+                "❌ ID сообщества VK должен состоять только из цифр. Попробуй еще раз:",
             }),
           };
         }
