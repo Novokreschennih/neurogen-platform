@@ -16,6 +16,7 @@ import {
   getNextStateAfterSecret,
 } from "../../scenarios/common/constants.js";
 import { getSecretWordErrorResponse } from "../../utils/ux_helpers.js";
+import { generateToken } from "../../utils/jwt_utils.js";
 import channelManager from "../../core/channels/channel_manager.js";
 export async function handleWebChat(event, context) {
   const { action, log, corsHeaders, ydb } = context;
@@ -203,6 +204,11 @@ export async function handleWebChat(event, context) {
         webUser,
       );
 
+      const webAppToken = generateToken(
+          { uid: webUser.id, first_name: webUser.first_name },
+          { expiresIn: "2h" }
+        );
+
       const formatButtons = (stepButtons) => {
         if (!stepButtons) return [];
         const btns =
@@ -211,8 +217,24 @@ export async function handleWebChat(event, context) {
             : stepButtons;
         return btns?.map((row) =>
           row.map((btn) => {
-            if (btn.url && btn.url.includes("module-")) {
-              return { ...btn, url: btn.url + "&web=1" };
+            let targetUrl = btn.url || (btn.web_app ? btn.web_app.url : null);
+            
+            if (targetUrl) {
+              if (targetUrl.includes("neurogen-promo-kit") || targetUrl.includes("crm-dashboard")) {
+                const separator = targetUrl.includes("?") ? "&" : "?";
+                targetUrl = `${targetUrl}${separator}token=${webAppToken}`;
+              }
+              
+              if (targetUrl.includes("module-")) {
+                const separator = targetUrl.includes("?") ? "&" : "?";
+                targetUrl = `${targetUrl}${separator}web=1`;
+              }
+              
+              if (btn.web_app) {
+                return { ...btn, web_app: { url: targetUrl } };
+              } else {
+                return { ...btn, url: targetUrl };
+              }
             }
             return btn;
           }),

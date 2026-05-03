@@ -507,18 +507,25 @@
         const urlParams = new URLSearchParams(window.location.search);
         const urlToken = urlParams.get("token");
         
-        // Универсальная авторизация (Omnichannel Auth)
-        if (urlToken) {
+        // 1. Если токен пришел в URL — он Самый Главный (приоритет)
+        if (urlToken && urlToken !== "undefined") {
           authHeaders["Authorization"] = `Bearer ${urlToken}`;
           localStorage.setItem("neurogen_jwt", urlToken);
-          // Очищаем токен из URL для безопасности
-          window.history.replaceState({}, document.title, window.location.pathname);
-        } else if (localStorage.getItem("neurogen_jwt")) {
+          // Очищаем токен из URL для безопасности, чтобы не светился при пересылке
+          window.history.replaceState({}, document.title, window.location.pathname + window.location.search.replace(/[\?&]token=[^&]+/, '').replace(/^&/, '?'));
+        } 
+        // 2. Если токена нет в URL, пробуем взять старый из памяти
+        else if (localStorage.getItem("neurogen_jwt")) {
           authHeaders["Authorization"] = `Bearer ${localStorage.getItem("neurogen_jwt")}`;
-        } else if (tg?.initData) {
+        } 
+        // 3. Если открыто в Телеграм, используем initData
+        else if (tg?.initData) {
           authHeaders["x-telegram-initdata"] = tg.initData;
         } else {
-          document.getElementById("loadingBlock").innerHTML = '<p class="text-red-500 font-bold text-center">Доступ запрещён. Перейдите по защищенной ссылке из системы.</p>';
+          // Если вообще ничего нет
+          document.getElementById("loadingBlock").innerHTML = 
+            '<div class="p-4 bg-red-900/20 border border-red-500/50 rounded-xl text-red-400 text-sm font-bold">' +
+            '⚠️ ОШИБКА АВТОРИЗАЦИИ<br><span class="text-[10px] font-normal">Пожалуйста, откройте Промо-Кит из чата NeuroGen.</span></div>';
           return;
         }
 
