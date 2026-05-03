@@ -54,6 +54,7 @@ this.style.background = 'rgba(255,255,255,0.08)'"
 
           <!-- Кнопка ВЫБРАТЬ КАНАЛ -->
           <a
+            id="channelsLink"
             href="/join/?step=channels"
             style="position: relative; z-index: 2147483648; display: flex; align-items: center; gap: 6px; color: rgba(200,200,200,1); text-decoration: none; font-size: 14px; font-weight: 600; padding: 8px 12px; border-radius: 10px; transition: all 0.2s; background: linear-gradient(135deg, rgba(168,85,247,0.4), rgba(6,182,212,0.4)); border: 1px solid rgba(168,85,247,0.5);"
             onmouseover="this.style.color = '#fff';
@@ -463,6 +464,13 @@ this.style.background =
     userEmail = params.get("email");
     if (userEmail) {
       localStorage.setItem("neurogen_user_email", userEmail);
+    }
+
+    // Обновляем ссылку на каналы с partner_id
+    const channelsLink = document.getElementById("channelsLink");
+    if (channelsLink && referrer) {
+      const encodedRef = encodeURIComponent(referrer);
+      channelsLink.href = `/join/?page=${encodedRef}&step=channels`;
     }
   }
 

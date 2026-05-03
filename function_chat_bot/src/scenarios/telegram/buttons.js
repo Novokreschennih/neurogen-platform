@@ -203,6 +203,9 @@ export const telegramButtons = {
         [{ text: "✅ Я ЗАРЕГИСТРИРОВАН", callback_data: "CLICK_REG_ID" }],
       ],
 
+  // === B2B_START ===
+  B2B_START: [[{ text: "🚀 ПОДКЛЮЧИТЬ СИСТЕМУ", callback_data: "Pre_Training_Logic" }]],
+
   // === Theory_Mod1 ===
   Theory_Mod1: [
         [{ text: "➡️ ЭТАП 2: ТЕНЕВОЙ ПАРТНЕР", callback_data: "Theory_Mod2" }],
@@ -1601,9 +1604,9 @@ export const telegramButtons = {
         const isPro = user.bought_tripwire;
         const mod3Done = user.session?.mod3_done;
 
-        // 1. Promo-Kit добавляем ВСЕМ, у кого есть бот (и FREE, и PRO)
-        if (!!user.session?.bot_username) {
-          const botName = user.session?.bot_username || "";
+        // 1. Promo-Kit добавляем ВСЕМ, у кого есть partner_id (sh_ref_tail)
+        if (user.sh_ref_tail) {
+          const botName = user.session?.bot_username || "sethubble_biz_bot";
           const apiGw =
             process.env.API_GW_HOST ||
             "d5dsbah1d4ju0glmp9d0.3zvepvee.apigw.yandexcloud.net";

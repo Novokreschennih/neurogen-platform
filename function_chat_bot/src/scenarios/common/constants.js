@@ -86,16 +86,10 @@ export const SECRETS_CONFIG = {
  * VK и Web не поддерживают WAIT_BOT_TOKEN
  */
 export function getNextStateAfterSecret(secretState, channel) {
-  if (secretState === "WAIT_SECRET_1") {
-    return "Module_2_Online"; // Все каналы
-  }
-  if (secretState === "WAIT_SECRET_2") {
-    return channel === "telegram" ? "WAIT_BOT_TOKEN" : "Module_3_Offline";
-  }
-  if (secretState === "WAIT_SECRET_3") {
-    return "Lesson_Final_Comparison"; // Все каналы
-  }
-  return "Training_Main"; // fallback
+  if (secretState === "WAIT_SECRET_1") return "Module_2_Online";
+  if (secretState === "WAIT_SECRET_2") return "Module_2_Reward_PromoKit";
+  if (secretState === "WAIT_SECRET_3") return "Lesson_Final_Comparison";
+  return "Training_Main";
 }
 
 /**
