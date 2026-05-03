@@ -28,6 +28,39 @@ import {
 } from "./src/core/email/email_service.js";
 
 // === ПЛАТФОРМЫ ===
+
+/**
+ * Генерация Telegram inline-клавиатуры для шага воронки
+ * (вынесено на уровень модуля для sendStepViaTelegram)
+ */
+const getKeyboard = (step, links, user, info) => {
+  if (!step || !step.buttons) return null;
+  const btns =
+    typeof step.buttons === "function"
+      ? step.buttons(links, user, info)
+      : step.buttons;
+  const filteredBtns = btns
+    .map((row) =>
+      row.filter((b) => b.callback_data || b.callback || b.url || b.web_app),
+    )
+    .filter((row) => row.length > 0);
+
+  if (filteredBtns.length === 0) return null;
+
+  return Markup.inlineKeyboard(
+    filteredBtns.map((r) =>
+      r
+        .map((b) => {
+          const cbData = b.callback_data || b.callback;
+          if (b.url) return Markup.button.url(b.text, b.url);
+          if (b.web_app) return Markup.button.webApp(b.text, b.web_app.url);
+          if (cbData) return Markup.button.callback(b.text, cbData);
+          return null;
+        })
+        .filter(Boolean),
+    ),
+  );
+};
 import { setupTelegramHandlers } from "./src/platforms/telegram/telegram_setup.js";
 import { handleVkWebhook } from "./src/platforms/vk/vk_handler.js";
 
@@ -408,7 +441,10 @@ async function authorizeCrmRequest(headers, eventBody, isBase64Encoded) {
   if (!tgData) {
     const initData = getHeader(headers, "x-telegram-initdata");
     if (!initData) {
-      console.error("[AUTH FAIL] Missing auth. Headers:", JSON.stringify(headers));
+      console.error(
+        "[AUTH FAIL] Missing auth. Headers:",
+        JSON.stringify(headers),
+      );
       return {
         error: {
           statusCode: 401,
@@ -1010,7 +1046,10 @@ export const handler = async (event) => {
       bodyForCheck = Buffer.from(event.body, "base64").toString("utf8");
     } catch (e) {}
   }
-  const isWebhook = bodyForCheck.includes("update_id") || bodyForCheck.includes('type":"message_new"') || bodyForCheck.includes('type":"message_event"');
+  const isWebhook =
+    bodyForCheck.includes("update_id") ||
+    bodyForCheck.includes('type":"message_new"') ||
+    bodyForCheck.includes('type":"message_event"');
 
   if (!isWebhook && clientIp !== "unknown_ip") {
     const rateCheck = checkRateLimit(clientIp);
@@ -1318,16 +1357,20 @@ export const handler = async (event) => {
       errorMsg.includes("Unavailable");
 
     if (isTransient) {
-      log.error("[HANDLER] Transient error (will retry)", err, { error: errorMsg });
+      log.error("[HANDLER] Transient error (will retry)", err, {
+        error: errorMsg,
+      });
     } else {
-      log.error("[HANDLER] Permanent error (stopping retries)", err, { error: errorMsg });
+      log.error("[HANDLER] Permanent error (stopping retries)", err, {
+        error: errorMsg,
+      });
     }
 
     // === 🚨 PANIC ALERT: Уведомление администратора в Telegram ===
     try {
       const adminId = process.env.ADMIN_TELEGRAM_ID;
       const botToken = process.env.BOT_TOKEN;
-      
+
       // Отправляем алерт только если задан админ и это реальная ошибка (не просто юзер забанил бота)
       if (adminId && botToken && !errorMsg.includes("bot was blocked")) {
         const alertMsg =
@@ -1341,14 +1384,14 @@ export const handler = async (event) => {
 
         // Отправляем напрямую через fetch, чтобы не зависеть от инстанса Telegraf (который мог упасть)
         await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             chat_id: adminId,
             text: alertMsg,
-            parse_mode: 'HTML'
-          })
-        }).catch(e => console.error("Не удалось отправить Panic Alert:", e));
+            parse_mode: "HTML",
+          }),
+        }).catch((e) => console.error("Не удалось отправить Panic Alert:", e));
       }
     } catch (alertErr) {
       console.error("Сбой системы алертов:", alertErr);

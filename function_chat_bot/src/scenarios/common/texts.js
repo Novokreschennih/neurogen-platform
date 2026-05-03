@@ -8,6 +8,7 @@
  * - функцией (links, user, info) => string (динамический текст)
  */
 
+import { getNeuroCoinsStatus } from "../../utils/ux_helpers.js";
 import {
   getProgressBar,
   TRIPWIRE_PRICE,

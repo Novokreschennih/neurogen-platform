@@ -2,6 +2,8 @@
  * UX Helpers — прогресс, loop detection, channel summary
  */
 
+import { getProgressBar } from "../scenarios/common/constants.js";
+
 /**
  * Прогресс-бар обучения
  * Показывает модуль и текущий шаг
