@@ -20,7 +20,7 @@ export async function handlePartnerApi(event, context) {
     verifyToken,
   } = context;
 
-  const actions = ["get_partner_link", "update_ai_settings"];
+  const actions = ["get_partner_link", "update_ai_settings", "get_public_config"];
   if (!actions.includes(params.action)) return null;
 
   // v7.1: Universal authorization
@@ -184,6 +184,31 @@ export async function handlePartnerApi(event, context) {
         success: false,
         error: error.message || "Internal error",
       });
+    }
+  }
+
+  // === GET PUBLIC CONFIG (для лендинга) ===
+  if (params.action === "get_public_config") {
+    try {
+      const tail = params.page;
+      if (!tail) {
+        return response(200, { telegram: true, web: true });
+      }
+      const owner = await ydb.getUserByRefTail(tail);
+      if (!owner) {
+        return response(200, { telegram: true, web: true });
+      }
+      const channels = owner.session?.channels || {};
+      return response(200, {
+        telegram: !!(channels.telegram?.configured || owner.bot_token),
+        vk: !!(channels.vk?.configured),
+        web: true,
+        email: !!(channels.email?.configured),
+        sh_user_id: owner.sh_user_id || "1123",
+      });
+    } catch (error) {
+      log.error(`[PARTNER API] get_public_config error`, error);
+      return response(200, { telegram: true, web: true });
     }
   }
 

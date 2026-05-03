@@ -540,19 +540,6 @@ export function registerTelegramActions(bot, ctx) {
           );
         }
 
-        if (nextState === "WAIT_BOT_TOKEN") {
-          u.state = "WAIT_BOT_TOKEN";
-          await ydb.saveUser(u);
-          return ctx.reply(
-            `🚀 <b>ПЕРЕХОДИМ К ПРАКТИКЕ: ЗАПУСК ИИ-КЛОНА</b>\n\n` +
-              `Отлично, секретный код принят! 🪙\n\n` +
-              `Ты уже оформил профиль своего бота по инструкции из Модуля 2. Теперь нам осталось подключить его к нашему нейроядру. Твой бот оживет и в нём сразу будут зашиты твои реферальные ссылки.\n\n` +
-              `Скопируй и пришли мне <b>API TOKEN</b> твоего нового бота из @BotFather (это длинный набор букв и цифр).\n\n` +
-              `🔒 <i>Помни: он не дает нам доступ к твоему аккаунту. Это совершенно безопасно.</i>`,
-            { parse_mode: "HTML", protect_content: true },
-          );
-        }
-
         u.state = nextState;
         await ydb.saveUser(u);
         return renderStep(ctx, nextState, token);
@@ -1125,6 +1112,53 @@ export function registerTelegramActions(bot, ctx) {
           protect_content: true,
         });
       }
+    }
+
+    // === MULTI-CHANNEL: Настройка Telegram ===
+    if (u.state === "WAIT_TG_SETUP") {
+      const tokenMatch = txt.match(/^(\d+:[A-Za-z0-9_-]+)$/);
+      if (!tokenMatch) {
+        return ctx.reply(
+          "❌ Неверный формат токена. Токен должен выглядеть так: 123456789:ABCdefGHIjkl... Попробуй еще раз:",
+          { parse_mode: "HTML", protect_content: true },
+        );
+      }
+      if (!u.session.channels) u.session.channels = {};
+      u.session.channels.telegram = {
+        bot_token: txt,
+        enabled: true,
+        configured: true,
+        configured_at: Date.now(),
+      };
+      u.state = "CHANNEL_SETUP_TG_SUCCESS";
+      await ydb.saveUser(u);
+      return ctx.reply(
+        "✅ <b>TELEGRAM ПОДКЛЮЧЕН!</b>\n\nТвой токен сохранен. Теперь бот сможет принимать лидов из Telegram.",
+        { parse_mode: "HTML", protect_content: true },
+      );
+    }
+
+    // === MULTI-CHANNEL: Настройка VK ===
+    if (u.state === "WAIT_VK_GROUP_ID") {
+      if (isNaN(txt)) {
+        return ctx.reply(
+          "❌ ID сообщества VK должен состоять только из цифр. Попробуй еще раз:",
+          { parse_mode: "HTML", protect_content: true },
+        );
+      }
+      if (!u.session.channels) u.session.channels = {};
+      u.session.channels.vk = {
+        group_id: txt,
+        enabled: true,
+        configured: true,
+        configured_at: Date.now(),
+      };
+      u.state = "CHANNEL_SETUP_VK_SUCCESS";
+      await ydb.saveUser(u);
+      return ctx.reply(
+        `✅ <b>VK ПОДКЛЮЧЕН!</b>\n\nТвоя группа (ID: ${txt}) привязана к системе.`,
+        { parse_mode: "HTML", protect_content: true },
+      );
     }
 
     // === ОБРАБОТКА СВОБОДНОГО ТЕКСТА (AI) ===

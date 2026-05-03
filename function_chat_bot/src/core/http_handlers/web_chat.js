@@ -16,6 +16,7 @@ import {
   getNextStateAfterSecret,
 } from "../../scenarios/common/constants.js";
 import { getSecretWordErrorResponse } from "../../utils/ux_helpers.js";
+import { ChannelManager } from "../../core/channels/channel_manager.js";
 
 export async function handleWebChat(event, context) {
   const { action, log, corsHeaders, ydb } = context;
@@ -165,18 +166,8 @@ export async function handleWebChat(event, context) {
           needsSave = true;
         }
         if (targetCallback === "SETUP_BOT_START") {
-          webUser.state = "WAIT_BOT_TOKEN";
-          if (needsSave) await ydb.saveUser(webUser);
-          return {
-            statusCode: 200,
-            headers: corsHeaders,
-            body: JSON.stringify({
-              success: true,
-              stepKey: webUser.state,
-              text: "🚀 <b>НАСТРОЙКА БОТА-КЛОНА</b>\n\nПришли мне <b>API TOKEN</b> твоего нового бота из @BotFather.",
-              buttons: [[{ text: "🔙 ОТМЕНА", callback_data: "MAIN_MENU" }]],
-            }),
-          };
+          targetCallback = "Module_2_Reward_PromoKit";
+          needsSave = true;
         }
         if (targetCallback === "THEORY_COURSE_COMPLETE") {
           if (!webUser.session.theory_complete) {
@@ -541,7 +532,70 @@ export async function handleWebChat(event, context) {
         }
       }
 
-      // --- Д. Чат с ИИ (Универсальный AI Engine v3.0) ---
+      // --- Г. Настройка Telegram (MULTI-CHANNEL) ---
+      if (u.state === "WAIT_TG_SETUP") {
+        const tokenMatch = txt.match(/^(\d+:[A-Za-z0-9_-]+)$/);
+        if (!tokenMatch) {
+          return {
+            statusCode: 200,
+            headers: corsHeaders,
+            body: JSON.stringify({
+              answer: "❌ Неверный формат токена. Токен должен выглядеть так: 123456789:ABCdefGHIjkl... Попробуй еще раз:",
+            }),
+          };
+        }
+        const cm = new ChannelManager(u, ydb);
+        cm.enableChannel("telegram");
+        cm.setChannelConfig("telegram", {
+          bot_token: txt,
+          enabled: true,
+          configured: true,
+          configured_at: Date.now(),
+        });
+        u.state = "CHANNEL_SETUP_TG_SUCCESS";
+        await ydb.saveUser(u);
+        return {
+          statusCode: 200,
+          headers: corsHeaders,
+          body: JSON.stringify({
+            answer: "✅ <b>TELEGRAM ПОДКЛЮЧЕН!</b>\n\nТвой токен сохранен. Теперь бот сможет принимать лидов из Telegram.",
+            loadNextStep: true,
+          }),
+        };
+      }
+
+      // --- Д. Настройка VK (MULTI-CHANNEL) ---
+      if (u.state === "WAIT_VK_GROUP_ID") {
+        if (isNaN(txt)) {
+          return {
+            statusCode: 200,
+            headers: corsHeaders,
+            body: JSON.stringify({
+              answer: "❌ ID сообщества VK должен состоять только из цифр. Попробуй еще раз:",
+            }),
+          };
+        }
+        const cm = new ChannelManager(u, ydb);
+        cm.enableChannel("vk");
+        cm.setChannelConfig("vk", {
+          group_id: txt,
+          enabled: true,
+          configured: true,
+          configured_at: Date.now(),
+        });
+        u.state = "CHANNEL_SETUP_VK_SUCCESS";
+        await ydb.saveUser(u);
+        return {
+          statusCode: 200,
+          headers: corsHeaders,
+          body: JSON.stringify({
+            answer: `✅ <b>PRO-РЕЖИМ: VK ПОДКЛЮЧЕН!</b>\n\nТвоя группа (ID: ${txt}) привязана к системе.\n\n⚠️ Не забудь настроить Callback API в сообществе VK, указав адрес нашего сервера, иначе бот не сможет отвечать.`,
+            loadNextStep: true,
+          }),
+        };
+      }
+
+      // --- Е. Чат с ИИ (Универсальный AI Engine v3.0) ---
 
       // ОПТИМИЗАЦИЯ: 1 запрос к владельцу вместо 2-х!
       let isOwnerAiActive = false;

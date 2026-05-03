@@ -932,6 +932,20 @@ eleventyExcludeFromCollections: true
 						localStorage.getItem("neurogen_partner_id") || DEFAULT_PARTNER_ID;
 				}
 
+				async function adjustChannels() {
+					try {
+						const apiUrl = API_URL.replace("web-chat", "get_public_config");
+						const res = await fetch(`${apiUrl}&page=${partnerId}`);
+						const config = await res.json();
+						if (!config.telegram) document.getElementById("btnTelegram")?.classList.add("hidden");
+						if (!config.vk) document.getElementById("btnVK")?.classList.add("hidden");
+						if (!config.email) document.getElementById("btnEmail")?.classList.add("hidden");
+					} catch (e) {
+						console.error("Config fetch failed", e);
+					}
+				}
+				adjustChannels();
+
 				const storedBot = localStorage.getItem("neurogen_partner_bot");
 				refBot =
 					storedBot && storedBot !== "sethubble_bot" ? storedBot : DEFAULT_BOT;
@@ -1123,8 +1137,8 @@ eleventyExcludeFromCollections: true
 				btnVK.addEventListener("click", () => {
 					const email = emailInput.value.trim() || storedEmail;
 					const startPayload = email
-						? `${partnerId}-${encodeEmailForUrl(email)}`
-						: partnerId;
+						? `${partnerId}__${encodeEmailForUrl(email)}`
+						: `${partnerId}__${currentSessionId}`;
 					window.location.href = `${VK_COMMUNITY_URL}?ref=${startPayload}`;
 				});
 
