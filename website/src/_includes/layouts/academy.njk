@@ -51,15 +51,26 @@
   // Читаем параметры из URL (например: ?bot=Anton_Partner_Bot)
   const urlParams = new URLSearchParams(window.location.search);
   const botUsername = urlParams.get("bot");
-
-  // Если параметр есть, меняем ссылку в кнопке!
-  if (botUsername) {
-    const btn = document.getElementById("tg-return-btn");
-    if (btn) {
-      // Убираем @ если партнер вдруг его передаст
+  const vkGroup = urlParams.get("vk_group");
+  const isWeb = urlParams.get("web");
+  
+  const btn = document.getElementById("tg-return-btn");
+  
+  if (btn) {
+    if (isWeb) {
+      // Если открыто из Web-чата
+      btn.innerHTML = "💬 Вернуться в Чат";
+      // Обычно статьи открываются в новой вкладке, поэтому закрываем её
+      btn.href = "javascript:window.close();"; 
+    } else if (vkGroup) {
+      // Если открыто из VK
+      btn.innerHTML = "💬 Вернуться ВКонтакте";
+      btn.href = `https://vk.me/club${vkGroup}`;
+    } else if (botUsername) {
+      // Если открыто из Telegram
       const cleanName = botUsername.replace("@", "");
+      btn.innerHTML = "✈ Вернуться в Telegram";
       btn.href = `https://t.me/${cleanName}`;
-      console.log("Bot URL updated to:", btn.href);
     }
   }
 });

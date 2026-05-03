@@ -435,6 +435,22 @@ export const telegramButtons = {
         }
       },
 
+  // === Кнопки при ожидании секретного слова ===
+  WAIT_SECRET_1: (links, user, info) => [
+    [{ text: "📖 ВЕРНУТЬСЯ К СТАТЬЕ", url: `${ACADEMY_BASE_URL}/module-1/?bot=${info?.bot_username || "sethubble_biz_bot"}` }],
+    [{ text: "🔙 ОТМЕНА", callback_data: "Module_1_Strategy" }]
+  ],
+
+  WAIT_SECRET_2: (links, user, info) => [
+    [{ text: "📖 ВЕРНУТЬСЯ К СТАТЬЕ", url: `${ACADEMY_BASE_URL}/module-2/?bot=${info?.bot_username || "sethubble_biz_bot"}` }],
+    [{ text: "🔙 ОТМЕНА", callback_data: "Module_2_Online" }]
+  ],
+
+  WAIT_SECRET_3: (links, user, info) => [
+    [{ text: "📖 ВЕРНУТЬСЯ К СТАТЬЕ", url: `${ACADEMY_BASE_URL}/module-3/?bot=${info?.bot_username || "sethubble_biz_bot"}` }],
+    [{ text: "🔙 ОТМЕНА", callback_data: "Module_3_Offline" }]
+  ],
+
   // === LOCKED_B2B_INFO ===
   LOCKED_B2B_INFO: [
         [{ text: "⚙️ ПРОДОЛЖИТЬ НАСТРОЙКУ", callback_data: "Training_Main" }],
