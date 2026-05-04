@@ -236,7 +236,7 @@ async function notifyBotOwner(targetBotToken, message, mainBotInstance) {
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "Content-Type, x-telegram-initdata, x-payment-key, x-crm-key",
+    "Content-Type, x-telegram-initdata, x-payment-key, x-crm-key, Authorization",
   "Access-Control-Allow-Methods": "OPTIONS,POST,GET",
 };
 
@@ -998,7 +998,7 @@ export const handler = async (event) => {
   const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers":
-      "Content-Type, x-telegram-initdata, x-payment-key, x-crm-key",
+      "Content-Type, x-telegram-initdata, x-payment-key, x-crm-key, Authorization",
     "Access-Control-Allow-Methods": "OPTIONS,POST,GET",
     "X-API-Version": "v1", // v5.0: Версия API в заголовке
   };

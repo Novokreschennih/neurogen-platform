@@ -178,6 +178,45 @@ export async function handleWebChat(event, context) {
           targetCallback = "Theory_Reward_Spoilers";
           needsSave = true;
         }
+        // НОВОЕ: Обработка кнопки Промо-Кита для Веб-чата
+        if (targetCallback === "PROMO_KIT") {
+          const isPro = webUser.bought_tripwire;
+          const hasMod2 = webUser.session?.mod2_done || isPro;
+
+          if (!hasMod2) {
+            webUser.state = "LOCKED_PROMO";
+            if (needsSave) await ydb.saveUser(webUser);
+            return {
+              statusCode: 200,
+              headers: corsHeaders,
+              body: JSON.stringify({ success: true, loadNextStep: true }),
+            };
+          }
+
+          const { generateToken } = await import("../../utils/jwt_utils.js");
+          const webAppToken = generateToken(
+            { uid: webUser.id, first_name: webUser.first_name },
+            { expiresIn: "24h" }
+          );
+
+          const apiGw = process.env.API_GW_HOST || "d5dsbah1d4ju0glmp9d0.3zvepvee.apigw.yandexcloud.net";
+          const botName = webUser.session?.bot_username || "sethubble_biz_bot";
+
+          const promoKitUrl = `https://sethubble.ru/promo-kit/?bot=${botName}&api=https://${apiGw}&token=${webAppToken}`;
+
+          return {
+            statusCode: 200,
+            headers: corsHeaders,
+            body: JSON.stringify({
+              success: true,
+              text: "🚀 <b>ВАШ ПЕРСОНАЛЬНЫЙ ПРОМО-КИТ ГОТОВ</b>\n\nЯ сгенерировал для вас временную ссылку доступа. Она будет активна 24 часа.",
+              buttons: [
+                [{ text: "📲 ОТКРЫТЬ ДАШБОРД", url: promoKitUrl }],
+                [{ text: "🏠 ВЕРНУТЬСЯ В МЕНЮ", callback_data: "MAIN_MENU" }]
+              ],
+            }),
+          };
+        }
       }
 
       // Обычный переход по шагам
