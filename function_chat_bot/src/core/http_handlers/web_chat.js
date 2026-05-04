@@ -206,7 +206,7 @@ export async function handleWebChat(event, context) {
 
       const webAppToken = generateToken(
           { uid: webUser.id, first_name: webUser.first_name },
-          { expiresIn: "2h" }
+          { expiresIn: "24h" }
         );
 
       const formatButtons = (stepButtons) => {

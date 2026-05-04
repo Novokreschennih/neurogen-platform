@@ -718,6 +718,7 @@ export const telegramButtons = {
   // === TOOLS_MENU ===
   TOOLS_MENU: (links, user) => {
         const isPro = user.bought_tripwire;
+        const hasMod2 = user.session?.mod2_done || isPro;
         const hasMod3 = user.session?.mod3_done || isPro;
 
         const r = [];
@@ -744,18 +745,18 @@ export const telegramButtons = {
           r.push([{ text: "🔒 ТВОИ КЛИЕНТЫ", callback_data: "LOCKED_CRM" }]);
         }
 
-        // 2. Промо-кит
-        if (hasMod3) {
+        // 2. Промо-кит (Теперь открывается после Модуля 2!)
+        if (hasMod2) {
           r.push([{ text: "📦 ПРОМО-КИТ", callback_data: "PROMO_KIT" }]);
         } else {
-          r.push([{ text: "🔒 ПРОМО-КИТ", callback_data: "LOCKED_PROMO" }]);
+          r.push([{ text: "🔒 ПЕРСОНАЛЬНЫЙ ПРОМО-КИТ", callback_data: "LOCKED_PROMO" }]);
         }
 
-        // 3. База знаний (Яндекс.Диск)
+        // 3. База знаний (Яндекс.Диск) - оставляем после Модуля 3
         if (hasMod3) {
           r.push([
             {
-              text: "📥 БАЗА ЗНАНИЙ",
+              text: "📥 БАЗА ЗНАНИЙ B2B",
               url: links.free_disk || "https://disk.yandex.ru/d/...",
             },
           ]);

@@ -173,6 +173,13 @@ export function registerTelegramActions(bot, ctx) {
   bot.action("PROMO_KIT", async (ctx) => {
     await ctx.answerCbQuery();
 
+    const isPro = ctx.dbUser.bought_tripwire;
+    const hasMod2 = ctx.dbUser.session?.mod2_done || isPro;
+
+    if (!hasMod2) {
+      return renderStep(ctx, "LOCKED_PROMO", token);
+    }
+
     const botName = ctx.dbUser.session?.bot_username || "sethubble_biz_bot";
     const apiGw =
       process.env.API_GW_HOST ||
@@ -191,12 +198,8 @@ export function registerTelegramActions(bot, ctx) {
       { expiresIn: "7d" },
     );
 
-    const mod3Done = ctx.dbUser.session?.mod3_done;
-    const isPro = ctx.dbUser.bought_tripwire;
-    const mod3Param = mod3Done || isPro ? "&mod3=1" : "";
-
     // v7.1: Add JWT token to URL
-    const webAppUrl = `${promoKitUrl}?token=${jwtToken}&bot=${botName}&api=https://${apiGw}${mod3Param}`;
+    const webAppUrl = `${promoKitUrl}?token=${jwtToken}&bot=${botName}&api=https://${apiGw}`;
 
     return ctx.reply(
       `🚀 <b>Promo-Kit</b>\n\nТвой генератор маркетинговых материалов:`,
