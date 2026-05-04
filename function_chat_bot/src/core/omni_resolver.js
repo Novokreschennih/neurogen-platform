@@ -57,12 +57,15 @@ export async function resolveUser(channel, ids) {
   if (ids.email) searchCrits.push({ email: ids.email });
   if (ids.sh_user_id) searchCrits.push({ sh_user_id: ids.sh_user_id }); // ✅ v7.2: слияние по SetHubble ID
 
-  // ОПТИМИЗАЦИЯ: Параллельный поиск вместо последовательного
-  const foundPromises = searchCrits.map((crit) => ydb.findUser(crit));
-  const foundResults = await Promise.all(foundPromises);
+  // ОПТИМИЗАЦИЯ: Строго последовательный поиск для защиты пула YDB в Serverless (maxLimit: 3)
+  const foundResults = [];
+  for (const crit of searchCrits) {
+    const u = await ydb.findUser(crit);
+    if (u) foundResults.push(u);
+  }
 
-  // Убираем дубли и null
-  const found = foundResults.filter((u) => u !== null);
+  // Убираем дубли и null (foundResults уже без null)
+  const found = foundResults;
   const uniqueFound = [];
   const seenIds = new Set();
   for (const u of found) {
