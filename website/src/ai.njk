@@ -484,7 +484,13 @@ this.style.background =
   }
 
   // === 3. ЗАГРУЗКА И ОТРИСОВКА ШАГОВ ВОРОНКИ (НОВОЕ) ===
-  async function loadWebStep(buttonAction = null) {
+  async function loadWebStep(buttonAction = null, buttonText = null) {
+    // НОВОЕ: Если нажали кнопку с текстом, рисуем её в чате как сообщение пользователя
+    if (buttonText && buttonAction !== "MAIN_MENU") {
+      addMessage(buttonText, true, false);
+      chatHistory.push({ role: "user", content: buttonText });
+    }
+
     showTyping();
     try {
       const response = await fetch(API_URL, {
@@ -496,6 +502,8 @@ this.style.background =
           email: userEmail,
           callback_data: buttonAction,
           partner_id: referrer,
+          // НОВОЕ: Передаем текст кнопки на сервер для сохранения в dialog_history
+          message: buttonText || "",
         }),
       });
 
@@ -548,16 +556,19 @@ this.style.background =
 
           if (btn.url) {
             // Обычные ссылки
-            b.innerHTML = `<span>${btn.text}</span> <span class="opacity-30 text-xs">↗</span>`;
+            b.innerHTML =
+              `<span>${btn.text}</span> <span class="opacity-30 text-xs">↗</span>`;
             b.onclick = () => window.open(btn.url, "_blank");
           } else if (btn.web_app && btn.web_app.url) {
             // WebApp ссылки (Promo-Kit, CRM)
-            b.innerHTML = `<span>${btn.text}</span> <span class="opacity-30 text-xs">↗</span>`;
+            b.innerHTML =
+              `<span>${btn.text}</span> <span class="opacity-30 text-xs">↗</span>`;
             b.onclick = () => window.open(btn.web_app.url, "_blank");
           } else {
             // Обычные кнопки (Callback)
-            b.innerHTML = `<span>${btn.text}</span> <span class="group-hover:translate-x-1 transition-transform text-cyan-400">→</span>`;
-            b.onclick = () => loadWebStep(btn.callback_data);
+            b.innerHTML =
+              `<span>${btn.text}</span> <span class="group-hover:translate-x-1 transition-transform text-cyan-400">→</span>`;
+            b.onclick = () => loadWebStep(btn.callback_data, btn.text);
           }
           btnWrapper.appendChild(b);
         });

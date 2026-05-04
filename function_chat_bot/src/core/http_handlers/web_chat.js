@@ -123,18 +123,9 @@ export async function handleWebChat(event, context) {
       if (targetCallback) {
         if (targetCallback.startsWith("ENTER_SECRET_")) {
           const level = targetCallback.split("_")[2];
-          webUser.state = `WAIT_SECRET_${level}`;
-          if (needsSave) await ydb.saveUser(webUser);
-          return {
-            statusCode: 200,
-            headers: corsHeaders,
-            body: JSON.stringify({
-              success: true,
-              stepKey: webUser.state,
-              text: `✍️ <b>ВВОД КОДА: МОДУЛЬ ${level}</b>\n\nОтправь мне секретное слово из статьи ответным сообщением прямо здесь:`,
-              buttons: [[{ text: "🔙 ОТМЕНА", callback_data: "MAIN_MENU" }]],
-            }),
-          };
+          // НОВОЕ: Перенаправляем на WAIT_SECRET, чтобы бот отрисовал кнопки со ссылками на статьи
+          targetCallback = `WAIT_SECRET_${level}`;
+          needsSave = true;
         }
         if (
           targetCallback === "CLICK_REG_ID" ||
@@ -196,10 +187,12 @@ export async function handleWebChat(event, context) {
           const { generateToken } = await import("../../utils/jwt_utils.js");
           const webAppToken = generateToken(
             { uid: webUser.id, first_name: webUser.first_name },
-            { expiresIn: "24h" }
+            { expiresIn: "24h" },
           );
 
-          const apiGw = process.env.API_GW_HOST || "d5dsbah1d4ju0glmp9d0.3zvepvee.apigw.yandexcloud.net";
+          const apiGw =
+            process.env.API_GW_HOST ||
+            "d5dsbah1d4ju0glmp9d0.3zvepvee.apigw.yandexcloud.net";
           const botName = webUser.session?.bot_username || "sethubble_biz_bot";
 
           const promoKitUrl = `https://sethubble.ru/promo-kit/?bot=${botName}&api=https://${apiGw}&token=${webAppToken}`;
@@ -212,7 +205,7 @@ export async function handleWebChat(event, context) {
               text: "🚀 <b>ВАШ ПЕРСОНАЛЬНЫЙ ПРОМО-КИТ ГОТОВ</b>\n\nЯ сгенерировал для вас временную ссылку доступа. Она будет активна 24 часа.",
               buttons: [
                 [{ text: "📲 ОТКРЫТЬ ДАШБОРД", url: promoKitUrl }],
-                [{ text: "🏠 ВЕРНУТЬСЯ В МЕНЮ", callback_data: "MAIN_MENU" }]
+                [{ text: "🏠 ВЕРНУТЬСЯ В МЕНЮ", callback_data: "MAIN_MENU" }],
               ],
             }),
           };
@@ -224,6 +217,16 @@ export async function handleWebChat(event, context) {
         webUser.state = targetCallback;
         webUser.saved_state = targetCallback;
         webUser.session.last_activity = Date.now();
+        // НОВОЕ: Сохраняем текст нажатой кнопки в dialog_history
+        if (payload.message) {
+          if (!Array.isArray(webUser.session.dialog_history)) {
+            webUser.session.dialog_history = [];
+          }
+          webUser.session.dialog_history.push({
+            role: "user",
+            content: payload.message,
+          });
+        }
         needsSave = true;
       }
 
@@ -244,9 +247,9 @@ export async function handleWebChat(event, context) {
       );
 
       const webAppToken = generateToken(
-          { uid: webUser.id, first_name: webUser.first_name },
-          { expiresIn: "24h" }
-        );
+        { uid: webUser.id, first_name: webUser.first_name },
+        { expiresIn: "24h" },
+      );
 
       const formatButtons = (stepButtons) => {
         if (!stepButtons) return [];
@@ -257,18 +260,21 @@ export async function handleWebChat(event, context) {
         return btns?.map((row) =>
           row.map((btn) => {
             let targetUrl = btn.url || (btn.web_app ? btn.web_app.url : null);
-            
+
             if (targetUrl) {
-              if (targetUrl.includes("neurogen-promo-kit") || targetUrl.includes("crm-dashboard")) {
+              if (
+                targetUrl.includes("neurogen-promo-kit") ||
+                targetUrl.includes("crm-dashboard")
+              ) {
                 const separator = targetUrl.includes("?") ? "&" : "?";
                 targetUrl = `${targetUrl}${separator}token=${webAppToken}`;
               }
-              
+
               if (targetUrl.includes("module-")) {
                 const separator = targetUrl.includes("?") ? "&" : "?";
                 targetUrl = `${targetUrl}${separator}web=1`;
               }
-              
+
               if (btn.web_app) {
                 return { ...btn, web_app: { url: targetUrl } };
               } else {
