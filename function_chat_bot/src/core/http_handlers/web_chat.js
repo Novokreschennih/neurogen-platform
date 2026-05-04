@@ -194,8 +194,12 @@ export async function handleWebChat(event, context) {
             process.env.API_GW_HOST ||
             "d5dsbah1d4ju0glmp9d0.3zvepvee.apigw.yandexcloud.net";
           const botName = webUser.session?.bot_username || "sethubble_biz_bot";
+          const mod3Param =
+            webUser.session?.mod3_done || webUser.bought_tripwire
+              ? "&mod3=1"
+              : "";
 
-          const promoKitUrl = `https://sethubble.ru/promo-kit/?bot=${botName}&api=https://${apiGw}&token=${webAppToken}`;
+          const promoKitUrl = `https://sethubble.ru/promo-kit/?bot=${botName}&api=https://${apiGw}${mod3Param}&token=${webAppToken}`;
 
           return {
             statusCode: 200,
