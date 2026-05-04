@@ -62,9 +62,7 @@ eleventyExcludeFromCollections: true
       .loading-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
       @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
       
-      /* AI Constructor tab content */
-      .ai-content { display: none; }
-      .ai-content.active { display: block; }
+      
     </style>
   </head>
   <body class="min-h-screen bg-[#050505] pb-12 relative overflow-x-hidden">
@@ -110,7 +108,7 @@ eleventyExcludeFromCollections: true
       <div id="mainContent" class="hidden space-y-6">
         
         <!-- Tab: Marketing -->
-        <div id="content-marketing" class="ai-content active">        
+        <div id="content-marketing" class="space-y-6">        
           <!-- БЛОК ЦЕННОСТИ СИСТЕМЫ -->
           <div class="glass-panel rounded-3xl p-6 md:p-8">
             <h2 class="text-2xl font-black mb-2 uppercase">Твой <span class="gradient-text">Арсенал</span></h2>
@@ -287,7 +285,7 @@ eleventyExcludeFromCollections: true
         </div>
 
         <!-- Tab: AI Constructor -->
-        <div id="content-ai" class="ai-content space-y-6">
+        <div id="content-ai" class="hidden space-y-6">
           
           <!-- БЛОК 1: ПРЕДПРОСМОТР (Показываем всегда, если не оплачено) -->
           <div id="ai-paywall" class="hidden">
@@ -477,18 +475,23 @@ eleventyExcludeFromCollections: true
 
       // Tab switching
       function switchTab(tab) {
-        // Контент
-        document.getElementById("content-marketing").classList.toggle("hidden", tab !== "marketing");
-        document.getElementById("content-ai").classList.toggle("hidden", tab !== "ai");
-        
-        // Кнопки (визуальное выделение)
+        const contentMarketing = document.getElementById("content-marketing");
+        const contentAi = document.getElementById("content-ai");
         const btnMarketing = document.getElementById("tab-marketing");
         const btnAi = document.getElementById("tab-ai");
-        
+
         if (tab === 'marketing') {
+          // Показываем Маркетинг, скрываем ИИ
+          contentMarketing.classList.remove("hidden");
+          contentAi.classList.add("hidden");
+          
           btnMarketing.className = "pb-2 tab-active transition-all";
           btnAi.className = "pb-2 text-gray-500 transition-all";
         } else {
+          // Показываем ИИ, скрываем Маркетинг
+          contentMarketing.classList.add("hidden");
+          contentAi.classList.remove("hidden");
+          
           btnMarketing.className = "pb-2 text-gray-500 transition-all";
           btnAi.className = "pb-2 tab-active transition-all";
         }
