@@ -266,9 +266,10 @@ export async function handleWebChat(event, context) {
             let targetUrl = btn.url || (btn.web_app ? btn.web_app.url : null);
 
             if (targetUrl) {
+              // Проверяем наличие ключевых слов в ссылке, независимо от домена
               if (
-                targetUrl.includes("neurogen-promo-kit") ||
-                targetUrl.includes("crm-dashboard")
+                targetUrl.includes("/promo-kit/") ||
+                targetUrl.includes("/crm-dashboard/")
               ) {
                 const separator = targetUrl.includes("?") ? "&" : "?";
                 targetUrl = `${targetUrl}${separator}token=${webAppToken}`;
