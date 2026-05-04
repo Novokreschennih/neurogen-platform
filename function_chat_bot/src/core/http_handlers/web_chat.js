@@ -331,10 +331,13 @@ export async function handleWebChat(event, context) {
       const verificationCode = crypto.randomUUID().split("-")[0].toUpperCase();
       const codeExpires = Date.now() + 24 * 60 * 60 * 1000;
 
+      // Берем имя из payload, либо берем кусок до @
+      const firstName = payload.first_name || email.split("@")[0];
+
       const user = await resolveUser("email", {
         email: email,
         partner_id: partnerId,
-        first_name: email.split("@")[0],
+        first_name: firstName,
       });
 
       user.session.email_verification_code = verificationCode;

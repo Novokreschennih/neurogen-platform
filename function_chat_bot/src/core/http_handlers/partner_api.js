@@ -20,7 +20,11 @@ export async function handlePartnerApi(event, context) {
     verifyToken,
   } = context;
 
-  const actions = ["get_partner_link", "update_ai_settings", "get_public_config"];
+  const actions = [
+    "get_partner_link",
+    "update_ai_settings",
+    "get_public_config",
+  ];
   if (!actions.includes(params.action)) return null;
 
   // v7.1: Universal authorization
@@ -196,15 +200,23 @@ export async function handlePartnerApi(event, context) {
       }
       const owner = await ydb.getUserByRefTail(tail);
       if (!owner) {
-        return response(200, { telegram: true, web: true });
+        return response(200, {
+          telegram: true,
+          vk: false,
+          web: true,
+          email: false,
+          sh_user_id: "1123",
+          first_name: "SetHubble",
+        });
       }
       const channels = owner.session?.channels || {};
       return response(200, {
         telegram: !!(channels.telegram?.configured || owner.bot_token),
-        vk: !!(channels.vk?.configured),
+        vk: !!channels.vk?.configured,
         web: true,
-        email: !!(channels.email?.configured),
-        sh_user_id: owner.sh_user_id || "1123",
+        email: !!channels.email?.configured,
+        sh_user_id: owner.sh_user_id || "Не указан",
+        first_name: owner.first_name || "Партнёр",
       });
     } catch (error) {
       log.error(`[PARTNER API] get_public_config error`, error);
