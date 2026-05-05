@@ -27,7 +27,44 @@ export async function handlePartnerApi(event, context) {
   ];
   if (!actions.includes(params.action)) return null;
 
-  // v7.1: Universal authorization
+  // === 1. ПУБЛИЧНЫЙ ЭНДПОИНТ (Не требует токена!) ===
+  if (params.action === "get_public_config") {
+    try {
+      let tail = params.page;
+      if (!tail && event.body) {
+        try {
+          tail = JSON.parse(event.body).page;
+        } catch (e) {}
+      }
+
+      const owner = await ydb.getUserByRefTail(tail);
+      if (!owner) {
+        return response(200, {
+          telegram: true,
+          vk: false,
+          web: true,
+          email: false,
+          sh_user_id: "1123",
+          first_name: "SetHubble",
+        });
+      }
+
+      const channels = owner.session?.channels || {};
+      return response(200, {
+        telegram: !!(channels.telegram?.configured || owner.bot_token),
+        vk: !!channels.vk?.configured,
+        web: true,
+        email: !!channels.email?.configured,
+        sh_user_id: owner.sh_user_id || "ID скрыт",
+        first_name: owner.first_name || "Партнёр",
+      });
+    } catch (e) {
+      log.error(`[PARTNER API] get_public_config error`, e);
+      return response(500, { error: e.message });
+    }
+  }
+
+  // === 2. АВТОРИЗАЦИЯ (Ниже только приватные методы) ===
   let telegramId = null;
   let firstName = "Партнёр";
 
@@ -60,7 +97,7 @@ export async function handlePartnerApi(event, context) {
     });
   }
 
-  // === GET PARTNER LINK ===
+  // === 3. GET PARTNER LINK ===
   if (params.action === "get_partner_link") {
     try {
       // Используем getUser — он сам поймет, UUID это или Telegram ID
@@ -123,7 +160,7 @@ export async function handlePartnerApi(event, context) {
     }
   }
 
-  // === UPDATE AI SETTINGS (v7.1: Universal cloud intelligence) ===
+  // === 4. UPDATE AI SETTINGS ===
   if (params.action === "update_ai_settings") {
     try {
       // Используем getUser — он сам поймет, UUID это или Telegram ID
@@ -175,39 +212,6 @@ export async function handlePartnerApi(event, context) {
         success: false,
         error: error.message || "Internal error",
       });
-    }
-  }
-
-  // === GET PUBLIC CONFIG (для лендинга) ===
-  if (params.action === "get_public_config") {
-    try {
-      const tail = params.page;
-      if (!tail) {
-        return response(200, { telegram: true, web: true });
-      }
-      const owner = await ydb.getUserByRefTail(tail);
-      if (!owner) {
-        return response(200, {
-          telegram: true,
-          vk: false,
-          web: true,
-          email: false,
-          sh_user_id: "1123",
-          first_name: "SetHubble",
-        });
-      }
-      const channels = owner.session?.channels || {};
-      return response(200, {
-        telegram: !!(channels.telegram?.configured || owner.bot_token),
-        vk: !!channels.vk?.configured,
-        web: true,
-        email: !!channels.email?.configured,
-        sh_user_id: owner.sh_user_id || "Не указан",
-        first_name: owner.first_name || "Партнёр",
-      });
-    } catch (error) {
-      log.error(`[PARTNER API] get_public_config error`, error);
-      return response(200, { telegram: true, web: true });
     }
   }
 

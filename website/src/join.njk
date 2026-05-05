@@ -817,12 +817,16 @@ body {
   // === ДИНАМИЧЕСКИЕ КАНАЛЫ (Запрос к API) ===
   async function fetchPublicConfig() {
     try {
-      const res = await fetch(BASE_API_URL, {
+      // Добавляем action в URL, чтобы API Gateway точно передал его бэкенду
+      const res = await fetch(`${BASE_API_URL}?action=get_public_config`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "get_public_config", page: partnerId }),
+        body: JSON.stringify({ page: partnerId }),
       });
+
       const config = await res.json();
+
+      if (!config || config.error) throw new Error("Invalid config");
 
       // Скрываем каналы, которые партнер не настроил
       if (!config.telegram) {
