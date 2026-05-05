@@ -55,13 +55,27 @@ export async function resolveUser(channel, ids) {
   if (ids.vk_id) searchCrits.push({ vk_id: ids.vk_id });
   if (ids.web_id) searchCrits.push({ web_id: ids.web_id });
   if (ids.email) searchCrits.push({ email: ids.email });
-  if (ids.sh_user_id) searchCrits.push({ sh_user_id: ids.sh_user_id }); // ✅ v7.2: слияние по SetHubble ID
+  if (ids.sh_user_id) searchCrits.push({ sh_user_id: ids.sh_user_id }); // v7.2: слияние по SetHubble ID
 
   // ОПТИМИЗАЦИЯ: Строго последовательный поиск для защиты пула YDB в Serverless (maxLimit: 3)
+  // Каждый поиск обернут в try/catch, чтобы ошибка одного критерия не валила весь резолвер
   const foundResults = [];
   for (const crit of searchCrits) {
-    const u = await ydb.findUser(crit);
-    if (u) foundResults.push(u);
+    try {
+      const u = await ydb.findUser(crit);
+      if (u) {
+        // Проверяем, нет ли уже этого пользователя в результатах (по id)
+        if (!foundResults.some((existing) => existing.id === u.id)) {
+          foundResults.push(u);
+        }
+      }
+    } catch (e) {
+      console.error(
+        `[OMNI-RESOLVER] Error searching by ${Object.keys(crit)[0]}:`,
+        e.message,
+      );
+      // Игнорируем ошибку одного поиска, чтобы не падал весь резолвер
+    }
   }
 
   // Убираем дубли и null (foundResults уже без null)

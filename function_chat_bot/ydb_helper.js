@@ -36,22 +36,24 @@ export const driver = new Driver({
   authService: getCredentialsFromEnv(),
   // === ИСПРАВЛЕНИЕ: ЖЕСТКИЕ ЛИМИТЫ ДЛЯ SERVERLESS ===
   poolSettings: {
-    minLimit: 1,      // Не держим кучу сессий про запас
-    maxLimit: 3,      // ОПТИМИЗАЦИЯ: 3 сессии на контейнер (было 10).
-                      // При 3+ параллельных контейнерах 10 сессий каждый
-                      // превышает глобальный лимит YDB Serverless (~20-50),
-                      // вызывая RESOURCE_EXHAUSTED.
-    keepAlivePeriod: 30000 // Пинговать раз в 30 сек
-  }
+    minLimit: 1, // Не держим кучу сессий про запас
+    maxLimit: 3, // ОПТИМИЗАЦИЯ: 3 сессии на контейнер (было 10).
+    // При 3+ параллельных контейнерах 10 сессий каждый
+    // превышает глобальный лимит YDB Serverless (~20-50),
+    // вызывая RESOURCE_EXHAUSTED.
+    keepAlivePeriod: 30000, // Пинговать раз в 30 сек
+  },
 });
 
 // Хелпер для определения временных ошибок сети и YDB
 function isTransientYdbError(e) {
   const msg = e.message || String(e);
-  return msg.includes("RESOURCE_EXHAUSTED") ||
-         msg.includes("UNAVAILABLE") ||
-         msg.includes("Connection dropped") ||
-         msg.includes("Session is busy");
+  return (
+    msg.includes("RESOURCE_EXHAUSTED") ||
+    msg.includes("UNAVAILABLE") ||
+    msg.includes("Connection dropped") ||
+    msg.includes("Session is busy")
+  );
 }
 
 let driverInitialized = false;
@@ -166,36 +168,57 @@ export async function findUser(criteria) {
         let params = {};
         let declareType = "Utf8";
 
+        // 1. Поиск по UUID (id)
         if (criteria.id) {
           whereClause = "id = $search_val";
           params = { $search_val: TypedValues.utf8(String(criteria.id)) };
-        } else if (criteria.tg_id) {
-          // ИСПОЛЬЗУЕМ ИНДЕКС VIEW
+        }
+        // 2. Поиск по Telegram ID (Пропускаем 0, NaN и null)
+        else if (
+          criteria.tg_id &&
+          !isNaN(Number(criteria.tg_id)) &&
+          Number(criteria.tg_id) !== 0
+        ) {
           viewClause = "VIEW idx_tg_id";
           whereClause = "tg_id = $search_val";
           params = { $search_val: TypedValues.uint64(String(criteria.tg_id)) };
           declareType = "Uint64";
-        } else if (criteria.email) {
+        }
+        // 3. Поиск по Email
+        else if (criteria.email && criteria.email.trim() !== "") {
           viewClause = "VIEW idx_email";
           whereClause = "email = $search_val";
           params = {
             $search_val: TypedValues.utf8(String(criteria.email).toLowerCase()),
           };
-        } else if (criteria.web_id) {
+        }
+        // 4. Поиск по Web ID
+        else if (criteria.web_id && criteria.web_id.trim() !== "") {
           viewClause = "VIEW idx_web_id";
           whereClause = "web_id = $search_val";
           params = { $search_val: TypedValues.utf8(String(criteria.web_id)) };
-        } else if (criteria.sh_user_id) {
-          // ✅ v7.2: Поиск по SetHubble ID (омниканальное слияние)
+        }
+        // 5. Поиск по SetHubble ID
+        else if (criteria.sh_user_id) {
           viewClause = "VIEW idx_sh_user_id";
           whereClause = "sh_user_id = $search_val";
-          params = { $search_val: TypedValues.utf8(String(criteria.sh_user_id)) };
-        } else if (criteria.vk_id) {
+          params = {
+            $search_val: TypedValues.utf8(String(criteria.sh_user_id)),
+          };
+        }
+        // 6. Поиск по VK ID (Пропускаем 0, NaN и null)
+        else if (
+          criteria.vk_id &&
+          !isNaN(Number(criteria.vk_id)) &&
+          Number(criteria.vk_id) !== 0
+        ) {
           viewClause = "VIEW idx_vk_id";
           whereClause = "vk_id = $search_val";
           params = { $search_val: TypedValues.uint64(String(criteria.vk_id)) };
           declareType = "Uint64";
-        } else {
+        }
+        // Ничего не подошло — возвращаем null
+        else {
           return null;
         }
 
@@ -214,11 +237,17 @@ export async function findUser(criteria) {
       // ИСПОЛЬЗУЕМ НАШ НОВЫЙ ХЕЛПЕР
       if (isTransientYdbError(e) && attempt < maxRetries) {
         const delay = baseDelayMs * Math.pow(2, attempt);
-        log.warn(`[findUser] Transient error, retry ${attempt+1}/${maxRetries} in ${delay}ms`);
-        await new Promise(res => setTimeout(res, delay));
+        log.warn(
+          `[findUser] Transient error, retry ${attempt + 1}/${maxRetries} in ${delay}ms`,
+        );
+        await new Promise((res) => setTimeout(res, delay));
         continue;
       }
-      log.error(`Failed to find user by criteria`, e.message || String(e), criteria);
+      log.error(
+        `Failed to find user by criteria`,
+        e.message || String(e),
+        criteria,
+      );
       return null;
     }
   }
@@ -336,7 +365,7 @@ export async function saveUser(user) {
   // Добавляем случайную паузу от 10 до 50 мс перед попыткой сохранения.
   // Это предотвращает одновременный удар по базе от нескольких контейнеров
   // и размазывает пиковые всплески запросов во времени.
-  await new Promise(res => setTimeout(res, 10 + Math.random() * 40));
+  await new Promise((res) => setTimeout(res, 10 + Math.random() * 40));
 
   // Retry logic for RESOURCE_EXHAUSTED errors
   const maxRetries = 4;
@@ -409,12 +438,18 @@ export async function saveUser(user) {
       // ИСПОЛЬЗУЕМ НАШ НОВЫЙ ХЕЛПЕР
       if (isTransientYdbError(e) && attempt < maxRetries) {
         const delay = baseDelayMs * Math.pow(2, attempt);
-        log.warn(`[saveUser] Transient error, retry ${attempt + 1}/${maxRetries} in ${delay}ms`, { userId });
+        log.warn(
+          `[saveUser] Transient error, retry ${attempt + 1}/${maxRetries} in ${delay}ms`,
+          { userId },
+        );
         await new Promise((res) => setTimeout(res, delay));
         continue;
       }
 
-      log.error(`Failed to save user`, e.message || String(e), { userId, attempt });
+      log.error(`Failed to save user`, e.message || String(e), {
+        userId,
+        attempt,
+      });
       return { success: false };
     }
   }
@@ -921,7 +956,12 @@ export async function getPartnerStatsByFunnel(partnerId) {
         { $pid: TypedValues.utf8(String(partnerId)) },
       );
 
-      let total = 0, paid = 0, start_count = 0, training_count = 0, tripwire_count = 0, delivery_count = 0;
+      let total = 0,
+        paid = 0,
+        start_count = 0,
+        training_count = 0,
+        tripwire_count = 0,
+        delivery_count = 0;
       for (const row of resultSets[0]?.rows || []) {
         const items = row.items || [];
         const st = items[0]?.textValue || items[0]?.utf8Value || "";
@@ -929,20 +969,42 @@ export async function getPartnerStatsByFunnel(partnerId) {
         const count = Number(items[2]?.uint64Value || 0);
 
         total += count;
-        if (isPro) { paid += count; delivery_count += count; }
-        else {
+        if (isPro) {
+          paid += count;
+          delivery_count += count;
+        } else {
           if (st === "START") start_count += count;
-          else if (st.includes("Module") || st.includes("Theory") || st.includes("Training")) training_count += count;
-          else if (st.includes("Tripwire") || st.includes("Offer") || st === "FAQ_PRO") tripwire_count += count;
+          else if (
+            st.includes("Module") ||
+            st.includes("Theory") ||
+            st.includes("Training")
+          )
+            training_count += count;
+          else if (
+            st.includes("Tripwire") ||
+            st.includes("Offer") ||
+            st === "FAQ_PRO"
+          )
+            tripwire_count += count;
         }
       }
       return {
-        total, paid,
-        byStage: { start: start_count, training: training_count, tripwire: tripwire_count, delivery: delivery_count },
+        total,
+        paid,
+        byStage: {
+          start: start_count,
+          training: training_count,
+          tripwire: tripwire_count,
+          delivery: delivery_count,
+        },
       };
     });
   } catch (e) {
-    return { total: 0, paid: 0, byStage: { start: 0, training: 0, tripwire: 0, delivery: 0 } };
+    return {
+      total: 0,
+      paid: 0,
+      byStage: { start: 0, training: 0, tripwire: 0, delivery: 0 },
+    };
   }
 }
 
@@ -1394,4 +1456,3 @@ export async function batchUpdateLastSeen(userIds) {
     log.error(`[BATCH UPDATE] Failed`, e.message);
   }
 }
-

@@ -63,31 +63,17 @@ export async function handlePartnerApi(event, context) {
   // === GET PARTNER LINK ===
   if (params.action === "get_partner_link") {
     try {
-      let user = await ydb.findUser({ tg_id: Number(telegramId) });
+      // Используем getUser — он сам поймет, UUID это или Telegram ID
+      let user = await ydb.getUser(telegramId);
 
+      // Promo-Kit открывают ТОЛЬКО существующие пользователи.
+      // Если профиль не найден, возвращаем ошибку, а НЕ создаем пустышку!
       if (!user) {
-        user = {
-          tg_id: Number(telegramId),
-          partner_id: "",
-          state: "START",
-          bought_tripwire: false,
-          session: {
-            tags: ["lead_promo_kit"],
-            dialog_history: [],
-            xp: 0,
-          },
-          last_seen: Date.now(),
-          saved_state: "",
-          bot_token: MAIN_TOKEN,
-          tariff: "",
-          sh_user_id: "",
-          sh_ref_tail: "",
-          purchases: [],
-          first_name: firstName,
-        };
-        const result = await ydb.saveUser(user);
-        user.id = result.id;
-        log.info(`[PARTNER API] New user registered`, { userId: telegramId });
+        log.warn(`[PARTNER API] User not found for token uid: ${telegramId}`);
+        return response(404, {
+          success: false,
+          error: "User profile not found. Open from bot.",
+        });
       }
 
       let botUsername = "";
@@ -140,7 +126,8 @@ export async function handlePartnerApi(event, context) {
   // === UPDATE AI SETTINGS (v7.1: Universal cloud intelligence) ===
   if (params.action === "update_ai_settings") {
     try {
-      let user = await ydb.findUser({ tg_id: Number(telegramId) });
+      // Используем getUser — он сам поймет, UUID это или Telegram ID
+      let user = await ydb.getUser(telegramId);
       if (!user) {
         return response(404, {
           success: false,
