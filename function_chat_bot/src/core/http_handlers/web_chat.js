@@ -339,6 +339,7 @@ export async function handleWebChat(event, context) {
         email: email,
         partner_id: partnerId,
         first_name: firstName,
+        web_id: webSessionId, // <--- КРИТИЧЕСКИЙ ФИКС: Сразу привязываем сессию!
       });
 
       user.session.email_verification_code = verificationCode;

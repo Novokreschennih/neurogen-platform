@@ -504,6 +504,8 @@ this.style.background =
           partner_id: referrer,
           // НОВОЕ: Передаем текст кнопки на сервер для сохранения в dialog_history
           message: buttonText || "",
+          // НОВОЕ: Передаем имя из localStorage, если оно сохранено
+          first_name: localStorage.getItem("neurogen_name") || "",
         }),
       });
 

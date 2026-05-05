@@ -50,8 +50,14 @@ export async function handlePartnerApi(event, context) {
       }
 
       const channels = owner.session?.channels || {};
+      // Флаг канала загорится ТОЛЬКО если есть реальный токен (и это не дефолтная заглушка)
+      const hasPersonalBot =
+        owner.bot_token &&
+        owner.bot_token !== "VK_CENTRAL_GROUP" &&
+        owner.bot_token !== process.env.BOT_TOKEN;
+
       return response(200, {
-        telegram: !!(channels.telegram?.configured || owner.bot_token),
+        telegram: !!hasPersonalBot,
         vk: !!channels.vk?.configured,
         web: true,
         email: !!channels.email?.configured,
