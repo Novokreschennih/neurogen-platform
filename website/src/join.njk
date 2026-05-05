@@ -872,13 +872,31 @@ body {
   const emailForm = document.getElementById("emailForm");
   const emailInput = document.getElementById("userEmail");
 
+  // Считываем состояние из URL и памяти браузера
+  const urlStep = urlParams.get("step");
+  const storedEmail = localStorage.getItem("neurogen_email");
+  const emailVerified = localStorage.getItem("neurogen_email_verified") === "true" || localStorage.getItem("neurogen_email_submitted") === "true";
+
   function openModal() {
     modal.classList.remove("hidden");
     setTimeout(() => {
       modal.classList.remove("opacity-0");
       modalContent.classList.add("modal-enter-active");
     }, 10);
-    emailInput.focus();
+    
+    // 🧠 УМНАЯ ЛОГИКА: Пропускаем шаг Email, если уже вводили, ИЛИ если прилетели с ?step=channels
+    if ((emailVerified && storedEmail) || urlStep === "channels") {
+      stepEmail.classList.add("hidden");
+      stepChoice.classList.remove("hidden");
+      
+      const emailSubmittedEl = document.getElementById("email-submitted");
+      if (emailSubmittedEl) emailSubmittedEl.classList.add("hidden");
+    } else {
+      // Иначе показываем ввод Email
+      stepEmail.classList.remove("hidden");
+      stepChoice.classList.add("hidden");
+      emailInput.focus();
+    }
   }
 
   function closeModal() {
@@ -894,6 +912,11 @@ body {
   modal.addEventListener("click", (e) => {
     if (e.target === modal) closeModal();
   });
+
+  // 🔥 АВТОЗАПУСК: Если в URL есть ?step=channels, СРАЗУ открываем модалку!
+  if (urlStep === "channels") {
+    openModal();
+  }
 
   emailForm.addEventListener("submit", async (e) => {
     e.preventDefault();
