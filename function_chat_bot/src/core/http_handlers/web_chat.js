@@ -132,7 +132,6 @@ export async function handleWebChat(event, context) {
           targetCallback === "FORCE_REG_UPDATE"
         ) {
           webUser.state = "WAIT_REG_ID";
-          if (needsSave) await ydb.saveUser(webUser);
           return {
             statusCode: 200,
             headers: corsHeaders,
@@ -176,7 +175,6 @@ export async function handleWebChat(event, context) {
 
           if (!hasMod2) {
             webUser.state = "LOCKED_PROMO";
-            if (needsSave) await ydb.saveUser(webUser);
             return {
               statusCode: 200,
               headers: corsHeaders,
