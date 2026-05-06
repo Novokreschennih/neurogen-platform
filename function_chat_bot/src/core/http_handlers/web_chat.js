@@ -332,16 +332,23 @@ export async function handleWebChat(event, context) {
       const verificationCode = crypto.randomUUID().split("-")[0].toUpperCase();
       const codeExpires = Date.now() + 24 * 60 * 60 * 1000;
 
-      // Берем имя из payload, либо берем кусок до @
-      const firstName = payload.first_name || email.split("@")[0];
+      // 1. Берем имя из формы, либо фолбэк
+      const inputName = payload.first_name || email.split("@")[0];
 
+      // 2. Находим или склеиваем пользователя (добавили web_id для жесткой привязки)
       const user = await resolveUser("email", {
         email: email,
         partner_id: partnerId,
-        first_name: firstName,
-        web_id: webSessionId, // <--- КРИТИЧЕСКИЙ ФИКС: Сразу привязываем сессию!
+        first_name: inputName,
+        web_id: webSessionId
       });
 
+      // 3. 🔥 ПРИНУДИТЕЛЬНО ПЕРЕЗАПИСЫВАЕМ ИМЯ, если оно пришло из формы
+      if (payload.first_name) {
+        user.first_name = payload.first_name;
+      }
+
+      // 4. Генерируем коды верификации
       user.session.email_verification_code = verificationCode;
       user.session.email_verification_expires = codeExpires;
       user.session.channels = user.session.channels || {};
@@ -353,7 +360,7 @@ export async function handleWebChat(event, context) {
         verified: false,
       };
 
-      // Оптимизация: сохранение и асинхронная отправка письма
+      // 5. 🔥 СОХРАНЯЕМ В БАЗУ ДО ОТПРАВКИ ПИСЬМА (чтобы шаблон взял новое имя)
       await ydb.saveUser(user);
       const { sendEmail, templates } =
         await import("../email/email_service.js");
