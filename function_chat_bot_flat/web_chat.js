@@ -255,43 +255,45 @@ export async function handleWebChat(event, context) {
         { expiresIn: "24h" },
       );
 
+      // Исправленная функция форматирования кнопок v7.3
       const formatButtons = (stepButtons) => {
         if (!stepButtons) return [];
         const btns =
           typeof stepButtons === "function"
             ? stepButtons(links, webUser, info)
             : stepButtons;
+
         return btns?.map((row) =>
           row.map((btn) => {
-            let targetUrl = btn.url || (btn.web_app ? btn.web_app.url : null);
+            // Создаем копию объекта кнопки, чтобы не менять оригинал
+            const newBtn = { ...btn };
+            let targetUrl = newBtn.url || (newBtn.web_app ? newBtn.web_app.url : null);
 
             if (targetUrl) {
-              // v7.2: Регистронезависимая проверка без привязки к слэшам
               const lowerUrl = targetUrl.toLowerCase();
-              if (
-                lowerUrl.includes("promo-kit") ||
-                lowerUrl.includes("crm-dashboard")
-              ) {
-                // Не дублируем token, если уже есть
+
+              // Проверяем на вхождение ключевых слов
+              if (lowerUrl.includes("promo-kit") || lowerUrl.includes("crm-dashboard")) {
                 if (!lowerUrl.includes("token=")) {
                   const separator = targetUrl.includes("?") ? "&" : "?";
                   targetUrl = `${targetUrl}${separator}token=${webAppToken}`;
-                  console.log(`[WEB CHAT] Token appended to URL: ${targetUrl.substring(0, 50)}...`);
                 }
               }
 
-              if (targetUrl.includes("module-")) {
+              // Добавляем флаг веба для статей (регистронезависимо)
+              if (lowerUrl.includes("module-")) {
                 const separator = targetUrl.includes("?") ? "&" : "?";
                 targetUrl = `${targetUrl}${separator}web=1`;
               }
 
-              if (btn.web_app) {
-                return { ...btn, web_app: { url: targetUrl } };
+              // !!! КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Записываем URL обратно в объект !!!
+              if (newBtn.web_app) {
+                newBtn.web_app = { ...newBtn.web_app, url: targetUrl };
               } else {
-                return { ...btn, url: targetUrl };
+                newBtn.url = targetUrl;
               }
             }
-            return btn;
+            return newBtn;
           }),
         );
       };
