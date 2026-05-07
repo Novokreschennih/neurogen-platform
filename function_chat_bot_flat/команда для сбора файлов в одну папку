@@ -1,0 +1,1 @@
+mkdir -p /home/yaronov/Проекты/neurogen-platform/function_chat_bot_flat && find /home/yaronov/Проекты/neurogen-platform/function_chat_bot -type f \( -name "*.js" -o -name "package.json" -o -name "package-lock.json" \) ! -path "*/node_modules/*" ! -name "*.md" -exec cp {} /home/yaronov/Проекты/neurogen-platform/function_chat_bot_flat/ \;
