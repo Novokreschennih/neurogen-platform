@@ -132,6 +132,7 @@ export async function handleWebChat(event, context) {
           targetCallback === "FORCE_REG_UPDATE"
         ) {
           webUser.state = "WAIT_REG_ID";
+          await ydb.saveUser(webUser);
           return {
             statusCode: 200,
             headers: corsHeaders,
@@ -175,6 +176,7 @@ export async function handleWebChat(event, context) {
 
           if (!hasMod2) {
             webUser.state = "LOCKED_PROMO";
+            await ydb.saveUser(webUser);
             return {
               statusCode: 200,
               headers: corsHeaders,
@@ -625,9 +627,8 @@ export async function handleWebChat(event, context) {
             }),
           };
         }
-        const cm = new ChannelManager(u, ydb);
-        cm.enableChannel("telegram");
-        cm.setChannelConfig("telegram", {
+        channelManager.enableChannel(u, "telegram");
+        channelManager.setChannelConfig(u, "telegram", {
           bot_token: txt,
           enabled: true,
           configured: true,
@@ -658,9 +659,8 @@ export async function handleWebChat(event, context) {
             }),
           };
         }
-        const cm = new ChannelManager(u, ydb);
-        cm.enableChannel("vk");
-        cm.setChannelConfig("vk", {
+        channelManager.enableChannel(u, "vk");
+        channelManager.setChannelConfig(u, "vk", {
           group_id: txt,
           enabled: true,
           configured: true,
@@ -759,7 +759,7 @@ export async function handleWebChat(event, context) {
         custom_prompt: ownerSettings.custom_prompt,
       };
 
-      const aiEngineModule = await import("../../ai_engine.js");
+      const aiEngineModule = await import("../../../ai_engine.js");
 
       const currentHistory = webUser.session?.dialog_history || [];
       const cleanedHistory = aiEngineModule.cleanupDialogHistory(

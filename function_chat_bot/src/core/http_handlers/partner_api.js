@@ -58,7 +58,7 @@ export async function handlePartnerApi(event, context) {
 
       return response(200, {
         telegram: !!hasPersonalBot,
-        vk: !!channels.vk?.configured,
+        vk: true,
         web: true,
         email: !!channels.email?.configured,
         sh_user_id: owner.sh_user_id || "ID скрыт",
