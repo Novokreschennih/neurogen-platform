@@ -933,19 +933,25 @@ async function initUser() {
   // 1. ПРИОРИТЕТ: Токен из URL
   if (urlToken && urlToken !== "undefined" && urlToken !== "null") {
     console.log("Token found in URL, saving...");
+
+    // Сначала сохраняем в память и локальное хранилище
     authHeaders["Authorization"] = `Bearer ${urlToken}`;
     localStorage.setItem("neurogen_jwt", urlToken);
 
-    /* ЗАКОММЕНТИРОВАНО v7.8: Не удаляем токен из URL сразу,
-       чтобы избежать потери данных при редиректе сервера.
-       Если сервер сделает редирект (из-за отсутствия слэша),
-       токен останется в URL и будет подхвачен заново.
-    const cleanParams = new URLSearchParams(window.location.search);
-    cleanParams.delete("token");
-    const newUrl = window.location.pathname
-      + (cleanParams.toString() ? "?" + cleanParams.toString() : "");
-    window.history.replaceState({}, document.title, newUrl);
-    */
+    // ТЕПЕРЬ ОЧИЩАЕМ URL (без перезагрузки страницы)
+    try {
+      const cleanParams = new URLSearchParams(window.location.search);
+      cleanParams.delete("token"); // Удаляем только токен, оставляем bot и api для работы
+
+      const searchString = cleanParams.toString();
+      const newUrl = window.location.pathname + (searchString ? "?" + searchString : "");
+
+      window.history.replaceState({}, document.title, newUrl);
+      console.log("URL cleaned successfully");
+    } catch (e) {
+      console.error("URL cleaning failed", e);
+    }
+
   } // 2. ВТОРОЙ ПРИОРИТЕТ: Токен из LocalStorage
   else if (localStorage.getItem("neurogen_jwt")) {
     const storedToken = localStorage.getItem("neurogen_jwt");
