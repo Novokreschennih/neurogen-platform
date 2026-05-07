@@ -936,12 +936,16 @@ async function initUser() {
     authHeaders["Authorization"] = `Bearer ${urlToken}`;
     localStorage.setItem("neurogen_jwt", urlToken);
 
-    // Очищаем URL, сохраняя остальные параметры (bot, api) но удаляя token
+    /* ЗАКОММЕНТИРОВАНО v7.8: Не удаляем токен из URL сразу,
+       чтобы избежать потери данных при редиректе сервера.
+       Если сервер сделает редирект (из-за отсутствия слэша),
+       токен останется в URL и будет подхвачен заново.
     const cleanParams = new URLSearchParams(window.location.search);
     cleanParams.delete("token");
     const newUrl = window.location.pathname
       + (cleanParams.toString() ? "?" + cleanParams.toString() : "");
     window.history.replaceState({}, document.title, newUrl);
+    */
   } // 2. ВТОРОЙ ПРИОРИТЕТ: Токен из LocalStorage
   else if (localStorage.getItem("neurogen_jwt")) {
     const storedToken = localStorage.getItem("neurogen_jwt");

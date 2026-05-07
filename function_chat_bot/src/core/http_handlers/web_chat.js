@@ -255,7 +255,7 @@ export async function handleWebChat(event, context) {
         { expiresIn: "24h" },
       );
 
-      // Исправленная функция форматирования кнопок v7.3
+      // Функция форматирования кнопок v7.7 (production)
       const formatButtons = (stepButtons) => {
         if (!stepButtons) return [];
         const btns =
@@ -265,29 +265,36 @@ export async function handleWebChat(event, context) {
 
         return btns?.map((row) =>
           row.map((btn) => {
-            // Создаем копию объекта кнопки, чтобы не менять оригинал
             const newBtn = { ...btn };
             let targetUrl = newBtn.url || (newBtn.web_app ? newBtn.web_app.url : null);
 
             if (targetUrl) {
               const lowerUrl = targetUrl.toLowerCase();
 
-              // Проверяем на вхождение ключевых слов
+              // v7.8: Тройная защита от редиректов и потери токена
               if (lowerUrl.includes("promo-kit") || lowerUrl.includes("crm-dashboard")) {
                 if (!lowerUrl.includes("token=")) {
-                  const separator = targetUrl.includes("?") ? "&" : "?";
-                  targetUrl = `${targetUrl}${separator}token=${webAppToken}`;
+                  // 1. Отделяем чистый URL от текущих параметров
+                  let [baseUrl, queryString] = targetUrl.split('?');
+                  // 2. ГАРАНТИРУЕМ СЛЭШ (чтобы сервер не делал редирект)
+                  if (!baseUrl.endsWith('/')) {
+                    baseUrl += '/';
+                  }
+                  // 3. Собираем обратно
+                  const qs = queryString ? `?${queryString}` : '';
+                  targetUrl = `${baseUrl}${qs}&token=${webAppToken}`;
+                  // 4. Финальная чистка: заменяем двойные вопросы, если вдруг появились
+                  targetUrl = targetUrl.replace('??', '?');
                 }
               }
 
-              // Добавляем флаг веба для статей (регистронезависимо)
+              // Флаг web=1 для статей академии
               if (lowerUrl.includes("module-")) {
-                const separator = targetUrl.includes("?") ? "&" : "?";
-                targetUrl = `${targetUrl}${separator}web=1`;
+                const sep = targetUrl.includes("?") ? "&" : "?";
+                targetUrl = `${targetUrl}${sep}web=1`;
               }
 
-              // В веб-чате все кнопки конвертируем в обычные URL-ссылки
-              // (включая web_app из Telegram-сценариев)
+              // Конвертируем web_app в обычную ссылку для браузера
               return { text: newBtn.text, url: targetUrl };
             }
             return newBtn;
