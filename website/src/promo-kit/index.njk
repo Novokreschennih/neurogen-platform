@@ -261,6 +261,26 @@ body {
                   Реферальный QR-код
                 </h2>
 
+                <!-- НОВЫЙ ПЕРЕКЛЮЧАТЕЛЬ АУДИТОРИИ -->
+                <div class="flex justify-center mb-6">
+                  <div class="bg-black/80 p-1 rounded-xl border border-white/10 flex gap-1 w-full max-w-[280px]">
+                    <button
+                      id="linkModeOnline"
+                      onclick="setLinkMode('online')"
+                      class="flex-1 py-2 rounded-lg text-xs font-bold bg-cyan-600 text-white transition-all shadow-lg"
+                    >
+                      💻 Онлайн
+                    </button>
+                    <button
+                      id="linkModeOffline"
+                      onclick="setLinkMode('offline')"
+                      class="flex-1 py-2 rounded-lg text-xs font-bold text-gray-400 hover:text-white transition-all"
+                    >
+                      🏢 Офлайн (B2B)
+                    </button>
+                  </div>
+                </div>
+
                 <div class="flex justify-center mb-6">
                   <div
                     id="qrcode"
@@ -838,6 +858,7 @@ let userData = null;
 let refLink = "";
 let b2bRefLink = "";
 let botName = "";
+let currentLinkMode = 'online'; // По умолчанию Онлайн
 let authHeaders = { "Content-Type": "application/json" };
 
 // Извлекаем URL бекенда
@@ -884,6 +905,40 @@ function switchTab(tab) {
   }
 
   if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
+}
+
+// === ЛОГИКА ПЕРЕКЛЮЧЕНИЯ ССЫЛОК (ОНЛАЙН / ОФЛАЙН) ===
+function getActiveLink() {
+  if (currentLinkMode === 'offline') {
+    return b2bRefLink || (refLink + "&role=b2b");
+  }
+  return refLink || `https://sethubble.ru/join/?page=${userData?.partner_id || "p_qdr"}`;
+}
+
+function setLinkMode(mode) {
+  currentLinkMode = mode;
+  const btnOnline = document.getElementById('linkModeOnline');
+  const btnOffline = document.getElementById('linkModeOffline');
+  
+  if (mode === 'online') {
+    btnOnline.className = "flex-1 py-2 rounded-lg text-xs font-bold bg-cyan-600 text-white transition-all shadow-lg";
+    btnOffline.className = "flex-1 py-2 rounded-lg text-xs font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all";
+  } else {
+    btnOffline.className = "flex-1 py-2 rounded-lg text-xs font-bold bg-purple-600 text-white transition-all shadow-lg";
+    btnOnline.className = "flex-1 py-2 rounded-lg text-xs font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all";
+  }
+  
+  // Обновляем текст ссылки
+  const activeUrl = getActiveLink();
+  document.getElementById('botLinkDisplay').textContent = activeUrl;
+  
+  // Обновляем ссылки в постах (магнитах)
+  document.querySelectorAll('.bot-link').forEach(el => el.textContent = activeUrl);
+  
+  // Перерисовываем QR-код
+  generateQR(activeUrl);
+  
+  if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
 }
 
 // AI Constructor functions
@@ -1039,15 +1094,8 @@ function initUI() {
   document.getElementById("loadingBlock").classList.add("hidden");
   document.getElementById("mainContent").classList.remove("hidden");
 
-  // Landing URL Fallback
-  const landingUrl = refLink
-    || `https://sethubble.ru/join/?page=${userData.partner_id || "p_qdr"}`;
-
-  // Вставка ссылок
-  document.getElementById("botLinkDisplay").textContent = landingUrl;
-  document.querySelectorAll(".bot-link").forEach((el) => {
-    el.textContent = landingUrl;
-  });
+  // Инициализация правильной ссылки и QR-кода при загрузке
+  setLinkMode('online');
 
   // Аватар
   if (userData.first_name) {
@@ -1160,8 +1208,6 @@ function initUI() {
   if (userData.user_daily_limit) {
     document.getElementById("ai-limit").value = userData.user_daily_limit;
   }
-
-  generateQR(b2bRefLink || landingUrl);
 }
 
 function generateQR(url) {
@@ -1180,7 +1226,7 @@ function generateQR(url) {
 // === КНОПКИ ДЕЙСТВИЙ (Omnichannel) ===
 
 document.getElementById("copyLinkBtn").addEventListener("click", () => {
-  navigator.clipboard.writeText(refLink).then(() => {
+  navigator.clipboard.writeText(getActiveLink()).then(() => {
     const btn = document.getElementById("copyLinkBtn");
     const original = btn.innerHTML;
     btn.innerHTML = "<span>✅</span> СКОПИРОВАНО";
@@ -1242,8 +1288,10 @@ p {
 });
 
 document.getElementById("shareBtn").addEventListener("click", async () => {
-  const shareLink = b2bRefLink || refLink;
-  const textToShare = "🤖 Мой ИИ-помощник работает 24/7. Попробуй: ";
+  const shareLink = getActiveLink();
+  const textToShare = currentLinkMode === 'offline'
+      ? "Узнайте, как оцифровать сарафанное радио для вашего бизнеса: "
+      : "🤖 Мой ИИ-помощник работает 24/7. Попробуй: ";
 
   // 1. Попытка нативного шеринга в Telegram
   if (tg && tg.openTelegramLink) {
@@ -1275,13 +1323,13 @@ document.getElementById("shareBtn").addEventListener("click", async () => {
 });
 
 document.getElementById("openMySiteBtn").addEventListener("click", () => {
-  const link = b2bRefLink || refLink;
+  const link = getActiveLink();
   if (tg?.openLink) tg.openLink(link);
   else window.open(link, "_blank");
 });
 
 document.getElementById("createPdfBtn").addEventListener("click", () => {
-  const pdfLink = b2bRefLink || refLink;
+  const pdfLink = getActiveLink();
   const pdfAppUrl = `https://qr2pdf.vercel.app/?link=${
     encodeURIComponent(pdfLink)
   }`;
