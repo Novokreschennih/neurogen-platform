@@ -39,7 +39,7 @@ export async function handleWebChat(event, context) {
     }
     const payloadEmail = payload.email ? validateEmail(payload.email) : null;
     const partnerId = payload.partner_id || payload.referrer || "p_qdr";
-    const firstName = payloadEmail ? payloadEmail.split("@")[0] : "WebUser";
+    const firstName = payload.first_name || (payloadEmail ? payloadEmail.split("@")[0] : "WebUser");
 
     // 1 быстрый запрос по индексу
     let webUser = await ydb.findUser({ web_id: webSessionId });
@@ -286,12 +286,9 @@ export async function handleWebChat(event, context) {
                 targetUrl = `${targetUrl}${separator}web=1`;
               }
 
-              // !!! КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Записываем URL обратно в объект !!!
-              if (newBtn.web_app) {
-                newBtn.web_app = { ...newBtn.web_app, url: targetUrl };
-              } else {
-                newBtn.url = targetUrl;
-              }
+              // В веб-чате все кнопки конвертируем в обычные URL-ссылки
+              // (включая web_app из Telegram-сценариев)
+              return { text: newBtn.text, url: targetUrl };
             }
             return newBtn;
           }),

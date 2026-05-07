@@ -286,12 +286,9 @@ export async function handleWebChat(event, context) {
                 targetUrl = `${targetUrl}${separator}web=1`;
               }
 
-              // !!! КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Записываем URL обратно в объект !!!
-              if (newBtn.web_app) {
-                newBtn.web_app = { ...newBtn.web_app, url: targetUrl };
-              } else {
-                newBtn.url = targetUrl;
-              }
+              // В веб-чате все кнопки конвертируем в обычные URL-ссылки
+              // (включая web_app из Telegram-сценариев)
+              return { text: newBtn.text, url: targetUrl };
             }
             return newBtn;
           }),
