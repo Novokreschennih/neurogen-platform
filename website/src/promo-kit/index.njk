@@ -569,6 +569,36 @@ body {
 
           <!-- БЛОК 2: КОНСТРУКТОР (Показываем только если оплачено) -->
           <div id="ai-constructor" class="hidden space-y-6">
+            <!-- Индикатор статуса подписки -->
+            <div
+              id="ai-status-banner"
+              class="mb-6 p-4 rounded-2xl border flex items-center justify-between transition-all"
+            >
+              <div class="flex items-center gap-3">
+                <div id="status-icon" class="text-2xl">⏳</div>
+                <div>
+                  <div
+                    id="status-title"
+                    class="text-xs font-bold uppercase tracking-wider"
+                  >
+                    Загрузка статуса...
+                  </div>
+                  <div
+                    id="status-date"
+                    class="text-[10px] text-gray-400 mt-0.5"
+                  >
+                    Определяем дату...
+                  </div>
+                </div>
+              </div>
+              <div
+                id="status-badge"
+                class="px-3 py-1 rounded-full text-[10px] font-black uppercase shadow-lg"
+              >
+                ---
+              </div>
+            </div>
+
             <div class="glass-panel rounded-2xl p-5 border-l-4 border-cyan-500">
               <h3 class="font-bold text-white mb-1">Глобальный Нейромозг</h3>
               <p class="text-xs text-gray-400">
@@ -944,14 +974,14 @@ async function initUser() {
       cleanParams.delete("token"); // Удаляем только токен, оставляем bot и api для работы
 
       const searchString = cleanParams.toString();
-      const newUrl = window.location.pathname + (searchString ? "?" + searchString : "");
+      const newUrl = window.location.pathname
+        + (searchString ? "?" + searchString : "");
 
       window.history.replaceState({}, document.title, newUrl);
       console.log("URL cleaned successfully");
     } catch (e) {
       console.error("URL cleaning failed", e);
     }
-
   } // 2. ВТОРОЙ ПРИОРИТЕТ: Токен из LocalStorage
   else if (localStorage.getItem("neurogen_jwt")) {
     const storedToken = localStorage.getItem("neurogen_jwt");
@@ -1048,21 +1078,60 @@ function initUI() {
     document.getElementById("badge-free").classList.remove("hidden");
   }
 
-  // === ПРОВЕРКА ПОДПИСКИ И ОТОБРАЖЕНИЕ ВКЛАДКИ ИИ ===
-  const isAiActive = userData.ai_active_until
-    && (userData.ai_active_until > Date.now());
+  // === УЛУЧШЕННАЯ ПРОВЕРКА ИИ С ТРИАЛ-МЕТКОЙ ===
+  const now = Date.now();
+  const aiUntil = parseInt(userData.ai_active_until) || 0;
+  const isAiActive = aiUntil > now;
 
   const paywallBlock = document.getElementById("ai-paywall");
   const constructorBlock = document.getElementById("ai-constructor");
+  const statusBanner = document.getElementById("ai-status-banner");
+  const statusTitle = document.getElementById("status-title");
+  const statusDate = document.getElementById("status-date");
+  const statusBadge = document.getElementById("status-badge");
+  const statusIcon = document.getElementById("status-icon");
 
   if (isAiActive) {
-    // Если оплачено: показываем конструктор, скрываем пейволл
-    if (constructorBlock) constructorBlock.classList.remove("hidden");
-    if (paywallBlock) paywallBlock.classList.add("hidden");
+    constructorBlock.classList.remove("hidden");
+    paywallBlock.classList.add("hidden");
+
+    // Вычисляем, сколько дней осталось
+    const daysLeft = Math.ceil((aiUntil - now) / (1000 * 60 * 60 * 24));
+    const formattedDate = new Date(aiUntil).toLocaleDateString("ru-RU", {
+      day: "numeric",
+      month: "long",
+    });
+
+    // Если осталось 3 дня или меньше — это Trial (Пробный период)
+    if (daysLeft <= 3) {
+      // СТИЛЬ ДЛЯ ТРИАЛА (Желтый/Оранжевый)
+      statusBanner.className =
+        "mb-6 p-4 rounded-2xl border border-yellow-500/30 bg-yellow-500/5 flex items-center justify-between";
+      statusTitle.textContent = "Пробный период (Trial)";
+      statusTitle.className =
+        "text-xs font-bold text-yellow-400 uppercase tracking-wider";
+      statusDate.textContent = `Доступ закроется ${formattedDate}`;
+      statusBadge.textContent = "3 ДНЯ БЕСПЛАТНО";
+      statusBadge.className =
+        "px-3 py-1 rounded-full text-[10px] font-black uppercase bg-yellow-500 text-black";
+      statusIcon.textContent = "🎁";
+    } else {
+      // СТИЛЬ ДЛЯ ОПЛАЧЕННОГО (Зеленый/Циан)
+      statusBanner.className =
+        "mb-6 p-4 rounded-2xl border border-cyan-500/30 bg-cyan-500/5 flex items-center justify-between";
+      statusTitle.textContent = "Интеллект активен";
+      statusTitle.className =
+        "text-xs font-bold text-cyan-400 uppercase tracking-wider";
+      statusDate.textContent = `Подписка активна до ${formattedDate}`;
+      statusBadge.textContent = "PREMIUM";
+      statusBadge.className =
+        "px-3 py-1 rounded-full text-[10px] font-black uppercase bg-cyan-500 text-black";
+      statusIcon.textContent = "🚀";
+    }
   } else {
-    // Если НЕ оплачено: показываем пейволл, скрываем конструктор
-    if (paywallBlock) paywallBlock.classList.remove("hidden");
-    if (constructorBlock) constructorBlock.classList.add("hidden");
+    // Если подписка кончилась
+    paywallBlock.classList.remove("hidden");
+    constructorBlock.classList.add("hidden");
   }
 
   // === ЗАГРУЗКА НАСТРОЕК ИИ ===
