@@ -41,7 +41,7 @@ export async function handlePartnerApi(event, context) {
       if (!owner) {
         return response(200, {
           telegram: true,
-          vk: false,
+          vk: true,
           web: true,
           email: false,
           sh_user_id: "1123",
