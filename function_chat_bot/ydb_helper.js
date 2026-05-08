@@ -36,12 +36,9 @@ export const driver = new Driver({
   authService: getCredentialsFromEnv(),
   // === ИСПРАВЛЕНИЕ: ЖЕСТКИЕ ЛИМИТЫ ДЛЯ SERVERLESS ===
   poolSettings: {
-    minLimit: 1, // Не держим кучу сессий про запас
-    maxLimit: 3, // ОПТИМИЗАЦИЯ: 3 сессии на контейнер (было 10).
-    // При 3+ параллельных контейнерах 10 сессий каждый
-    // превышает глобальный лимит YDB Serverless (~20-50),
-    // вызывая RESOURCE_EXHAUSTED.
-    keepAlivePeriod: 30000, // Пинговать раз в 30 сек
+    minLimit: 0, // НЕ держим сессии про запас (экономит квоты)
+    maxLimit: 1, // 1 контейнер = 1 сессия. Больше облачной функции не нужно!
+    keepAlivePeriod: 30000,
   },
 });
 
