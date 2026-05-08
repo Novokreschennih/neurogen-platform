@@ -414,10 +414,10 @@ export async function handleWebChat(event, context) {
         };
       }
 
-      webUser.session.post_gen_count++;
+      // ИСПРАВЛЕНИЕ: Безопасное инкрементирование
+      webUser.session.post_gen_count = (webUser.session.post_gen_count || 0) + 1;
       needsSave = true;
 
-      // 2. Вызов нейросети напрямую (минуя ограничения ai_engine)
       const apiKey = process.env.POLZA_API_KEY || process.env.OPENROUTER_API_KEY;
       if (!apiKey) {
         if (needsSave) await ydb.saveUser(webUser);
@@ -436,6 +436,11 @@ export async function handleWebChat(event, context) {
 
       try {
         const endpoint = process.env.POLZA_API_KEY ? "https://polza.ai/api/v1/chat/completions" : "https://openrouter.ai/api/v1/chat/completions";
+        
+        // ИСПРАВЛЕНИЕ: Защита от зависания API
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+
         const res = await fetch(endpoint, {
           method: "POST",
           headers: {
@@ -444,25 +449,28 @@ export async function handleWebChat(event, context) {
             "HTTP-Referer": "https://sethubble.com"
           },
           body: JSON.stringify({
-            model: "openai/gpt-4o-mini",
+            model: "openai/gpt-4o-mini", // Самая быстрая модель для постов
             messages:[
               { role: "system", content: systemPrompt },
               { role: "user", content: "Напиши пост." }
             ],
             max_tokens: 300,
             temperature: 0.8
-          })
+          }),
+          signal: controller.signal
         });
         
+        clearTimeout(timeoutId);
+        
         const data = await res.json();
-        const text = data.choices?.[0]?.message?.content || "Ошибка генерации";
+        const text = data.choices?.[0]?.message?.content || "⚠️ Ошибка: нейросеть вернула пустой ответ";
         
         if (needsSave) await ydb.saveUser(webUser);
         return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ answer: text }) };
         
       } catch (e) {
         if (needsSave) await ydb.saveUser(webUser);
-        return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ answer: "⚠️ Ошибка связи с нейросетью" }) };
+        return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ answer: "⚠️ Нейросеть отвечает слишком долго. Попробуй еще раз." }) };
       }
     }
 

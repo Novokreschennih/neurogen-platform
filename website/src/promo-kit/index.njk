@@ -928,10 +928,10 @@ eleventyExcludeFromCollections: true
             }
         });
 
-        // AI POST GENERATOR (Изолированный маршрут generate-post)
+        // AI POST GENERATOR (Изолированный маршрут)
         async function generateAIPost() {
             const select = document.getElementById("aiPostTopic");
-            const topic = select.options[select.selectedIndex]?.text;
+            const topic = select.options[select.selectedIndex]?.text; // Берем красивый текст из селекта
             const btn = document.getElementById("generatePostBtn");
             const resBox = document.getElementById("aiPostResult");
             const resText = document.getElementById("aiPostText");
@@ -944,9 +944,10 @@ eleventyExcludeFromCollections: true
             
             try {
                 const response = await fetch(BACKEND_URL, {
-                    method: "POST", headers: authHeaders,
+                    method: "POST",
+                    headers: authHeaders,
                     body: JSON.stringify({
-                        action: "generate-post",
+                        action: "generate-post", // <--- ИСПРАВЛЕНИЕ: Теперь шлем правильную команду!
                         topic: topic,
                         link: getActiveLink(),
                         sessionId: currentSessionId
@@ -954,19 +955,16 @@ eleventyExcludeFromCollections: true
                 });
                 const data = await response.json();
                 
-                if(data.answer) {
+                if(data.answer && !data.answer.includes("⚠️") && !data.answer.includes("⏳")) {
                     resText.innerHTML = data.answer.replace(/\n/g, "<br>");
                     resBox.classList.remove("hidden");
                     resBox.classList.add("animate-fadeInUp");
-                    
-                    if (data.answer.includes("⏳")) {
-                        showToast("Достигнут лимит генераций", "warning");
-                    } else {
-                        showToast("Пост готов!", "success");
-                    }
+                    showToast("Пост готов!", "success");
+                } else {
+                    showToast(data.answer || "Ошибка генерации", "error");
                 }
             } catch(e) {
-                showToast("Ошибка связи с сервером", "error");
+                showToast("Ошибка связи с сервером (возможно таймаут)", "error");
             } finally {
                 btn.innerHTML = original;
                 btn.disabled = false;
