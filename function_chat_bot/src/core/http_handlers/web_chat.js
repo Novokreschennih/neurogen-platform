@@ -414,18 +414,35 @@ export async function handleWebChat(event, context) {
         };
       }
 
-      // ИСПРАВЛЕНИЕ: Безопасное инкрементирование
       webUser.session.post_gen_count = (webUser.session.post_gen_count || 0) + 1;
       needsSave = true;
 
-      const apiKey = process.env.POLZA_API_KEY || process.env.OPENROUTER_API_KEY;
+      // 2. Подхватываем настройки ИИ владельца (как в основном чате)
+      let ownerSettings = { ai_provider: "polza", ai_model: "deepseek/deepseek-v4-flash", custom_api_key: "" };
+      if (webUser.partner_id && webUser.partner_id !== "p_qdr") {
+        try {
+          const owner = await ydb.getUserByRefTail(webUser.partner_id);
+          if (owner) {
+            ownerSettings = {
+              ai_provider: owner.ai_provider || "polza",
+              ai_model: owner.ai_model || "deepseek/deepseek-v4-flash",
+              custom_api_key: owner.custom_api_key || ""
+            };
+          }
+        } catch(e) {}
+      }
+
+      const apiKey = ownerSettings.custom_api_key || process.env.POLZA_API_KEY || process.env.OPENROUTER_API_KEY;
       if (!apiKey) {
         if (needsSave) await ydb.saveUser(webUser);
         return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ answer: "⚠️ Системный API ключ не настроен" }) };
       }
 
+      const baseURL = ownerSettings.ai_provider === "openrouter" ? "https://openrouter.ai/api/v1" : "https://polza.ai/api/v1";
+      const model = ownerSettings.ai_model || "deepseek/deepseek-v4-flash";
+
       const systemPrompt = `Ты — профессиональный SMM-копирайтер платформы NeuroGen.
-Твоя единственная задача: написать ОДИН короткий, вирусный, сочный пост для соцсетей (Telegram/VK).
+Твоя единственная задача: написать ОДИН короткий, вирусный, сочный пост для соцсетей.
 Продвигаем IT-платформу SetHubble (пассивный доход, ИИ-боты 24/7, оцифровка бизнеса).
 Целевая аудитория: ${topic}
 Строгие правила:
@@ -435,13 +452,10 @@ export async function handleWebChat(event, context) {
 4. В самом конце ОБЯЗАТЕЛЬНО вставь эту ссылку: ${refLink}`;
 
       try {
-        const endpoint = process.env.POLZA_API_KEY ? "https://polza.ai/api/v1/chat/completions" : "https://openrouter.ai/api/v1/chat/completions";
-        
-        // ИСПРАВЛЕНИЕ: Защита от зависания API
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const timeoutId = setTimeout(() => controller.abort(), 12000); // Ждем до 12 секунд
 
-        const res = await fetch(endpoint, {
+        const res = await fetch(`${baseURL}/chat/completions`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -449,12 +463,12 @@ export async function handleWebChat(event, context) {
             "HTTP-Referer": "https://sethubble.com"
           },
           body: JSON.stringify({
-            model: "openai/gpt-4o-mini", // Самая быстрая модель для постов
+            model: model,
             messages:[
               { role: "system", content: systemPrompt },
               { role: "user", content: "Напиши пост." }
             ],
-            max_tokens: 300,
+            max_tokens: 1500, // ГАРАНТИЯ ЧТО DEEPSEEK УСПЕЕТ ПОДУМАТЬ
             temperature: 0.8
           }),
           signal: controller.signal
@@ -463,14 +477,19 @@ export async function handleWebChat(event, context) {
         clearTimeout(timeoutId);
         
         const data = await res.json();
-        const text = data.choices?.[0]?.message?.content || "⚠️ Ошибка: нейросеть вернула пустой ответ";
+        const text = data.choices?.[0]?.message?.content;
         
+        if (!text) {
+           if (needsSave) await ydb.saveUser(webUser);
+           return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ answer: "⚠️ Нейросеть не смогла сгенерировать текст (возможно, сбой на стороне провайдера)." }) };
+        }
+
         if (needsSave) await ydb.saveUser(webUser);
         return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ answer: text }) };
         
       } catch (e) {
         if (needsSave) await ydb.saveUser(webUser);
-        return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ answer: "⚠️ Нейросеть отвечает слишком долго. Попробуй еще раз." }) };
+        return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ answer: "⚠️ Нейросеть отвечает слишком долго. Проверьте таймауты в Яндекс Облаке." }) };
       }
     }
 

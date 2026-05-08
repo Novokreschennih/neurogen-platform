@@ -748,13 +748,13 @@ ${historyContext}
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://sethubble.com",
+        "HTTP-Referer": "https://sethubble.ru",
         "X-Title": "NeuroGen AI Engine v3",
       },
       body: JSON.stringify({
         model: model,
         messages,
-        max_tokens: 200,
+        max_tokens: 1500, // <--- Увеличили, чтобы DeepSeek успевал подумать и ответить
         temperature: 0.75,
         top_p: 0.9,
       }),
