@@ -121,13 +121,14 @@ export async function handlePartnerApi(event, context) {
 
       let botUsername = "";
       let botToken = MAIN_TOKEN;
+      let botInfo = null;
       const partnerTail = user.sh_ref_tail || `id_${telegramId}`;
 
       if (user.session?.bot_username) {
         botUsername = user.session.bot_username;
         botToken = user.bot_token || MAIN_TOKEN;
       } else {
-        const botInfo = await ydb.getBotInfo(MAIN_TOKEN);
+        botInfo = await ydb.getBotInfo(MAIN_TOKEN);
         botUsername = botInfo?.bot_username || "sethubble_bot";
       }
 
@@ -149,6 +150,8 @@ export async function handlePartnerApi(event, context) {
         user: {
           id: telegramId,
           first_name: firstName,
+          xp: user.session?.xp || 0, // NeuroCoins для динамической цены PRO
+          inviter_sh_id: botInfo?.sh_user_id || "1123", // ID пригласителя для AFID
           referrals: referrals.length,
           earnings: earnings.toFixed(2),
           clicks,
