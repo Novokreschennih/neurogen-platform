@@ -155,6 +155,13 @@ export async function handlePartnerApi(event, context) {
           is_pro: user.bought_tripwire,
           partner_id: user.sh_ref_tail,
           ai_active_until: user.ai_active_until || 0,
+          // === Расширенные данные ИИ ===
+          custom_prompt: user.custom_prompt || "",
+          ai_provider: user.ai_provider || "polza",
+          ai_model: user.ai_model || "deepseek/deepseek-v4-flash",
+          custom_api_key: user.custom_api_key || "",
+          user_daily_limit: user.user_daily_limit || 0,
+          ai_ui_state: user.session?.ai_ui_state || null, // Состояние селектов
         },
       });
     } catch (error) {
@@ -192,14 +199,21 @@ export async function handlePartnerApi(event, context) {
         ai_model,
         custom_api_key,
         user_daily_limit,
+        ai_ui_state // Получаем сохраненное состояние интерфейса
       } = aiSettings;
 
-      // Update user AI settings
+      // Обновляем основные поля
       user.custom_prompt = custom_prompt || "";
       user.ai_provider = ai_provider || "polza";
       user.ai_model = ai_model || "deepseek/deepseek-v4-flash";
       user.custom_api_key = custom_api_key || "";
       user.user_daily_limit = user_daily_limit || 0;
+
+      // Сохраняем стейт интерфейса в сессию
+      if (ai_ui_state) {
+        if (!user.session) user.session = {};
+        user.session.ai_ui_state = ai_ui_state;
+      }
 
       await ydb.saveUser(user);
 
