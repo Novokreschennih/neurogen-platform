@@ -389,6 +389,84 @@ export async function handleWebChat(event, context) {
     }
 
     // ============================================================
+    // 2.5. ГЕНЕРАТОР КОНТЕНТА ДЛЯ PROMO-KIT (ИЗОЛИРОВАННЫЙ ИИ)
+    // ============================================================
+    if (payload.action === "generate-post") {
+      const topic = payload.topic || "предприниматели";
+      const refLink = payload.link || "https://sethubble.ru";
+      
+      // 1. Проверка лимитов (FREE: 5 в день, PRO: 30 в день)
+      const genLimit = webUser.bought_tripwire ? 30 : 5;
+      const today = new Date().toISOString().split("T")[0];
+      
+      if (webUser.session.post_gen_date !== today) {
+        webUser.session.post_gen_count = 0;
+        webUser.session.post_gen_date = today;
+        needsSave = true;
+      }
+
+      if (webUser.session.post_gen_count >= genLimit) {
+        if (needsSave) await ydb.saveUser(webUser);
+        return {
+          statusCode: 200,
+          headers: corsHeaders,
+          body: JSON.stringify({ answer: `⏳ Лимит генераций на сегодня исчерпан (${genLimit}/${genLimit}). Приходите завтра или активируйте PRO.` })
+        };
+      }
+
+      webUser.session.post_gen_count++;
+      needsSave = true;
+
+      // 2. Вызов нейросети напрямую (минуя ограничения ai_engine)
+      const apiKey = process.env.POLZA_API_KEY || process.env.OPENROUTER_API_KEY;
+      if (!apiKey) {
+        if (needsSave) await ydb.saveUser(webUser);
+        return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ answer: "⚠️ Системный API ключ не настроен" }) };
+      }
+
+      const systemPrompt = `Ты — профессиональный SMM-копирайтер платформы NeuroGen.
+Твоя единственная задача: написать ОДИН короткий, вирусный, сочный пост для соцсетей (Telegram/VK).
+Продвигаем IT-платформу SetHubble (пассивный доход, ИИ-боты 24/7, оцифровка бизнеса).
+Целевая аудитория: ${topic}
+Строгие правила:
+1. Максимум 500 символов! Без воды.
+2. Структура: Цепляющий заголовок (с эмодзи) -> Боль аудитории -> Решение -> Призыв.
+3. НИКАКИХ хештегов.
+4. В самом конце ОБЯЗАТЕЛЬНО вставь эту ссылку: ${refLink}`;
+
+      try {
+        const endpoint = process.env.POLZA_API_KEY ? "https://polza.ai/api/v1/chat/completions" : "https://openrouter.ai/api/v1/chat/completions";
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`,
+            "HTTP-Referer": "https://sethubble.com"
+          },
+          body: JSON.stringify({
+            model: "openai/gpt-4o-mini",
+            messages:[
+              { role: "system", content: systemPrompt },
+              { role: "user", content: "Напиши пост." }
+            ],
+            max_tokens: 300,
+            temperature: 0.8
+          })
+        });
+        
+        const data = await res.json();
+        const text = data.choices?.[0]?.message?.content || "Ошибка генерации";
+        
+        if (needsSave) await ydb.saveUser(webUser);
+        return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ answer: text }) };
+        
+      } catch (e) {
+        if (needsSave) await ydb.saveUser(webUser);
+        return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ answer: "⚠️ Ошибка связи с нейросетью" }) };
+      }
+    }
+
+    // ============================================================
     // 3. ОБРАБОТКА ТЕКСТА (WAIT STATES + AI)
     // ============================================================
     if (payload.message) {

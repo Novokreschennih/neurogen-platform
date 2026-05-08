@@ -712,8 +712,9 @@ eleventyExcludeFromCollections: true
 
             const xp = parseInt(userData.xp) || 0;
             const price = xp >= 100 ? 20 : 40;
+            const productId = xp >= 100 ? "103_97998" : "142_ee4e9";
             const inviterId = userData.inviter_sh_id || "1123";
-            const paymentUrl = `https://sethubble.com/ru/?s=103_97999&afid=${inviterId}`;
+            const paymentUrl = `https://hubblepay.net/${productId}?afid=${inviterId}`;
             
             const upgradeBtn = document.getElementById("btn-upgrade-pro");
             if(upgradeBtn) {
@@ -927,40 +928,45 @@ eleventyExcludeFromCollections: true
             }
         });
 
-        // AI POST GENERATOR (Strict Prompt)
+        // AI POST GENERATOR (Изолированный маршрут generate-post)
         async function generateAIPost() {
             const select = document.getElementById("aiPostTopic");
-            const topic = select.value;
+            const topic = select.options[select.selectedIndex]?.text;
             const btn = document.getElementById("generatePostBtn");
             const resBox = document.getElementById("aiPostResult");
             const resText = document.getElementById("aiPostText");
             
-            if(!topic) return showToast("Выберите аудиторию!", "warning");
+            if(!select.value) return showToast("Выберите аудиторию!", "warning");
             
             btn.disabled = true;
             const original = btn.innerHTML;
             btn.innerHTML = "⏳ Пишу...";
             
             try {
-                // Строгий системный промпт, чтобы ИИ не уходил в диалог
-                const strictPrompt = `Сгенерируй только один короткий, сочный рекламный пост для соцсетей (до 400 символов) для аудитории: ${topic}. Цель: продать идею пассивного дохода через IT-платформу SetHubble и ИИ NeuroGen. В конце обязательно вставь призыв перейти по ссылке: ${getActiveLink()}`;
-                
                 const response = await fetch(BACKEND_URL, {
                     method: "POST", headers: authHeaders,
-                    body: JSON.stringify({ action: "web-chat", message: strictPrompt, partner_id: "p_qdr", sessionId: currentSessionId }) 
+                    body: JSON.stringify({
+                        action: "generate-post",
+                        topic: topic,
+                        link: getActiveLink(),
+                        sessionId: currentSessionId
+                    })
                 });
                 const data = await response.json();
                 
-                if(data.answer && !data.answer.includes("режиме ожидания") && !data.answer.includes("исчерпан")) {
+                if(data.answer) {
                     resText.innerHTML = data.answer.replace(/\n/g, "<br>");
                     resBox.classList.remove("hidden");
                     resBox.classList.add("animate-fadeInUp");
-                    showToast("Пост готов!", "success");
-                } else {
-                    showToast(data.answer || "Лимит запросов исчерпан", "error");
+                    
+                    if (data.answer.includes("⏳")) {
+                        showToast("Достигнут лимит генераций", "warning");
+                    } else {
+                        showToast("Пост готов!", "success");
+                    }
                 }
             } catch(e) {
-                showToast("Ошибка сети", "error");
+                showToast("Ошибка связи с сервером", "error");
             } finally {
                 btn.innerHTML = original;
                 btn.disabled = false;
