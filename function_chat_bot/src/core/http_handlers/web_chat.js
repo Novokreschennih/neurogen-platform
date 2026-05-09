@@ -393,7 +393,7 @@ export async function handleWebChat(event, context) {
     // ============================================================
     if (payload.action === "generate-post") {
       const topic = payload.topic || "предприниматели";
-      const refLink = payload.link || "https://sethubble.com";
+      const refLink = payload.link || "https://sethubble.ru";
       
       // 1. Проверка лимитов (FREE: 5 в день, PRO: 30 в день)
       const genLimit = webUser.bought_tripwire ? 30 : 5;
@@ -410,22 +410,22 @@ export async function handleWebChat(event, context) {
         return {
           statusCode: 200,
           headers: corsHeaders,
-          body: JSON.stringify({ answer: `⏳ Лимит генераций на сегодня исчерпан (${genLimit}/${genLimit}). Приходите завтра или активируйте PRO.` })
+          body: JSON.stringify({ answer: `⏳ Лимит генераций на сегодня исчерпан (${genLimit}/${genLimit}). Активируйте PRO для увеличения лимитов.` })
         };
       }
 
       webUser.session.post_gen_count = (webUser.session.post_gen_count || 0) + 1;
       needsSave = true;
 
-      // 2. Подхватываем настройки ИИ владельца (как в основном чате)
-      let ownerSettings = { ai_provider: "polza", ai_model: "deepseek/deepseek-v4-flash", custom_api_key: "" };
+      // 2. Настройки ключа (системный или свой)
+      let ownerSettings = { ai_provider: "polza", ai_model: "openai/gpt-4o-mini", custom_api_key: "" };
       if (webUser.partner_id && webUser.partner_id !== "p_qdr") {
         try {
           const owner = await ydb.getUserByRefTail(webUser.partner_id);
           if (owner) {
             ownerSettings = {
               ai_provider: owner.ai_provider || "polza",
-              ai_model: owner.ai_model || "deepseek/deepseek-v4-flash",
+              ai_model: owner.ai_model || "openai/gpt-4o-mini",
               custom_api_key: owner.custom_api_key || ""
             };
           }
@@ -439,21 +439,21 @@ export async function handleWebChat(event, context) {
       }
 
       const baseURL = ownerSettings.ai_provider === "openrouter" ? "https://openrouter.ai/api/v1" : "https://polza.ai/api/v1";
-      const model = ownerSettings.ai_model || "deepseek/deepseek-v4-flash";
-
-      const systemPrompt = `Ты — профессиональный SMM-копирайтер платформы NeuroGen.
-Твоя единственная задача: написать ОДИН короткий, вирусный, сочный пост для соцсетей.
-Продвигаем IT-платформу SetHubble (пассивный доход, ИИ-боты 24/7, оцифровка бизнеса).
-Целевая аудитория: ${topic}
-Строгие правила:
-1. Максимум 500 символов! Без воды.
-2. Структура: Цепляющий заголовок (с эмодзи) -> Боль аудитории -> Решение -> Призыв.
-3. НИКАКИХ хештегов.
-4. В самом конце ОБЯЗАТЕЛЬНО вставь эту ссылку: ${refLink}`;
+      
+      // ИСПОЛЬЗУЕМ СТРОГИЙ ПРОМПТ ТОЛЬКО ДЛЯ ПОСТОВ (без оглядки на ai_engine.js)
+      const systemPrompt = `Ты — профессиональный SMM-копирайтер.
+Твоя единственная задача: написать ОДИН короткий, вирусный, привлекательный пост для соцсетей.
+Аудитория поста: ${topic}.
+Продвигаем IT-платформу NeuroGen / SetHubble.
+ПРАВИЛА:
+1. Пиши живо, с эмодзи, разбивай на короткие абзацы.
+2. Не более 600 символов! Без воды и долгих вступлений.
+3. НИКАКИХ хештегов. НИКАКИХ кавычек вокруг текста.
+4. В самом конце обязательно вставь призыв к действию и эту ссылку: ${refLink}`;
 
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 12000); // Ждем до 12 секунд
+        const timeoutId = setTimeout(() => controller.abort(), 12000);
 
         const res = await fetch(`${baseURL}/chat/completions`, {
           method: "POST",
@@ -463,33 +463,29 @@ export async function handleWebChat(event, context) {
             "HTTP-Referer": "https://sethubble.com"
           },
           body: JSON.stringify({
-            model: model,
+            model: "openai/gpt-4o-mini", // Жестко фиксируем быструю модель для постов
             messages:[
               { role: "system", content: systemPrompt },
-              { role: "user", content: "Напиши пост." }
+              { role: "user", content: "Сгенерируй пост для соцсетей." }
             ],
-            max_tokens: 1500, // ГАРАНТИЯ ЧТО DEEPSEEK УСПЕЕТ ПОДУМАТЬ
-            temperature: 0.8
+            max_tokens: 500,
+            temperature: 0.7
           }),
           signal: controller.signal
         });
         
         clearTimeout(timeoutId);
-        
         const data = await res.json();
         const text = data.choices?.[0]?.message?.content;
         
-        if (!text) {
-           if (needsSave) await ydb.saveUser(webUser);
-           return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ answer: "⚠️ Нейросеть не смогла сгенерировать текст (возможно, сбой на стороне провайдера)." }) };
-        }
+        if (!text) throw new Error("Empty response");
 
         if (needsSave) await ydb.saveUser(webUser);
         return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ answer: text }) };
         
       } catch (e) {
         if (needsSave) await ydb.saveUser(webUser);
-        return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ answer: "⚠️ Нейросеть отвечает слишком долго. Проверьте таймауты в Яндекс Облаке." }) };
+        return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ answer: "⚠️ Сбой нейросети или таймаут. Попробуйте нажать еще раз." }) };
       }
     }
 
