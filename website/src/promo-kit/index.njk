@@ -695,7 +695,7 @@ eleventyExcludeFromCollections: true
             if (tg?.openLink) tg.openLink(link); else window.open(link, "_blank");
         });
         document.getElementById("createPdfBtn").addEventListener("click", () => {
-            window.open(`https://qr2pdf.vercel.app/?link=${encodeURIComponent(getActiveLink())}`, "_blank");
+            window.open(`https://qr2pdf.vercel.app/?link=${encodeURIComponent(getActiveLink())}&token=${webAppJwt}`, "_blank");
         });
 
         // === ДИНАМИЧЕСКИЙ РЕКЛАМНЫЙ ФЛАЕР (ТЕЙБЛ-ТЕНТ) ===
