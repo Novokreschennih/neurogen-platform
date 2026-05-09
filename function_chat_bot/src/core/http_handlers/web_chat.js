@@ -393,7 +393,7 @@ export async function handleWebChat(event, context) {
     // ============================================================
     if (payload.action === "generate-post") {
       const topic = payload.topic || "предприниматели";
-      const refLink = payload.link || "https://sethubble.ru";
+      const refLink = payload.link || "https://sethubble.com";
       
       // 1. Проверка лимитов (FREE: 5 в день, PRO: 30 в день)
       const genLimit = webUser.bought_tripwire ? 30 : 5;
