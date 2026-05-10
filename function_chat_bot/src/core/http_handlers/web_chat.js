@@ -634,23 +634,38 @@ export async function handleWebChat(event, context) {
       // 3.2. СЕКРЕТНЫЕ СЛОВА (ПРИОРИТЕТ!)
       if (SECRETS_CONFIG[webUser.state]) {
         const config = SECRETS_CONFIG[webUser.state];
-        // Сравниваем введенный текст с секретным словом
+
         if (txt.toLowerCase() === config.word.toLowerCase()) {
+          // --- СЛОВО ВЕРНОЕ ---
           if (!webUser.session.xp_awarded) webUser.session.xp_awarded = {};
           if (!webUser.session.xp_awarded[config.awardKey]) {
             webUser.session.xp = (webUser.session.xp || 0) + config.xp;
             webUser.session.xp_awarded[config.awardKey] = true;
             webUser.session[config.flag] = true;
           }
+          // Сбрасываем попытки при успехе
+          if (webUser.session.secret_attempts) delete webUser.session.secret_attempts[webUser.state];
+
           webUser.state = getNextStateAfterSecret(webUser.state, "web");
           await ydb.saveUser(webUser);
           return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ answer: `✅ <b>КОД ПРИНЯТ!</b>\n\n🪙 +${config.xp} NeuroCoins!`, loadNextStep: true }) };
+
         } else {
-          // !!! ВАЖНО: Если слово неверное, возвращаем ошибку и ВЫХОДИМ, не пуская запрос в ИИ
+          // --- СЛОВО НЕВЕРНОЕ ---
+          // Считаем попытки для выдачи подсказок
+          if (!webUser.session.secret_attempts) webUser.session.secret_attempts = {};
+          webUser.session.secret_attempts[webUser.state] = (webUser.session.secret_attempts[webUser.state] || 0) + 1;
+
+          const attempts = webUser.session.secret_attempts[webUser.state];
+          const errorMsg = getSecretWordErrorResponse(webUser.state, attempts);
+
+          await ydb.saveUser(webUser);
+
+          // ВАЖНО: Мы возвращаем ответ и ПРЕРЫВАЕМ выполнение функции, чтобы не идти в ИИ
           return {
             statusCode: 200,
             headers: corsHeaders,
-            body: JSON.stringify({ answer: getSecretWordErrorResponse(webUser.state, 1) })
+            body: JSON.stringify({ answer: errorMsg })
           };
         }
       }
