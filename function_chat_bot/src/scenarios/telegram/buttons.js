@@ -561,18 +561,29 @@ export const telegramButtons = {
   SYSTEM_SETUP: (links, user) => {
     const r = [];
     const hasBot = !!user.bot_token;
+    const isPro = !!user.bought_tripwire;
 
     // Кнопка «Повторить обучение» (всегда доступна для зарегистрированных)
     r.push([{ text: "📚 ПОВТОРИТЬ ОБУЧЕНИЕ", callback_data: "Training_Main" }]);
 
     if (!hasBot) {
-      // Если бота нет — предлагаем настроить
-      r.push([
-        {
-          text: "🚀 НАСТРОИТЬ БОТА СЕЙЧАС",
-          callback_data: "SETUP_BOT_START",
-        },
-      ]);
+      if (isPro) {
+        // Если PRO, но бота нет — предлагаем настроить
+        r.push([
+          {
+            text: "🚀 НАСТРОЙ БОТА-КЛОНА",
+            callback_data: "SETUP_BOT_START",
+          },
+        ]);
+      } else {
+        // Если FREE — продаем фичу
+        r.push([
+          {
+            text: "💎 СВОЙ БОТ (НУЖЕН PRO)",
+            callback_data: "Offer_Tripwire",
+          },
+        ]);
+      }
     } else {
       // Если бот настроен — кнопка обновления токена
       r.push([
@@ -882,7 +893,7 @@ export const telegramButtons = {
   MY_AI_BOT: (links, user) => {
     const r = [];
 
-    // Генерируем реферальную ссылку с ID пользователя для Telegram
+    // Генерируем ��еферальную ссылку с ID пользователя для Telegram
     const myRefTail =
       user.sh_ref_tail ||
       user.partner_id ||
@@ -905,11 +916,17 @@ export const telegramButtons = {
       ]);
       r.push([{ text: "✅ ОСТАВИТЬ КАК ЕСТЬ", callback_data: "MAIN_MENU" }]);
     } else {
-      // Если бота нет — кнопка запуска
-      r.push([
-        { text: "🚀 ПОДКЛЮЧИТЬ БОТА", callback_data: "SETUP_BOT_START" },
-      ]);
-      r.push([{ text: "🔙 НАЗАД", callback_data: "MAIN_MENU" }]);
+      // Если бота нет
+      if (user.bought_tripwire) {
+        r.push([
+          { text: "🚀 ПОДКЛЮЧИТЬ ЛИЧНОГО БОТА", callback_data: "SETUP_BOT_START" },
+        ]);
+      } else {
+        r.push([
+          { text: "💎 СВОЙ БОТ (НУЖЕН PRO)", callback_data: "Offer_Tripwire" },
+        ]);
+      }
+      r.push([{ text: "� НАЗАД", callback_data: "MAIN_MENU" }]);
     }
     return r;
   },

@@ -149,7 +149,23 @@ export function registerTelegramActions(bot, ctx) {
     );
   });
 
+  // === БЛОКИРОВКА СОЗДАНИЯ БОТА ДЛЯ FREE ===
   bot.action("SETUP_BOT_START", async (ctx) => {
+    // Проверка PRO-статуса
+    if (!ctx.dbUser.bought_tripwire) {
+      await ctx.answerCbQuery();
+      return ctx.reply(
+        "💎 <b>ПОДКЛЮЧЕНИЕ ЛИЧНОГО БОТА</b>\n\nСоздание бота со своей аватаркой, именем и защитой базы — это премиальная функция, доступная только на тарифе <b>NeuroGen PRO</b>.\n\nАктивируй PRO, чтобы запустить своего клона и получать 50% комиссии с продаж!",
+        {
+          parse_mode: "HTML",
+          protect_content: true,
+          reply_markup: {
+            inline_keyboard: [[{ text: "💎 КУПИТЬ PRO", callback_data: "Offer_Tripwire" }]]
+          }
+        }
+      );
+    }
+
     ctx.dbUser.state = "WAIT_BOT_TOKEN";
     if (ctx.dbUser.bot_token) {
       ctx.dbUser.session.is_changing_token = true;
@@ -273,6 +289,12 @@ export function registerTelegramActions(bot, ctx) {
   });
 
   bot.command("add_bot", async (ctx) => {
+    if (!ctx.dbUser.bought_tripwire) {
+      return ctx.reply(
+        "💎 <b>Подключение личного бота доступно только на тарифе PRO.</b>\n\nАктивируй PRO через меню /menu, чтобы запустить сво��го клона.",
+        { parse_mode: "HTML" }
+      );
+    }
     ctx.dbUser.state = "WAIT_BOT_TOKEN";
     await ctx.reply(
       "🚀 <b>ОТЛИЧНО! СОЗДАЕМ ТВОЕГО КЛОНА.</b>\n\nПришли мне <b>API TOKEN</b> твоего нового бота из @BotFather (он выглядит как набор букв и цифр).",
