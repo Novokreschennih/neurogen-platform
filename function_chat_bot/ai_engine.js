@@ -674,8 +674,8 @@ export async function generateAIResponse(
     return null;
   }
 
-  // v3.0: Модель (дефолт — gpt-4o-mini для экономии)
-  const model = botConfig.ai_model || "openai/gpt-4o-mini";
+  // v3.0: Модель (дефолт — deepseek/deepseek-chat стабильная)
+  const model = botConfig.ai_model || "deepseek/deepseek-v4-flash";
 
   // v3.0: Промпт — кастомный партнёра ИЛИ дефолтный
   const customSystemPrompt = botConfig.custom_prompt || DEFAULT_AI_PROMPT;
@@ -749,13 +749,13 @@ ${historyContext}
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
         "HTTP-Referer": "https://sethubble.ru",
-        "X-Title": "NeuroGen AI Engine v3",
+        "X-Title": "NeuroGen AI", // Помогает избежать блокировок провайдером
       },
       body: JSON.stringify({
-        model: model,
+        model: model, // Оставляем deepseek/deepseek-v4-flash как есть
         messages,
-        max_tokens: 1500, // <--- Увеличили, чтобы DeepSeek успевал подумать и ответить
-        temperature: 0.75,
+        max_tokens: 1500, // Этого хватит и на "мысли" ИИ, и на сам ответ
+        temperature: 0.7,
         top_p: 0.9,
       }),
       signal: controller.signal,

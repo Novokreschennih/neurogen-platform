@@ -171,46 +171,15 @@ export async function handleWebChat(event, context) {
         }
         // НОВОЕ: Обработка кнопки Промо-Кита для Веб-чата
         if (targetCallback === "PROMO_KIT") {
-          const isPro = webUser.bought_tripwire;
-          const hasMod2 = webUser.session?.mod2_done || isPro;
-
-          if (!hasMod2) {
-            webUser.state = "LOCKED_PROMO";
-            await ydb.saveUser(webUser);
-            return {
-              statusCode: 200,
-              headers: corsHeaders,
-              body: JSON.stringify({ success: true, loadNextStep: true }),
-            };
-          }
-
-          const { generateToken } = await import("../../utils/jwt_utils.js");
-          const webAppToken = generateToken(
-            { uid: webUser.id, first_name: webUser.first_name },
-            { expiresIn: "24h" },
-          );
-
-          const apiGw =
-            process.env.API_GW_HOST ||
-            "d5dsbah1d4ju0glmp9d0.3zvepvee.apigw.yandexcloud.net";
-          const botName = webUser.session?.bot_username || "sethubble_biz_bot";
-          const mod3Param =
-            webUser.session?.mod3_done || webUser.bought_tripwire
-              ? "&mod3=1"
-              : "";
-
-          const promoKitUrl = `https://sethubble.ru/promo-kit/?bot=${botName}&api=https://${apiGw}${mod3Param}&token=${webAppToken}`;
-
+          const apiGw = process.env.API_GW_HOST || "d5dsbah1d4ju0glmp9d0.3zvepvee.apigw.yandexcloud.net";
+          const promoKitUrl = `https://sethubble.ru/promo-kit/?token=${webAppToken}&api=https://${apiGw}`;
           return {
             statusCode: 200,
             headers: corsHeaders,
             body: JSON.stringify({
               success: true,
-              text: "🚀 <b>ВАШ ПЕРСОНАЛЬНЫЙ ПРОМО-КИТ ГОТОВ</b>\n\nЯ сгенерировал для вас временную ссылку доступа. Она будет активна 24 часа.",
-              buttons: [
-                [{ text: "📲 ОТКРЫТЬ ДАШБОРД", url: promoKitUrl }],
-                [{ text: "🏠 ВЕРНУТЬСЯ В МЕНЮ", callback_data: "MAIN_MENU" }],
-              ],
+              text: "🚀 Промо-Кит готов",
+              buttons: [[{ text: "📲 ОТКРЫТЬ", url: promoKitUrl }]],
             }),
           };
         }
@@ -272,19 +241,12 @@ export async function handleWebChat(event, context) {
               const lowerUrl = targetUrl.toLowerCase();
 
               // v7.8: Тройная защита от редиректов и потери токена
-              if (lowerUrl.includes("promo-kit") || lowerUrl.includes("crm-dashboard")) {
+              if (lowerUrl.includes("promo-kit") || lowerUrl.includes("crm-dashboard") || lowerUrl.includes("qr2pdf")) {
                 if (!lowerUrl.includes("token=")) {
-                  // 1. Отделяем чистый URL от текущих параметров
-                  let [baseUrl, queryString] = targetUrl.split('?');
-                  // 2. ГАРАНТИРУЕМ СЛЭШ (чтобы сервер не делал редирект)
-                  if (!baseUrl.endsWith('/')) {
-                    baseUrl += '/';
-                  }
-                  // 3. Собираем обратно
-                  const qs = queryString ? `?${queryString}` : '';
-                  targetUrl = `${baseUrl}${qs}&token=${webAppToken}`;
-                  // 4. Финальная чистка: заменяем двойные вопросы, если вдруг появились
-                  targetUrl = targetUrl.replace('??', '?');
+                  const baseUrl = targetUrl.split('?')[0].replace(/\/$/, "");
+                  const query = targetUrl.split('?')[1] || "";
+                  const sep = query ? "&" : "";
+                  targetUrl = `${baseUrl}/?${query}${sep}token=${webAppToken}`;
                 }
               }
 
@@ -418,14 +380,14 @@ export async function handleWebChat(event, context) {
       needsSave = true;
 
       // 2. Настройки ключа (системный или свой)
-      let ownerSettings = { ai_provider: "polza", ai_model: "openai/gpt-4o-mini", custom_api_key: "" };
+      let ownerSettings = { ai_provider: "polza", ai_model: "deepseek/deepseek-chat", custom_api_key: "" };
       if (webUser.partner_id && webUser.partner_id !== "p_qdr") {
         try {
           const owner = await ydb.getUserByRefTail(webUser.partner_id);
           if (owner) {
             ownerSettings = {
               ai_provider: owner.ai_provider || "polza",
-              ai_model: owner.ai_model || "openai/gpt-4o-mini",
+              ai_model: owner.ai_model || "deepseek/deepseek-chat",
               custom_api_key: owner.custom_api_key || ""
             };
           }
@@ -460,15 +422,15 @@ export async function handleWebChat(event, context) {
           headers: {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${apiKey}`,
-            "HTTP-Referer": "https://sethubble.com"
+            "HTTP-Referer": "https://sethubble.ru"
           },
           body: JSON.stringify({
-            model: "openai/gpt-4o-mini", // Жестко фиксируем быструю модель для постов
+            model: "deepseek/deepseek-chat", // DeepSeek для генерации постов
             messages:[
               { role: "system", content: systemPrompt },
               { role: "user", content: "Сгенерируй пост для соцсетей." }
             ],
-            max_tokens: 500,
+            max_tokens: 1000, // Увеличено для DeepSeek
             temperature: 0.7
           }),
           signal: controller.signal
@@ -669,59 +631,26 @@ export async function handleWebChat(event, context) {
         };
       }
 
-      // --- Г. СЕКРЕТНЫЕ СЛОВА (ИЗ СТАТЕЙ) ---
-      if (SECRETS_CONFIG[u.state]) {
-        const config = SECRETS_CONFIG[u.state];
-        const nextState = getNextStateAfterSecret(u.state, "web");
-
+      // 3.2. СЕКРЕТНЫЕ СЛОВА (ПРИОРИТЕТ!)
+      if (SECRETS_CONFIG[webUser.state]) {
+        const config = SECRETS_CONFIG[webUser.state];
+        // Сравниваем введенный текст с секретным словом
         if (txt.toLowerCase() === config.word.toLowerCase()) {
-          if (!u.session.xp_awarded) u.session.xp_awarded = {};
-
-          if (!u.session.xp_awarded[config.awardKey]) {
-            u.session.xp = (u.session.xp || 0) + config.xp;
-            u.session.xp_awarded[config.awardKey] = true;
-            u.session[config.flag] = true;
-            u.state = nextState;
-            await ydb.saveUser(u);
-            return {
-              statusCode: 200,
-              headers: corsHeaders,
-              body: JSON.stringify({
-                answer: `✅ <b>КОД ПРИНЯТ!</b>\n\n🪙 Тебе начислено +${config.xp} NeuroCoins! Твой баланс: ${u.session.xp}\n\nПродолжаем путь 👇`,
-                loadNextStep: true,
-                sessionId: webSessionId,
-              }),
-            };
-          } else {
-            u.state = nextState;
-            await ydb.saveUser(u);
-            return {
-              statusCode: 200,
-              headers: corsHeaders,
-              body: JSON.stringify({
-                answer: `✅ <b>ТЫ УЖЕ ПРОШЁЛ ЭТОТ МОДУЛЬ!</b>\n\nПродолжаем путь 👇`,
-                loadNextStep: true,
-                sessionId: webSessionId,
-              }),
-            };
+          if (!webUser.session.xp_awarded) webUser.session.xp_awarded = {};
+          if (!webUser.session.xp_awarded[config.awardKey]) {
+            webUser.session.xp = (webUser.session.xp || 0) + config.xp;
+            webUser.session.xp_awarded[config.awardKey] = true;
+            webUser.session[config.flag] = true;
           }
+          webUser.state = getNextStateAfterSecret(webUser.state, "web");
+          await ydb.saveUser(webUser);
+          return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ answer: `✅ <b>КОД ПРИНЯТ!</b>\n\n🪙 +${config.xp} NeuroCoins!`, loadNextStep: true }) };
         } else {
-          // Track failed attempts
-          if (!u.session.secret_attempts) u.session.secret_attempts = {};
-          u.session.secret_attempts[u.state] =
-            (u.session.secret_attempts[u.state] || 0) + 1;
-          await ydb.saveUser(u);
-
-          const attempts = u.session.secret_attempts[u.state];
-          const errorMsg = getSecretWordErrorResponse(u.state, attempts);
-
+          // !!! ВАЖНО: Если слово неверное, возвращаем ошибку и ВЫХОДИМ, не пуская запрос в ИИ
           return {
             statusCode: 200,
             headers: corsHeaders,
-            body: JSON.stringify({
-              answer: errorMsg,
-              sessionId: webSessionId,
-            }),
+            body: JSON.stringify({ answer: getSecretWordErrorResponse(webUser.state, 1) })
           };
         }
       }
