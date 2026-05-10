@@ -695,7 +695,18 @@ eleventyExcludeFromCollections: true
             if (tg?.openLink) tg.openLink(link); else window.open(link, "_blank");
         });
         document.getElementById("createPdfBtn").addEventListener("click", () => {
-            window.open(`https://qr2pdf.vercel.app/?link=${encodeURIComponent(getActiveLink())}&token=${webAppJwt}`, "_blank");
+            const link = getActiveLink();
+            // Генерируем ссылку на твой внутренний раздел
+            // Добавляем token для авторизации и api для связи с бэкендом
+            const appUrl = `/qr2pdf/?link=${encodeURIComponent(link)}&token=${webAppJwt}&api=${encodeURIComponent(BACKEND_URL)}`;
+            
+            if (tg?.openLink) {
+                // Если открыто внутри Telegram, используем его нативный метод
+                tg.openLink(window.location.origin + appUrl);
+            } else {
+                // Если в обычном браузере, открываем в новой вкладке
+                window.open(appUrl, "_blank");
+            }
         });
 
         // === ДИНАМИЧЕСКИЙ РЕКЛАМНЫЙ ФЛАЕР (ТЕЙБЛ-ТЕНТ) ===
