@@ -752,17 +752,17 @@ body {
 
   // === CSS TOGGLE LOGIC ===
   const urlParams = new URLSearchParams(window.location.search);
-  const isB2b = urlParams.get("role") === "b2b";
+  const userRole = urlParams.get("role"); // Получаем роль (universal, agent, online, b2b)
 
-  if (isB2b) {
-    document.querySelectorAll(".content-default").forEach(el =>
-      el.classList.add("hidden")
-    );
-    document.querySelectorAll(".content-b2b").forEach(el =>
-      el.classList.remove("hidden")
-    );
-    document.getElementById("footer-text").textContent =
-      "NEUROGEN © 2026 | Официальный партнёр — ООО \"НейроДиджитал\"";
+  // Показываем B2B контент только если явно указано role=b2b (Офлайн)
+  if (userRole === "b2b") {
+    document.querySelectorAll(".content-default").forEach(el => el.classList.add("hidden"));
+    document.querySelectorAll(".content-b2b").forEach(el => el.classList.remove("hidden"));
+    document.getElementById("footer-text").textContent = "NEUROGEN © 2026 | Официальный партнёр — ООО \"НейроДиджитал\"";
+  } else {
+    // Для universal, agent, online и пустого значения — показываем дефолтный (B2C) контент
+    document.querySelectorAll(".content-default").forEach(el => el.classList.remove("hidden"));
+    document.querySelectorAll(".content-b2b").forEach(el => el.classList.add("hidden"));
   }
 
   // === Инициализация параметров ===
