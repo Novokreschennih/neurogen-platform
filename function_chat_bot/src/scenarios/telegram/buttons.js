@@ -301,7 +301,7 @@ export const telegramButtons = {
           ]
         : [
             {
-              text: "🔑 ВВЕСТИ СЕКРЕТНОЕ СЛОВО (+20 🪙)",
+               text: "🔑 ВВЕСТИ КЛЮЧ ДЕШИФРОВКИ (+20 🪙)",
               callback_data: "ENTER_SECRET_1",
             },
           ],
@@ -340,7 +340,7 @@ export const telegramButtons = {
         ],
         [
           {
-            text: "🔑 ВВЕСТИ СЕКРЕТНОЕ СЛОВО",
+               text: "🔑 ВВЕСТИ КЛЮЧ ДЕШИФРОВКИ",
             callback_data: "ENTER_SECRET_2",
           },
         ],
@@ -416,7 +416,7 @@ export const telegramButtons = {
         ],
         [
           {
-            text: "🔑 ВВЕСТИ СЕКРЕТНОЕ СЛОВО",
+               text: "🔑 ВВЕСТИ КЛЮЧ ДЕШИФРОВКИ",
             callback_data: "ENTER_SECRET_3",
           },
         ],

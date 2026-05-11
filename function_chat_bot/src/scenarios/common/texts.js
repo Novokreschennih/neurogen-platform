@@ -718,7 +718,7 @@ export const texts = {
 
   // === FollowUp_Tripwire_5 ===
   FollowUp_Tripwire_5: (links, user) => {
-    if (user.bought_tripwire) return `🎉 <b>PRO-СТАТУС АКТИВИРОВАН!</b>\n\n${user.first_name}, теперь ты в элите! Переходи к PRO-обу��ению.`;
+    if (user.bought_tripwire) return `🎉 <b>PRO-СТАТУС АКТИВИРОВАН!</b>\n\n${user.first_name}, теперь ты в элите! Переходи к PRO-обучению.`;
     
     return `💸 <b>ТВОИ ДЕНЬГИ ПРЯМО СЕЙЧАС УХОДЯТ НАВЕРХ</b>\n\n` +
     `${user.first_name}, знаешь, как работает <b>Правило Компрессии</b>?\n\n` +

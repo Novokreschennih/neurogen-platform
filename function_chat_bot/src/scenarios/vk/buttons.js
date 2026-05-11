@@ -294,7 +294,7 @@ export const vkButtons = {
           ]
         : [
             {
-              text: "🔑 ВВЕСТИ СЕКРЕТНОЕ СЛОВО (+20 🪙)",
+               text: "🔑 ВВЕСТИ КЛЮЧ ДЕШИФРОВКИ (+20 🪙)",
               callback: "ENTER_SECRET_1",
             },
           ],
@@ -333,7 +333,7 @@ export const vkButtons = {
         ],
         [
           {
-            text: "🔑 ВВЕСТИ СЕКРЕТНОЕ СЛОВО",
+               text: "🔑 ВВЕСТИ КЛЮЧ ДЕШИФРОВКИ",
             callback: "ENTER_SECRET_2",
           },
         ],
@@ -409,7 +409,7 @@ export const vkButtons = {
         ],
         [
           {
-            text: "🔑 ВВЕСТИ СЕКРЕТНОЕ СЛОВО",
+               text: "🔑 ВВЕСТИ КЛЮЧ ДЕШИФРОВКИ",
             callback: "ENTER_SECRET_3",
           },
         ],
