@@ -1,5 +1,5 @@
 ---
-title: "Promo-Kit | Твоя биз��ес-империя"
+title: "Promo-Kit | Твоя бизнес-империя"
 permalink: /promo-kit/
 eleventyExcludeFromCollections: true
 
@@ -71,6 +71,7 @@ eleventyExcludeFromCollections: true
 
         /* Стиль для кнопок-переключателей аудитории */
         .mode-btn { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .mode-btn.active-universal { background: linear-gradient(135deg, #10b981, #06b6d4); color: white; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); }
         .mode-btn.active-agent { background: linear-gradient(135deg, #06b6d4, #3b82f6); color: white; box-shadow: 0 4px 15px rgba(6, 182, 212, 0.3); }
         .mode-btn.active-online { background: linear-gradient(135deg, #8b5cf6, #d946ef); color: white; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3); }
         .mode-btn.active-offline { background: linear-gradient(135deg, #f59e0b, #ef4444); color: white; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3); }
@@ -136,6 +137,20 @@ eleventyExcludeFromCollections: true
             <!-- ========================================== -->
             <div id="content-marketing" class="space-y-6 animate-fadeInUp">
                 
+                <!-- ИНСТРУКЦИЯ (ONBOARDING) -->
+                <div class="acrylic rounded-3xl p-5 border-l-4 border-purple-500 bg-purple-500/5 flex items-start gap-4 shadow-lg shadow-purple-500/10">
+                    <div class="text-3xl hidden sm:block mt-1">👋</div>
+                    <div>
+                        <h3 class="text-white font-bold mb-2 text-sm uppercase tracking-wide flex items-center gap-2">Как работает твой бизнес?</h3>
+                        <ol class="text-xs text-gray-300 space-y-2 list-decimal list-inside">
+                            <li><span class="text-cyan-400 font-bold">Выбери аудиторию</span> ниже. Ссылка и рекламные PDF-флаеры адаптируются автоматически.</li>
+                            <li><span class="text-cyan-400 font-bold">Раздай ссылку</span> (или распечатай QR-код) потенциальным клиентам.</li>
+                            <li>Они перейдут на страницу-презентацию, оставят контакты и попадут в ИИ-воронку.</li>
+                            <li>Когда они совершат оплату (онлайн-сервисов или PRO-статуса) — <b class="text-green-400">деньги автоматически зачислятся на твой крипто-кошелек!</b></li>
+                        </ol>
+                    </div>
+                </div>
+
                 <div class="grid grid-cols-3 gap-3 md:gap-4">
                     <div class="acrylic acrylic-hover rounded-2xl p-4 text-center">
                         <p class="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-2">Переходы</p>
@@ -158,11 +173,12 @@ eleventyExcludeFromCollections: true
                         <div>
                             <h2 class="text-xl font-bold mb-4 text-center">Выберите аудиторию</h2>
                             
-                            <!-- 3 РЕЖИМА ССЫЛКИ -->
-                            <div class="bg-black/40 rounded-xl p-1 flex flex-col sm:flex-row gap-1 w-full mb-6 border border-white/5">
-                                <button onclick="setLinkMode('agent')" id="mode-agent" class="mode-btn flex-1 py-2.5 rounded-lg text-xs font-bold text-gray-400 hover:text-white">🦸‍♂️ Агент</button>
-                                <button onclick="setLinkMode('online')" id="mode-online" class="mode-btn flex-1 py-2.5 rounded-lg text-xs font-bold text-gray-400 hover:text-white">💻 Онлайн</button>
-                                <button onclick="setLinkMode('offline')" id="mode-offline" class="mode-btn flex-1 py-2.5 rounded-lg text-xs font-bold text-gray-400 hover:text-white">🏢 Офлайн (B2B)</button>
+                            <!-- 4 РЕЖИМА ССЫЛКИ -->
+                            <div class="bg-black/40 rounded-xl p-1 grid grid-cols-2 md:grid-cols-4 gap-1 w-full mb-6 border border-white/5">
+                                <button onclick="setLinkMode('universal')" id="mode-universal" class="mode-btn flex-1 py-2.5 rounded-lg text-[11px] font-bold text-gray-400 hover:text-white">🌐 Общая</button>
+                                <button onclick="setLinkMode('agent')" id="mode-agent" class="mode-btn flex-1 py-2.5 rounded-lg text-[11px] font-bold text-gray-400 hover:text-white">🦸‍♂️ Агент</button>
+                                <button onclick="setLinkMode('online')" id="mode-online" class="mode-btn flex-1 py-2.5 rounded-lg text-[11px] font-bold text-gray-400 hover:text-white">💻 Онлайн</button>
+                                <button onclick="setLinkMode('offline')" id="mode-offline" class="mode-btn flex-1 py-2.5 rounded-lg text-[11px] font-bold text-gray-400 hover:text-white">🏢 Офлайн</button>
                             </div>
 
                             <div class="flex justify-center mb-6">
@@ -254,7 +270,7 @@ eleventyExcludeFromCollections: true
                 <!-- AI GENERATOR -->
                 <div class="acrylic rounded-3xl p-6">
                     <h2 class="text-xl font-bold mb-1">📝 Генератор контента</h2>
-                    <p class="text-xs text-gray-500 mb-5">ИИ напишет пост под выбранную вами аудиторию.</p>
+                    <p class="text-xs text-gray-500 mb-5">ИИ напишет продающий пост под выбранную аудиторию.</p>
                     
                     <div class="bg-gradient-to-br from-purple-900/10 to-blue-900/10 rounded-2xl p-5 border border-purple-500/20">
                         <div class="flex flex-col md:flex-row gap-3">
@@ -315,7 +331,7 @@ eleventyExcludeFromCollections: true
                         <!-- ЛЕВАЯ КОЛОНКА -->
                         <div class="space-y-6">
                             <div class="space-y-3">
-                                <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">⚡ Быстрые пресеты:</p>
+                                <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">⚡ Быстрые пресеты (Тон общения):</p>
                                 <div class="grid grid-cols-2 gap-3">
                                     <button onclick="applyAiPreset('shark')" class="btn acrylic acrylic-hover p-4 rounded-xl text-left"><div class="text-2xl mb-2">🦈</div><div class="text-xs font-bold text-white">Акула продаж</div></button>
                                     <button onclick="applyAiPreset('mentor')" class="btn acrylic acrylic-hover p-4 rounded-xl text-left"><div class="text-2xl mb-2">🎓</div><div class="text-xs font-bold text-white">Наставник</div></button>
@@ -344,10 +360,20 @@ eleventyExcludeFromCollections: true
                                     </label>
                                     <input type="password" id="ai-api-key" placeholder="sk-..." class="w-full p-3 rounded-xl text-sm bg-black/60 border border-white/10 text-white outline-none">
                                 </div>
+                                <div>
+                                    <label class="text-[10px] font-bold text-gray-500 uppercase flex justify-between mb-1">
+                                        <span>Лимит запросов в день (0 = безлимит):</span>
+                                    </label>
+                                    <input type="number" id="ai-limit" placeholder="0" class="w-full p-3 rounded-xl text-sm bg-black/60 border border-white/10 text-white outline-none">
+                                </div>
                             </div>
 
-                            <div class="glass-panel p-5 rounded-2xl space-y-4">
-                                <h4 class="text-xs font-bold text-cyan-400 uppercase tracking-wider mb-3">🎭 Конструктор промпта</h4>
+                            <div class="glass-panel p-5 rounded-2xl space-y-4 relative overflow-hidden">
+                                <!-- Информационная плашка безопасности знаний -->
+                                <div class="absolute top-0 right-0 left-0 bg-blue-500/20 border-b border-blue-500/30 p-2 text-[10px] text-center text-blue-200">
+                                    ℹ️ Базовые знания о SetHubble жестко вшиты в ядро. Здесь вы настраиваете только манеру общения.
+                                </div>
+                                <h4 class="text-xs font-bold text-cyan-400 uppercase tracking-wider mb-3 mt-6">🎭 Конструктор промпта</h4>
                                 <div><label class="text-[10px] font-bold text-gray-500 uppercase">Роль ИИ:</label><input type="text" id="ui-role" oninput="compilePrompt()" class="w-full mt-1 p-3 rounded-xl text-sm bg-black/60 border border-white/10 text-white"></div>
                                 <div class="grid grid-cols-2 gap-3">
                                     <div><label class="text-[10px] font-bold text-gray-500 uppercase">Стиль:</label>
@@ -409,40 +435,52 @@ eleventyExcludeFromCollections: true
         // БАЗА ЗНАНИЙ ОФФЕРОВ (ДЛЯ САЙТА И PDF)
         // ==========================================
         const BENEFITS = {
+            universal: {
+                tag: "NEUROGEN ЭКОСИСТЕМА",
+                title: "ИИ-СИСТЕМА ДЛЯ<br><span class='gradient-text'>ПАССИВНОГО ДОХОДА</span>",
+                pdfTitle: "ИИ-СИСТЕМА ДЛЯ ПАССИВНОГО ДОХОДА",
+                subtitle: "Готовый IT-бизнес под ключ. Нейросети работают — вы зарабатываете.",
+                cards:[
+                    { icon: "🤖", title: "1. Ваш ИИ-Клон", text: "Бот сам общается с клиентами, презентует систему и закрывает сделки 24/7." },
+                    { icon: "💸", title: "2. До 50% с продаж", text: "Получайте моментальные выплаты в крипте за каждую продажу системы вашим ботом." },
+                    { icon: "🌐", title: "3. Любой трафик", text: "Подходит для блогеров, офлайн-бизнеса и новичков. Полная автоматизация." },
+                    { icon: "🧠", title: "4. ИИ-Лаборатория", text: "Доступ к премиум-нейросетям NeuroGen для создания сайтов, видео и текстов." }
+                ]
+            },
             agent: {
                 tag: "ТВОЯ ИМПЕРИЯ",
-                title: "КАК ПОСТРОИТЬ СЕТЬ И<br><span class='gradient-text'>ВЫЙТИ НА ПАССИВ?</span>",
+                title: "ТЕНЕВОЙ ВЛАДЕЛЕЦ РЫНКА<br><span class='gradient-text'>ВЫХОД НА ПАССИВ</span>",
                 pdfTitle: "КАК ПОСТРОИТЬ СЕТЬ И<br>ВЫЙТИ НА ПАССИВ?",
-                subtitle: "Радикально новый подход к affiliate-маркетингу. Строй структуру, а не разовые продажи.",
+                subtitle: "Хватит работать на корпорации. Мы даем тебе инфраструктуру, чтобы ты забирал процент с оборота целых бизнесов.",
                 cards:[
-                    { icon: "🌍", title: "1. Масштабируемая структура", text: "Строй глубокую сеть до 10 уровней. Новые агенты и клиенты твоих партнеров автоматически расширяют твою сеть, формируя стабильный пассивный доход." },
-                    { icon: "🏢", title: "2. Тотальная структуризация", text: "Продвигай онлайн и офлайн. Если ты подключаешь магазин или блогера, все их будущие клиенты оказываются в твоей структуре. Зарабатывай с чужих оборотов." },
-                    { icon: "⚡", title: "3. Бинар и Компрессия", text: "Бесконечная глубина через бинарную систему. А благодаря компрессии — деньги от неактивных участников или 'бесплатников' поднимаются к тебе." },
-                    { icon: "🧠", title: "4. ИИ-ассистент NeuroGen", text: "Твой личный ИИ-бот работает 24/7. Он сам общается с лидами, отвечает на вопросы, расширяет твою сеть партнеров и генерирует деньги на автопилоте." }
+                    { icon: "🌍", title: "1. Эффект Рычага", text: "Строй глубокую сеть до 10 уровней. Ты даешь бизнесу бесплатный инструмент оцифровки, а их клиенты автоматически расширяют твою сеть. Ты получаешь чистый инфраструктурный доход." },
+                    { icon: "🏢", title: "2. Тотальная структуризация", text: "Один удачный контакт с блогером или магазином может обеспечить тебя на годы. Все их 10,000 клиентов становятся твоей структурой. Зарабатывай с чужих оборотов." },
+                    { icon: "⚡", title: "3. Бинар и Компрессия", text: "Магия Компрессии: если кто-то под тобой ленится и сидит на бесплатном тарифе, его деньги не сгорают, а пролетают мимо него и оседают в твоем кошельке." },
+                    { icon: "🧠", title: "4. Твой ИИ-клон NeuroGen", text: "Тебе не придется никого уговаривать. Всю грязную работу по продажам и обучению закроет твой личный ИИ-бот. Ты просто раздаешь ссылки." }
                 ]
             },
             online: {
                 tag: "ОНЛАЙН БИЗНЕС",
-                title: "ВЗРЫВНОЙ РОСТ ПРОДАЖ<br><span class='gradient-text'>ДЛЯ ОНЛАЙН-ПРОЕКТОВ</span>",
-                pdfTitle: "ВЗРЫВНОЙ РОСТ ПРОДАЖ<br>ДЛЯ ОНЛАЙН-ПРОЕКТОВ",
-                subtitle: "Принципиально иная модель монетизации и масштабирования для инфобиза и e-commerce.",
+                title: "АЛХИМИЯ: ПРЕВРАЩАЕМ МУСОРНЫЙ<br><span class='gradient-text'>ТРАФИК В USDT</span>",
+                pdfTitle: "АЛХИМИЯ: МУСОРНЫЙ ТРАФИК<br>В ЧИСТУЮ ПРИБЫЛЬ",
+                subtitle: "95% твоей аудитории ничего не покупают и уходят к конкурентам. Пора монетизировать 100% трафика.",
                 cards:[
-                    { icon: "🚀", title: "1. Продажи через сеть", text: "Запусти глубокую реферальную программу до 10 уровней. Оплачивай продвижение только за реальный результат (покупку), а не за пустые клики." },
-                    { icon: "🧲", title: "2. Заработок на конкурентах", text: "Каждый перешедший по ссылке закрепляется за вами навсегда. Если он позже купит продукты других авторов на платформе — вы получите пассивный процент." },
-                    { icon: "🌍", title: "3. Глобальный рынок и крипта", text: "Принимайте платежи со всего мира в USDT. Мгновенная авто-выдача инфопродуктов, интеграция по Webhook и моментальный вывод на ваши кошельки." },
-                    { icon: "🧠", title: "4. ИИ-ассистент NeuroGen", text: "Система включает умного ИИ-бота, который консультирует ваших клиентов, прогревает отказников и превращает их в ваших лояльных партнеров." }
+                    { icon: "🚀", title: "1. Монетизация Отказов", text: "Дай бесплатный доступ к платформе тем, кто не купил твой курс. Они купят продукты других авторов, а система начислит % тебе. Навсегда." },
+                    { icon: "🧲", title: "2. Заработок на конкурентах", text: "Эффект Троянского коня: если твои конкуренты продают свои продукты твоим «отказникам», ты зарабатываешь на продажах конкурента!" },
+                    { icon: "🌍", title: "3. Железобетонная привязка", text: "Любой клик по твоей ссылке намертво привязывает человека к тебе на 4 месяца. Деньги от тебя больше не уйдут, даже если он купит позже." },
+                    { icon: "🧠", title: "4. ИИ-ассистент NeuroGen", text: "Умный бот сам проконсультирует твоих учеников, снимет с тебя техподдержку и превратит покупателей в лояльных партнеров по перепродаже." }
                 ]
             },
             offline: {
                 tag: "САРАФАННОЕ РАДИО 2.0",
-                title: "КАК ПРИВЛЕКАТЬ КЛИЕНТОВ<br><span class='gradient-text'>БЕЗ ЗАТРАТ НА РЕКЛАМУ?</span>",
-                pdfTitle: "КАК ПРИВЛЕКАТЬ КЛИЕНТОВ<br>БЕЗ ЗАТРАТ НА РЕКЛАМУ?",
-                subtitle: "Кардинально новый подход к маркетингу для офлайн-бизнеса. Вы платите только за реальный результат.",
+                title: "ЭФФЕКТ ТРОЯНСКОГО КОНЯ<br><span class='gradient-text'>ДЛЯ ОФЛАЙН-БИЗНЕСА</span>",
+                pdfTitle: "ЭФФЕКТ ТРОЯНСКОГО КОНЯ<br>ДЛЯ ВАШЕГО БИЗНЕСА",
+                subtitle: "Сдвиг парадигмы: вы платите за рекламу ТОЛЬКО тогда, когда клиент уже оставил деньги в вашей кассе.",
                 cards:[
-                    { icon: "🤝", title: "1. Мотивированные партнеры", text: "Дайте клиентам скидку, а тем, кто их привел — вознаграждение. Формируется сеть агентов, которые сами рекламируют вас. Вы платите комиссию только за деньги в кассе." },
-                    { icon: "⚙️", title: "2. Бесшовное внедрение", text: "Не нужно менять прием платежей. Вы принимаете наличные и карты как обычно, а кассир лишь фиксирует промокод покупателя в экосистеме SetHubble." },
-                    { icon: "🎁", title: "3. IT-инструменты в подарок", text: "Платформа бесплатно создаст сайты-визитки для вашего бизнеса и ваших агентов. Эффект вирусного распространения запускается мгновенно." },
-                    { icon: "🧠", title: "4. ИИ-ассистент NeuroGen", text: "Встроенный чат-бот (Telegram/VK) общается с аудиторией 24/7, собирает отзывы, расширяет сеть партнеров и генерирует дополнительный пассивный доход." }
+                    { icon: "🤝", title: "1. Ловушка и Вирус", text: "Вы ставите QR-код на кассу. Клиент сканирует его ради скидки и... автоматически становится вашим мотивированным агентом, раздавая свой код друзьям." },
+                    { icon: "⚙️", title: "2. Золотой Парашют", text: "Главная магия: если ваш клиент пойдет и купит онлайн-курс внутри экосистемы SetHubble — ВЫ получите пассивный процент с его трат!" },
+                    { icon: "🎁", title: "3. Ноль риска", text: "Вы выплачиваете вознаграждение из тех денег, которые новый клиент УЖЕ оставил в вашей кассе. Нет продажи — нет затрат. Риск слить бюджет равен нулю." },
+                    { icon: "🧠", title: "4. Ваш ИИ-Администратор", text: "Встроенный чат-бот (Telegram/VK) общается с вашей аудиторией 24/7, собирает отзывы, расширяет сеть партнеров и генерирует пассивный доход." }
                 ]
             }
         };
@@ -456,7 +494,7 @@ eleventyExcludeFromCollections: true
         let userData = null;
         let refLink = "";
         let b2bRefLink = "";
-        let currentLinkMode = "agent"; 
+        let currentLinkMode = "universal"; 
         let authHeaders = { "Content-Type": "application/json" };
         let webAppJwt = ""; 
         let currentSessionId = localStorage.getItem("neurogen_web_session");
@@ -549,7 +587,6 @@ eleventyExcludeFromCollections: true
             animateValue("statEarnings", 0, parseFloat(userData.earnings) || 0, 1500, true);
             document.getElementById("header-earnings").textContent = `$${(parseFloat(userData.earnings) || 0).toFixed(2)}`;
 
-            // === ИСПРАВЛЕННАЯ ДИНАМИЧЕСКАЯ ССЫЛКА НА ОПЛАТУ (&afid=) ===
             const xp = parseInt(userData.xp) || 0;
             const price = xp >= 100 ? 20 : 40;
             const productId = xp >= 100 ? "103_97998" : "142_ee4e9";
@@ -566,7 +603,7 @@ eleventyExcludeFromCollections: true
                 document.getElementById("tariff-pro").classList.remove("hidden");
                 document.getElementById("tariff-free").classList.add("hidden");
                 document.getElementById("openCrmBtn").onclick = () => {
-                    window.open(`https://novokreschennih.github.io/crm-dashboard/?token=${webAppJwt}`, "_blank");
+                    window.open(`https://sethubble.ru/crm/?token=${webAppJwt}`, "_blank");
                 };
             }
 
@@ -579,7 +616,7 @@ eleventyExcludeFromCollections: true
                 };
             }
 
-            setLinkMode('agent'); // По умолчанию режим Агент
+            setLinkMode('universal'); // По умолчанию универсальный режим
 
             // AI Status
             const now = Date.now();
@@ -611,7 +648,7 @@ eleventyExcludeFromCollections: true
 
             if (userData.ai_provider) document.getElementById("ai-provider").value = userData.ai_provider;
             updateModelsList(userData.ai_model); 
-            if (userData.user_daily_limit) document.getElementById("ai-limit").value = userData.user_daily_limit;
+            if (userData.user_daily_limit !== undefined) document.getElementById("ai-limit").value = userData.user_daily_limit;
             if (userData.custom_api_key) document.getElementById("ai-api-key").value = userData.custom_api_key;
             if (userData.ai_ui_state) {
                 const state = userData.ai_ui_state;
@@ -624,13 +661,14 @@ eleventyExcludeFromCollections: true
         }
 
         // =========================================================================
-        // МАРКЕТИНГ: 3 РЕЖИМА ССЫЛОК И ПРЕЗЕНТАЦИЙ
+        // МАРКЕТИНГ: 4 РЕЖИМА ССЫЛОК И ПРЕЗЕНТАЦИЙ
         // =========================================================================
         function getActiveLink() {
             const base = `https://sethubble.ru/join/?page=${userData?.partner_id || "p_qdr"}`;
             if (currentLinkMode === 'online') return base + "&role=online";
             if (currentLinkMode === 'offline') return base + "&role=b2b";
-            return base; // agent
+            if (currentLinkMode === 'agent') return base + "&role=agent";
+            return base + "&role=universal"; 
         }
 
         function updateAboutTab() {
@@ -643,7 +681,7 @@ eleventyExcludeFromCollections: true
             cardsContainer.innerHTML = '';
             
             data.cards.forEach((card, index) => {
-                const isNeuro = index === 3; // 4-я карточка всегда с фиолетовым акцентом
+                const isNeuro = index === 3; 
                 const borderClass = isNeuro ? "hover:border-purple-500/30" : "hover:border-cyan-500/30";
                 
                 cardsContainer.innerHTML += `
@@ -657,12 +695,12 @@ eleventyExcludeFromCollections: true
         }
 
         function setLinkMode(mode) {
-            currentLinkMode = mode;['agent', 'online', 'offline'].forEach(m => {
+            currentLinkMode = mode;['universal', 'agent', 'online', 'offline'].forEach(m => {
                 const btn = document.getElementById(`mode-${m}`);
                 if (m === mode) {
-                    btn.className = `mode-btn active-${m} flex-1 py-2.5 rounded-lg text-xs font-bold transition-all`;
+                    btn.className = `mode-btn active-${m} flex-1 py-2.5 rounded-lg text-[11px] font-bold transition-all`;
                 } else {
-                    btn.className = `mode-btn flex-1 py-2.5 rounded-lg text-xs font-bold text-gray-400 hover:text-white transition-all bg-transparent shadow-none`;
+                    btn.className = `mode-btn flex-1 py-2.5 rounded-lg text-[11px] font-bold text-gray-400 hover:text-white transition-all bg-transparent shadow-none`;
                 }
             });
             
@@ -674,9 +712,7 @@ eleventyExcludeFromCollections: true
             qrContainer.innerHTML = "";
             new QRCode(qrContainer, { text: activeUrl, width: 180, height: 180, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H });
             
-            // Обновляем текст на вкладке "О Системе"
             updateAboutTab();
-
             if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
         }
 
@@ -694,25 +730,17 @@ eleventyExcludeFromCollections: true
             const link = getActiveLink();
             if (tg?.openLink) tg.openLink(link); else window.open(link, "_blank");
         });
+
         document.getElementById("createPdfBtn").addEventListener("click", () => {
-            window.open(`https://qr2pdf.vercel.app/?link=${encodeURIComponent(getActiveLink())}&token=${webAppJwt}`, "_blank");
+            window.open(`https://sethubble.ru/qr2pdf/?link=${encodeURIComponent(getActiveLink())}&token=${webAppJwt}`, "_blank");
         });
-        //document.getElementById("createPdfBtn").addEventListener("click", () => {
-        //    const link = getActiveLink();
-        //    const appUrl = `/qr2pdf/?link=${encodeURIComponent(link)}&token=${webAppJwt}&api=${encodeURIComponent(BACKEND_URL)}`;
-        //    if (tg?.openLink) {
-        //        tg.openLink(window.location.origin + appUrl);
-        //    } else {
-        //        window.open(appUrl, "_blank");
-        //    }
-        //});
 
         // === ДИНАМИЧЕСКИЙ РЕКЛАМНЫЙ ФЛАЕР (ТЕЙБЛ-ТЕНТ) ===
         document.getElementById("printTableTentBtn").addEventListener("click", () => {
             const canvas = document.getElementById("qrcode").querySelector("canvas");
             if (canvas) {
                 const imgUrl = canvas.toDataURL("image/png");
-                const data = BENEFITS[currentLinkMode]; // Берем данные для текущей аудитории
+                const data = BENEFITS[currentLinkMode]; 
                 
                 const printWindow = window.open("", "_blank");
                 printWindow.document.write(`
@@ -723,8 +751,8 @@ eleventyExcludeFromCollections: true
                         .container { max-width: 800px; height: 96%; margin: 0 auto; border: 4px solid #eee; padding: 30px 40px; border-radius: 30px; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box; }
                         .header-sec { margin-bottom: 10px; }
                         .tag { display: inline-block; background: #06b6d4; color: #fff; padding: 6px 18px; border-radius: 20px; font-weight: bold; font-size: 14px; text-transform: uppercase; margin-bottom: 15px; letter-spacing: 1px; }
-                        h1 { font-size: 30px; text-transform: uppercase; margin-bottom: 10px; font-weight: 900; line-height: 1.2; color: #000; }
-                        p.subtitle { font-size: 16px; color: #555; margin-bottom: 0; line-height: 1.5; padding: 0 20px; }
+                        h1 { font-size: 28px; text-transform: uppercase; margin-bottom: 10px; font-weight: 900; line-height: 1.2; color: #000; }
+                        p.subtitle { font-size: 15px; color: #555; margin-bottom: 0; line-height: 1.5; padding: 0 20px; }
                         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; text-align: left; margin-bottom: 10px; }
                         .card { border-left: 4px solid #06b6d4; padding: 15px 20px; background: #fafafa; border-radius: 0 15px 15px 0; }
                         .card.neuro { border-left-color: #a855f7; background: #fdfafb; }
@@ -778,7 +806,7 @@ eleventyExcludeFromCollections: true
             btn.innerHTML = "⏳ Пишу...";
             
             try {
-                const response = await fetch(BACKEND_URL, {
+                const response = await fetch(`${BACKEND_URL}/?action=generate-post`, {
                     method: "POST", 
                     headers: authHeaders,
                     body: JSON.stringify({ 
@@ -812,13 +840,14 @@ eleventyExcludeFromCollections: true
         const MODELS = {
             polza:[
                 { id: "openai/gpt-4o-mini", name: "GPT-4o Mini (~$0.15 / 1M)" },
-                { id: "deepseek/deepseek-chat", name: "DeepSeek v3 (~$0.14 / 1M)" },
+                { id: "deepseek/deepseek-v4-flash", name: "DeepSeek v4 Flash (~$0.14 / 1M)" },
                 { id: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet (~$3.00 / 1M)" }
             ],
             openrouter:[
                 { id: "openai/gpt-4o-mini", name: "GPT-4o Mini (~$0.15 / 1M)" },
-                { id: "deepseek/deepseek-chat", name: "DeepSeek v3 (~$0.14 / 1M)" },
-                { id: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet (~$3.00 / 1M)" }
+                { id: "deepseek/deepseek-v4-flash", name: "DeepSeek v4 Flash (~$0.14 / 1M)" },
+                { id: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet (~$3.00 / 1M)" },
+                { id: "openai/gpt-4o", name: "GPT-4o (~$2.50 / 1M)" }
             ]
         };
 
@@ -865,12 +894,15 @@ eleventyExcludeFromCollections: true
             const btn = document.getElementById("saveAiBtn");
             btn.disabled = true; const original = btn.innerHTML; btn.innerHTML = "⏳ СОХРАНЯЮ...";
 
+            const limitVal = document.getElementById("ai-limit").value;
+            
             const payload = {
+                action: "update_ai_settings",
                 custom_prompt: document.getElementById("ai-prompt-hidden").value,
                 ai_provider: document.getElementById("ai-provider").value,
                 ai_model: document.getElementById("ai-model").value,
                 custom_api_key: document.getElementById("ai-api-key").value.trim(),
-                user_daily_limit: parseInt(document.getElementById("ai-limit").value) || 0,
+                user_daily_limit: parseInt(limitVal) || 0,
                 ai_ui_state: {
                     role: document.getElementById("ui-role").value,
                     tone: document.getElementById("ui-tone").value,
@@ -908,7 +940,7 @@ eleventyExcludeFromCollections: true
             btn.disabled = true;
 
             try {
-                const response = await fetch(BACKEND_URL, {
+                const response = await fetch(`${BACKEND_URL}/?action=web-chat`, {
                     method: "POST", headers: authHeaders,
                     body: JSON.stringify({ action: "web-chat", message: txt, partner_id: userData.partner_id, sessionId: currentSessionId })
                 });
