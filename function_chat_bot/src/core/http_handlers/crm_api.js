@@ -56,8 +56,8 @@ export async function handleCrmApi(event, context) {
     const pageSize = parseInt(data.pageSize) || 50;
     const offset = (page - 1) * pageSize;
 
-    // УЗНАЕМ ХВОСТ ПАРТНЕРА, КОТОРЫЙ ОТКРЫЛ CRM
-    const partner = await ydb.findUser({ tg_id: Number(auth.tgData.user.id) });
+    // УЗНАЕМ ХВОСТ ПАРТНЕРА, КОТОРЫЙ ОТКРЫЛ CRM (Поддержка Web UUID и TG ID)
+    const partner = await ydb.getUser(String(auth.tgData.user.id));
     const partnerTail = partner?.sh_ref_tail || "p_qdr";
 
     // ОПТИМИЗАЦИЯ: Параллельный запрос к БД.
@@ -136,7 +136,7 @@ export async function handleCrmApi(event, context) {
 
     if (Object.keys(filters).length > 0 || filters.channel) {
       // Для мультиканальности загружаем ВСЕХ лидов ПАРТНЕРА
-      const partner = await ydb.findUser({ tg_id: Number(auth.tgData.user.id) });
+      const partner = await ydb.getUser(String(auth.tgData.user.id));
       const partnerTail = partner?.sh_ref_tail || "p_qdr";
       const allUsers = await ydb.getUsersByPartner(partnerTail, 10000, 0);
 
@@ -207,7 +207,7 @@ export async function handleCrmApi(event, context) {
     }
 
     // === Мультиканальная рассылка ===
-    const partner = await ydb.findUser({ tg_id: Number(auth.tgData.user.id) });
+    const partner = await ydb.getUser(String(auth.tgData.user.id));
     const partnerTail = partner?.sh_ref_tail || "p_qdr";
     const allUsersForBroadcast = await ydb.getUsersByPartner(partnerTail, 10000, 0);
     const userMap = new Map(allUsersForBroadcast.map((u) => [u.user_id, u]));
@@ -323,7 +323,7 @@ export async function handleCrmApi(event, context) {
 
   // === EXPORT CSV ===
   if (action === "export_csv") {
-    const partner = await ydb.findUser({ tg_id: Number(auth.tgData.user.id) });
+    const partner = await ydb.getUser(String(auth.tgData.user.id));
     const partnerTail = partner?.sh_ref_tail || "p_qdr";
     const allUsers = await ydb.getUsersByPartner(partnerTail, 10000, 0);
 
@@ -380,8 +380,8 @@ export async function handleCrmApi(event, context) {
       };
     }
 
-    // Находим партнёра по его Telegram ID
-    const user = await ydb.findUser({ tg_id: Number(ownerId) });
+    // Находим партнёра по его Telegram ID (Поддержка Web UUID и TG ID)
+    const user = await ydb.getUser(String(ownerId));
     if (!user) {
       return {
         statusCode: 404,

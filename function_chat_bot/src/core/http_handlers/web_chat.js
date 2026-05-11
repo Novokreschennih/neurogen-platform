@@ -157,7 +157,25 @@ export async function handleWebChat(event, context) {
           needsSave = true;
         }
         if (targetCallback === "SETUP_BOT_START") {
-          targetCallback = "Module_2_Reward_PromoKit";
+          // ИСПРАВЛЕНО: Web-лиды тоже могут купить PRO и хотеть привязать бота
+          if (!webUser.bought_tripwire) {
+            // Если бесплатник - кидаем оффер (настройка своего клона только в PRO)
+            targetCallback = "Offer_Tripwire";
+          } else {
+            // Иначе открываем флоу привязки токена
+            webUser.state = "WAIT_BOT_TOKEN";
+            await ydb.saveUser(webUser);
+            return {
+              statusCode: 200,
+              headers: corsHeaders,
+              body: JSON.stringify({
+                success: true,
+                stepKey: webUser.state,
+                text: "🚀 <b>НАСТРОЙКА БОТА-КЛОНА</b>\n\nПришли мне <b>API TOKEN</b> твоего бота из @BotFather (он выглядит как набор букв и цифр).",
+                buttons: [[{ text: "🔙 ОТМЕНА", callback_data: "MAIN_MENU" }]]
+              })
+            };
+          }
           needsSave = true;
         }
         if (targetCallback === "THEORY_COURSE_COMPLETE") {
@@ -169,19 +187,25 @@ export async function handleWebChat(event, context) {
           targetCallback = "Theory_Reward_Spoilers";
           needsSave = true;
         }
-        // НОВОЕ: Обработка кнопки Промо-Кита для Веб-чата
+        // НОВОЕ: Обработка кнопки Промо-Кита для Веб-чата (С ЗАЩИТОЙ)
         if (targetCallback === "PROMO_KIT") {
-          const apiGw = process.env.API_GW_HOST || "d5dsbah1d4ju0glmp9d0.3zvepvee.apigw.yandexcloud.net";
-          const promoKitUrl = `https://sethubble.ru/promo-kit/?token=${webAppToken}&api=https://${apiGw}`;
-          return {
-            statusCode: 200,
-            headers: corsHeaders,
-            body: JSON.stringify({
-              success: true,
-              text: "🚀 Промо-Кит готов",
-              buttons: [[{ text: "📲 ОТКРЫТЬ", url: promoKitUrl }]],
-            }),
-          };
+          const hasMod2 = webUser.session?.mod2_done || webUser.bought_tripwire;
+          if (!hasMod2) {
+            targetCallback = "LOCKED_PROMO";
+            needsSave = true;
+          } else {
+            const apiGw = process.env.API_GW_HOST || "d5dsbah1d4ju0glmp9d0.3zvepvee.apigw.yandexcloud.net";
+            const promoKitUrl = `https://sethubble.ru/promo-kit/?token=${webAppToken}&api=https://${apiGw}`;
+            return {
+              statusCode: 200,
+              headers: corsHeaders,
+              body: JSON.stringify({
+                success: true,
+                text: "🚀 Промо-Кит готов",
+                buttons: [[{ text: "📲 ОТКРЫТЬ", url: promoKitUrl }]],
+              }),
+            };
+          }
         }
       }
 
@@ -666,6 +690,25 @@ export async function handleWebChat(event, context) {
 
           const attempts = webUser.session.secret_attempts[webUser.state];
           const errorMsg = getSecretWordErrorResponse(webUser.state, attempts);
+
+          // ИСПРАВЛЕНИЕ ТУПИКА: Если лимит превышен, автоматически перекидываем на следующий шаг
+          if (attempts >= SECRET_MAX_ATTEMPTS_BEFORE_SKIP) {
+            const nextState = getNextStateAfterSecret(webUser.state, "web");
+            webUser.session[config.flag] = true; // Пропускаем модуль
+            webUser.session.skipped_modules = webUser.session.skipped_modules || [];
+            webUser.session.skipped_modules.push(webUser.state);
+            webUser.state = nextState;
+            await ydb.saveUser(webUser);
+
+            return {
+              statusCode: 200,
+              headers: corsHeaders,
+              body: JSON.stringify({
+                answer: `${errorMsg}\n\n⚠️ <i>Система принудительно пропустила модуль, так как лимит попыток исчерпан. Монеты не начислены.</i>`,
+                loadNextStep: true
+              })
+            };
+          }
 
           await ydb.saveUser(webUser);
 

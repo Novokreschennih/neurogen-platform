@@ -202,7 +202,8 @@ export const telegramButtons = {
 
   // === B2B_START ===
   B2B_START: [
-    [{ text: "🚀 ПОДКЛЮЧИТЬ СИСТЕМУ", callback_data: "Pre_Training_Logic" }],
+    // Меняем маршрут, чтобы провести офлайн-бизнес через прогрев "Троянского коня"
+    [{ text: "🚀 ПОКАЖИ, КАК ЭТО РАБОТАЕТ", callback_data: "Business_Offline_Solution" }],
   ],
 
   // === Theory_Mod1 ===
