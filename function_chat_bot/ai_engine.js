@@ -752,9 +752,9 @@ ${historyContext}
         "X-Title": "NeuroGen AI", // Помогает избежать блокировок провайдером
       },
       body: JSON.stringify({
-        model: model, // Оставляем deepseek/deepseek-v4-flash как есть
+        model: model, // Используем название модели напрямую (v4-flash)
         messages,
-        max_tokens: 1500, // Этого хватит и на "мысли" ИИ, и на сам ответ
+        max_tokens: 2000, // Увеличили лимит на рассуждения + ответ
         temperature: 0.7,
         top_p: 0.9,
       }),

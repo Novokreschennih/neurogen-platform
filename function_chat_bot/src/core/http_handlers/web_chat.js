@@ -240,14 +240,22 @@ export async function handleWebChat(event, context) {
             if (targetUrl) {
               const lowerUrl = targetUrl.toLowerCase();
 
-              // v7.8: Тройная защита от редиректов и потери токена
+              // v7.9: Фикс слэшей и токенов для всех внутренних инструментов
               if (lowerUrl.includes("promo-kit") || lowerUrl.includes("crm-dashboard") || lowerUrl.includes("qr2pdf")) {
                 if (!lowerUrl.includes("token=")) {
-                  const baseUrl = targetUrl.split('?')[0].replace(/\/$/, "");
-                  const query = targetUrl.split('?')[1] || "";
-                  const sep = query ? "&" : "";
-                  targetUrl = `${baseUrl}/?${query}${sep}token=${webAppToken}`;
+                  let [baseUrl, queryString] = targetUrl.split('?');
+                  // Гарантируем слэш в конце папки
+                  if (!baseUrl.endsWith('/')) baseUrl += '/';
+                  const sep = queryString ? "&" : "";
+                  const qs = queryString ? `?${queryString}` : "?";
+                  targetUrl = `${baseUrl}${qs}${sep}token=${webAppToken}`;
+                  targetUrl = targetUrl.replace('??', '?');
                 }
+              }
+
+              // Специфический фикс для HubblePay (замена ? на & перед afid)
+              if (lowerUrl.includes("hubblepay.net")) {
+                targetUrl = targetUrl.replace('?afid=', '&afid=');
               }
 
               // Флаг web=1 для статей академии
@@ -380,14 +388,14 @@ export async function handleWebChat(event, context) {
       needsSave = true;
 
       // 2. Настройки ключа (системный или свой)
-      let ownerSettings = { ai_provider: "polza", ai_model: "deepseek/deepseek-chat", custom_api_key: "" };
+      let ownerSettings = { ai_provider: "polza", ai_model: "deepseek/deepseek-v4-flash", custom_api_key: "" };
       if (webUser.partner_id && webUser.partner_id !== "p_qdr") {
         try {
           const owner = await ydb.getUserByRefTail(webUser.partner_id);
           if (owner) {
             ownerSettings = {
               ai_provider: owner.ai_provider || "polza",
-              ai_model: owner.ai_model || "deepseek/deepseek-chat",
+              ai_model: owner.ai_model || "deepseek/deepseek-v4-flash",
               custom_api_key: owner.custom_api_key || ""
             };
           }
@@ -425,7 +433,7 @@ export async function handleWebChat(event, context) {
             "HTTP-Referer": "https://sethubble.ru"
           },
           body: JSON.stringify({
-            model: "deepseek/deepseek-chat", // DeepSeek для генерации постов
+            model: "deepseek/deepseek-v4-flash", // DeepSeek v4 Flash для генерации постов
             messages:[
               { role: "system", content: systemPrompt },
               { role: "user", content: "Сгенерируй пост для соцсетей." }
