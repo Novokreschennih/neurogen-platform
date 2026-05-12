@@ -28,271 +28,338 @@ eleventyExcludeFromCollections: true
     </script>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
         * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #050510; color: #ffffff; font-family: 'Inter', sans-serif; line-height: 1.5; overflow-x: hidden; min-height: 100vh; }
+        body { background: #05050f; color: #ffffff; font-family: 'Inter', sans-serif; line-height: 1.5; overflow-x: hidden; min-height: 100vh; }
         
-        .acrylic { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .acrylic-hover { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .acrylic-hover:hover { background: rgba(255, 255, 255, 0.08); border-color: rgba(6, 182, 212, 0.3); transform: translateY(-2px); box-shadow: 0 8px 25px rgba(6, 182, 212, 0.15); }
+        /* Premium Glassmorphism */
+        .glass-panel { background: rgba(20, 20, 30, 0.4); backdrop-filter: blur(24px) saturate(150%); -webkit-backdrop-filter: blur(24px) saturate(150%); border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1); }
+        .glass-panel-hover { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .glass-panel-hover:hover { background: rgba(30, 30, 45, 0.6); border-color: rgba(6, 182, 212, 0.3); transform: translateY(-3px); box-shadow: 0 12px 40px rgba(6, 182, 212, 0.15); }
         
-        .gradient-text { background: linear-gradient(135deg, #06b6d4, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-        .gradient-border { position: relative; }
-        .gradient-border::before { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; background: linear-gradient(135deg, rgba(6, 182, 212, 0.4), rgba(168, 85, 247, 0.4)); -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
+        .gradient-text { background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .gradient-text-purple { background: linear-gradient(135deg, #a855f7 0%, #f43f5e 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
         
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
-        .animate-fadeInUp { animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
-        .animate-float { animation: float 3s ease-in-out infinite; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-8px); } }
+        @keyframes pulse-glow { 0%, 100% { opacity: 1; box-shadow: 0 0 20px rgba(168,85,247,0.4); } 50% { opacity: 0.8; box-shadow: 0 0 40px rgba(168,85,247,0.8); } }
         
-        ::-webkit-scrollbar { width: 4px; height: 4px; }
-        ::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.02); }
-        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }
+        .animate-fadeInUp { animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .animate-float { animation: float 4s ease-in-out infinite; }
+        .animate-pulse-glow { animation: pulse-glow 3s infinite; }
         
-        .tab { position: relative; transition: all 0.3s; cursor: pointer; border: none; outline: none; }
-        .tab::after { content: ''; position: absolute; bottom: -2px; left: 50%; width: 0; height: 2px; background: linear-gradient(90deg, #06b6d4, #a855f7); transition: all 0.3s; transform: translateX(-50%); border-radius: 2px; }
-        .tab-active { color: #06b6d4; }
-        .tab-active::after { width: 100%; }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
         
-        .btn { position: relative; overflow: hidden; transition: all 0.2s; cursor: pointer; border: none; outline: none; }
-        .btn:active { transform: scale(0.97); }
+        /* Modern Buttons */
+        .btn { position: relative; overflow: hidden; transition: all 0.2s ease; cursor: pointer; outline: none; border: 1px solid transparent; }
+        .btn:active { transform: scale(0.96); }
         
-        #toast-container { position: fixed; top: 24px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
-        .toast { background: rgba(15, 15, 20, 0.95); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); color: white; padding: 12px 24px; border-radius: 16px; font-size: 14px; font-weight: 600; opacity: 0; transform: translateY(-20px) scale(0.95); transition: all 0.3s; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4); }
+        /* Pill Tabs */
+        .nav-tab { transition: all 0.3s ease; border-radius: 12px; }
+        .nav-tab.active { background: rgba(255, 255, 255, 0.1); color: #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); }
+        .nav-tab:not(.active):hover { background: rgba(255, 255, 255, 0.05); color: #e2e8f0; }
+
+        /* Toasts */
+        #toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+        .toast { background: rgba(15, 15, 20, 0.98); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); color: white; padding: 14px 28px; border-radius: 100px; font-size: 14px; font-weight: 600; opacity: 0; transform: translateY(-20px) scale(0.9); transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5); display: flex; items-center gap-3; }
         .toast.show { opacity: 1; transform: translateY(0) scale(1); }
-        .toast.success { border-color: rgba(34, 197, 94, 0.4); }
-        .toast.error { border-color: rgba(239, 68, 68, 0.4); }
-        .toast.warning { border-color: rgba(245, 158, 11, 0.4); }
+        .toast.success { border-color: rgba(34, 197, 94, 0.5); }
+        .toast.error { border-color: rgba(239, 68, 68, 0.5); }
+        .toast.warning { border-color: rgba(245, 158, 11, 0.5); }
 
-        input, select, textarea { transition: all 0.25s ease; }
-        input:focus, select:focus, textarea:focus { border-color: rgba(34, 211, 238, 0.5) !important; box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.1); }
+        /* Form Elements */
+        input, select, textarea { transition: all 0.3s ease; }
+        input:focus, select:focus, textarea:focus { border-color: rgba(6, 182, 212, 0.6) !important; background: rgba(0,0,0,0.8) !important; box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.1); }
         
-        .qr-container { background: white; padding: 12px; border-radius: 16px; display: inline-block; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05); }
+        /* QR Container */
+        .qr-container { background: #ffffff; padding: 16px; border-radius: 20px; display: inline-block; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1); }
 
-        /* Стиль для кнопок-переключателей аудитории */
-        .mode-btn { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .mode-btn.active-universal { background: linear-gradient(135deg, #10b981, #06b6d4); color: white; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); }
-        .mode-btn.active-agent { background: linear-gradient(135deg, #06b6d4, #3b82f6); color: white; box-shadow: 0 4px 15px rgba(6, 182, 212, 0.3); }
-        .mode-btn.active-online { background: linear-gradient(135deg, #8b5cf6, #d946ef); color: white; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3); }
-        .mode-btn.active-offline { background: linear-gradient(135deg, #f59e0b, #ef4444); color: white; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3); }
+        /* Segmented Control for Links */
+        .segment-container { background: rgba(0,0,0,0.5); border-radius: 14px; padding: 4px; display: flex; width: 100%; border: 1px solid rgba(255,255,255,0.05); }
+        .mode-btn { transition: all 0.3s ease; border-radius: 10px; flex: 1; text-align: center; font-size: 11px; font-weight: 700; padding: 10px 4px; color: #94a3b8; }
+        .mode-btn:hover:not([class*="active-"]) { color: #fff; background: rgba(255,255,255,0.03); }
+        .mode-btn.active-universal { background: linear-gradient(135deg, #10b981, #06b6d4); color: white; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); border: 1px solid rgba(255,255,255,0.1); }
+        .mode-btn.active-agent { background: linear-gradient(135deg, #0ea5e9, #6366f1); color: white; box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3); border: 1px solid rgba(255,255,255,0.1); }
+        .mode-btn.active-online { background: linear-gradient(135deg, #8b5cf6, #d946ef); color: white; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3); border: 1px solid rgba(255,255,255,0.1); }
+        .mode-btn.active-offline { background: linear-gradient(135deg, #f59e0b, #ef4444); color: white; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3); border: 1px solid rgba(255,255,255,0.1); }
     </style>
 </head>
 <body>
     
     <div id="toast-container"></div>
 
+    <!-- Background Orbs -->
     <div class="fixed inset-0 overflow-hidden pointer-events-none -z-10">
-        <div class="absolute top-[-20%] left-[-10%] w-96 h-96 bg-purple-600 rounded-full mix-blend-screen filter blur-[150px] opacity-[0.08] animate-pulse"></div>
-        <div class="absolute bottom-[-20%] right-[-10%] w-96 h-96 bg-cyan-600 rounded-full mix-blend-screen filter blur-[150px] opacity-[0.08] animate-pulse" style="animation-delay: 2s;"></div>
-        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-600 rounded-full mix-blend-screen filter blur-[200px] opacity-[0.04]"></div>
+        <div class="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-purple-600/20 rounded-full mix-blend-screen filter blur-[120px] animate-pulse" style="animation-duration: 8s;"></div>
+        <div class="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-cyan-600/20 rounded-full mix-blend-screen filter blur-[120px] animate-pulse" style="animation-duration: 10s; animation-delay: 2s;"></div>
     </div>
 
     <!-- Header -->
-    <header class="sticky top-0 z-40 bg-black/60 backdrop-blur-xl border-b border-white/5">
+    <header class="sticky top-0 z-40 bg-[#05050f]/80 backdrop-blur-xl border-b border-white/5 shadow-lg shadow-black/50">
         <div class="max-w-5xl mx-auto px-4 py-4">
             <div class="flex items-center justify-between">
-                <div>
-                    <h1 class="text-2xl font-black tracking-tight"><span class="gradient-text">⚡ NEURO</span><span class="text-white">GEN</span></h1>
-                    <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Командный центр</p>
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-purple-600 p-[1px]">
+                        <div class="w-full h-full bg-[#0a0a1a] rounded-[11px] flex items-center justify-center">
+                            <span class="text-xl">⚡</span>
+                        </div>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-black tracking-tight leading-none text-white">NEURO<span class="text-gray-400">GEN</span></h1>
+                        <p class="text-[9px] text-cyan-400 font-bold uppercase tracking-widest mt-1">Partner Dashboard</p>
+                    </div>
                 </div>
                 
-                <div class="flex items-center gap-3">
-                    <div class="hidden sm:flex items-center gap-3 text-xs bg-white/5 rounded-full px-4 py-2">
-                        <div class="flex items-center gap-1.5"><div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div><span class="text-gray-300">Онлайн</span></div>
+                <div class="flex items-center gap-4">
+                    <div class="hidden sm:flex items-center gap-3 bg-black/40 border border-white/5 rounded-full px-4 py-1.5 shadow-inner">
+                        <div class="flex items-center gap-1.5">
+                            <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_#22c55e]"></div>
+                            <span class="text-xs text-gray-400 font-medium">Network</span>
+                        </div>
                         <div class="w-px h-4 bg-white/10"></div>
-                        <span class="text-green-400 font-semibold" id="header-earnings">$0.00</span>
+                        <span class="text-green-400 font-bold text-sm tracking-wide" id="header-earnings">$0.00</span>
                     </div>
-                    <div class="relative">
-                        <div id="userAvatar" class="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-purple-600 flex items-center justify-center text-lg font-bold ring-2 ring-white/20">👤</div>
-                        <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-black"></div>
+                    <div class="relative group cursor-pointer">
+                        <div id="userAvatar" class="w-10 h-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 border border-white/10 flex items-center justify-center text-sm font-bold text-white shadow-lg transition-transform group-hover:scale-105">👤</div>
+                        <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-[#05050f]"></div>
                     </div>
                 </div>
             </div>
             
-            <div class="flex gap-2 mt-4 p-1 bg-white/5 rounded-xl overflow-x-auto no-scrollbar">
-                <button onclick="switchTab('marketing')" id="tab-marketing" class="tab flex-1 py-2.5 px-4 rounded-lg text-xs font-semibold transition-all tab-active whitespace-nowrap">📊 Воронка</button>
-                <button onclick="switchTab('ai')" id="tab-ai" class="tab flex-1 py-2.5 px-4 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition-all whitespace-nowrap">🧠 Интеллект</button>
-                <button onclick="switchTab('about')" id="tab-about" class="tab flex-1 py-2.5 px-4 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition-all whitespace-nowrap">💡 Презентация</button>
+            <!-- App Navigation -->
+            <div class="flex gap-2 mt-5 p-1 bg-black/40 border border-white/5 rounded-xl overflow-x-auto no-scrollbar">
+                <button onclick="switchTab('marketing')" id="tab-marketing" class="nav-tab active flex-1 py-2.5 px-4 text-xs font-bold flex items-center justify-center gap-2 whitespace-nowrap">
+                    <span class="text-lg">📊</span> Воронка
+                </button>
+                <button onclick="switchTab('ai')" id="tab-ai" class="nav-tab flex-1 py-2.5 px-4 text-xs font-bold text-gray-400 flex items-center justify-center gap-2 whitespace-nowrap">
+                    <span class="text-lg">🧠</span> Интеллект
+                </button>
+                <button onclick="switchTab('about')" id="tab-about" class="nav-tab flex-1 py-2.5 px-4 text-xs font-bold text-gray-400 flex items-center justify-center gap-2 whitespace-nowrap">
+                    <span class="text-lg">💡</span> Презентация
+                </button>
             </div>
         </div>
     </header>
 
-    <div class="max-w-5xl mx-auto p-4 mt-4">
+    <div class="max-w-5xl mx-auto p-4 mt-2 mb-12">
         
         <!-- Loading State -->
-        <div id="loadingBlock" class="acrylic rounded-2xl p-12 text-center animate-pulse-glow mb-6">
-            <div class="inline-flex flex-col items-center gap-4">
-                <div class="relative w-12 h-12">
-                    <div class="absolute inset-0 rounded-full border-2 border-cyan-500/20"></div>
-                    <div class="absolute inset-0 rounded-full border-2 border-transparent border-t-cyan-500 animate-spin"></div>
-                </div>
-                <div><p class="text-sm text-cyan-400 font-semibold tracking-wider uppercase">Синхронизация...</p></div>
+        <div id="loadingBlock" class="glass-panel rounded-3xl p-16 text-center animate-pulse-glow mb-6 flex flex-col items-center justify-center border-cyan-500/20">
+            <div class="relative w-16 h-16 mb-4">
+                <div class="absolute inset-0 rounded-full border-4 border-cyan-500/20"></div>
+                <div class="absolute inset-0 rounded-full border-4 border-transparent border-t-cyan-400 animate-spin"></div>
             </div>
+            <p class="text-sm text-cyan-400 font-bold tracking-widest uppercase">Синхронизация с узлом...</p>
         </div>
 
-        <div id="mainContent" class="hidden space-y-6">
+        <div id="mainContent" class="hidden">
             
             <!-- ========================================== -->
-            <!-- TAB: MARKETING -->
+            <!-- TAB: MARKETING (ВОРОНКА) -->
             <!-- ========================================== -->
             <div id="content-marketing" class="space-y-6 animate-fadeInUp">
                 
                 <!-- ИНСТРУКЦИЯ (ONBOARDING) -->
-                <div class="acrylic rounded-3xl p-5 border-l-4 border-purple-500 bg-purple-500/5 flex items-start gap-4 shadow-lg shadow-purple-500/10">
-                    <div class="text-3xl hidden sm:block mt-1">👋</div>
+                <div class="glass-panel rounded-3xl p-6 border-l-4 border-l-cyan-500 bg-gradient-to-r from-cyan-500/5 to-transparent flex items-start gap-5">
+                    <div class="text-4xl hidden sm:block">👋</div>
                     <div>
-                        <h3 class="text-white font-bold mb-2 text-sm uppercase tracking-wide flex items-center gap-2">Как работает твой бизнес?</h3>
-                        <ol class="text-xs text-gray-300 space-y-2 list-decimal list-inside">
-                            <li><span class="text-cyan-400 font-bold">Выбери аудиторию</span> ниже. Ссылка и рекламные PDF-флаеры адаптируются автоматически.</li>
-                            <li><span class="text-cyan-400 font-bold">Раздай ссылку</span> (или распечатай QR-код) потенциальным клиентам.</li>
-                            <li>Они перейдут на страницу-презентацию, оставят контакты и попадут в ИИ-воронку.</li>
-                            <li>Когда они совершат оплату (онлайн-сервисов или PRO-статуса) — <b class="text-green-400">деньги автоматически зачислятся на твой крипто-кошелек!</b></li>
+                        <h3 class="text-white font-black mb-3 text-base uppercase tracking-wide">Как управлять инфраструктурой?</h3>
+                        <ol class="text-sm text-gray-300 space-y-2.5 list-decimal list-inside font-medium">
+                            <li><span class="text-cyan-400">Выберите вектор (аудиторию)</span>. Ссылка, QR-код и материалы адаптируются на лету.</li>
+                            <li><span class="text-cyan-400">Направьте трафик</span> по этой ссылке (соцсети, рассылки, печатные флаеры).</li>
+                            <li>Система сама проведет презентацию и закроет лидов в ИИ-воронку.</li>
+                            <li>Когда они совершат оплату — <b class="text-green-400">USDT автоматически зачислятся на ваш баланс!</b></li>
                         </ol>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-3 gap-3 md:gap-4">
-                    <div class="acrylic acrylic-hover rounded-2xl p-4 text-center">
-                        <p class="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-2">Переходы</p>
-                        <p id="statClicks" class="text-2xl md:text-3xl font-black text-white">0</p>
+                <!-- СТАТИСТИКА -->
+                <div class="grid grid-cols-3 gap-3 md:gap-6">
+                    <div class="glass-panel glass-panel-hover rounded-2xl p-5 relative overflow-hidden group">
+                        <div class="absolute -right-4 -bottom-4 text-6xl opacity-[0.03] group-hover:scale-110 transition-transform duration-500">🖱️</div>
+                        <p class="text-[10px] md:text-xs text-gray-400 uppercase font-bold tracking-widest mb-1 relative z-10">Переходы</p>
+                        <p id="statClicks" class="text-2xl md:text-4xl font-black text-white relative z-10">0</p>
                     </div>
-                    <div class="acrylic acrylic-hover rounded-2xl p-4 text-center border-t border-t-blue-500/30">
-                        <p class="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-2">Лиды</p>
-                        <p id="statLeads" class="text-2xl md:text-3xl font-black text-blue-400">0</p>
+                    <div class="glass-panel glass-panel-hover rounded-2xl p-5 border-t-2 border-t-blue-500/50 relative overflow-hidden group">
+                        <div class="absolute -right-4 -bottom-4 text-6xl opacity-[0.03] group-hover:scale-110 transition-transform duration-500">👥</div>
+                        <p class="text-[10px] md:text-xs text-gray-400 uppercase font-bold tracking-widest mb-1 relative z-10">Агенты</p>
+                        <p id="statLeads" class="text-2xl md:text-4xl font-black text-blue-400 relative z-10">0</p>
                     </div>
-                    <div class="acrylic acrylic-hover rounded-2xl p-4 text-center border-t border-t-purple-500/30 bg-purple-500/5">
-                        <p class="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-2">Заработано</p>
-                        <p id="statEarnings" class="text-2xl md:text-3xl font-black text-purple-400">$0.00</p>
+                    <div class="glass-panel glass-panel-hover rounded-2xl p-5 border-t-2 border-t-green-500/50 bg-green-500/5 relative overflow-hidden group">
+                        <div class="absolute -right-4 -bottom-4 text-6xl opacity-[0.03] group-hover:scale-110 transition-transform duration-500">💰</div>
+                        <p class="text-[10px] md:text-xs text-green-500/80 uppercase font-bold tracking-widest mb-1 relative z-10">Прибыль</p>
+                        <p id="statEarnings" class="text-2xl md:text-4xl font-black text-green-400 relative z-10">$0.00</p>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
                     
-                    <!-- ТОЧКА ВХОДА И ВЫБОР РЕЖИМА -->
-                    <div class="acrylic rounded-3xl p-6 gradient-border flex flex-col justify-between">
+                    <!-- ТОЧКА ВХОДА (ССЫЛКА/QR) -->
+                    <div class="glass-panel rounded-3xl p-6 md:p-8 flex flex-col justify-between relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-400 via-purple-500 to-blue-500"></div>
+                        
                         <div>
-                            <h2 class="text-xl font-bold mb-4 text-center">Выберите аудиторию</h2>
+                            <h2 class="text-xl font-bold mb-5 flex items-center gap-2"><span class="text-2xl">🎯</span> Токтор атаки</h2>
                             
                             <!-- 4 РЕЖИМА ССЫЛКИ -->
-                            <div class="bg-black/40 rounded-xl p-1 grid grid-cols-2 md:grid-cols-4 gap-1 w-full mb-6 border border-white/5">
-                                <button onclick="setLinkMode('universal')" id="mode-universal" class="mode-btn flex-1 py-2.5 rounded-lg text-[11px] font-bold text-gray-400 hover:text-white">🌐 Общая</button>
-                                <button onclick="setLinkMode('agent')" id="mode-agent" class="mode-btn flex-1 py-2.5 rounded-lg text-[11px] font-bold text-gray-400 hover:text-white">🦸‍♂️ Агент</button>
-                                <button onclick="setLinkMode('online')" id="mode-online" class="mode-btn flex-1 py-2.5 rounded-lg text-[11px] font-bold text-gray-400 hover:text-white">💻 Онлайн</button>
-                                <button onclick="setLinkMode('offline')" id="mode-offline" class="mode-btn flex-1 py-2.5 rounded-lg text-[11px] font-bold text-gray-400 hover:text-white">🏢 Офлайн</button>
+                            <div class="segment-container mb-8">
+                                <button onclick="setLinkMode('universal')" id="mode-universal" class="mode-btn active-universal">🌐 Общая</button>
+                                <button onclick="setLinkMode('agent')" id="mode-agent" class="mode-btn">🦸‍♂️ Агент</button>
+                                <button onclick="setLinkMode('online')" id="mode-online" class="mode-btn">💻 Онлайн</button>
+                                <button onclick="setLinkMode('offline')" id="mode-offline" class="mode-btn">🏢 Офлайн</button>
                             </div>
 
-                            <div class="flex justify-center mb-6">
-                                <div id="qrcode" class="qr-container"></div>
+                            <div class="flex flex-col md:flex-row items-center gap-6 mb-8">
+                                <div id="qrcode" class="qr-container shrink-0 hover:scale-105 transition-transform duration-300"></div>
+                                <div class="flex-1 w-full space-y-4">
+                                    <div class="bg-black/60 rounded-xl p-4 border border-white/10 shadow-inner">
+                                        <p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-1">Ваш персональный шлюз:</p>
+                                        <code id="botLinkDisplay" class="text-xs md:text-sm text-cyan-300 break-all font-mono">Загрузка...</code>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <button id="copyLinkBtn" class="btn bg-white/10 hover:bg-white/20 py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg> Копировать
+                                        </button>
+                                        <button id="openMySiteBtn" class="btn bg-white/10 hover:bg-white/20 py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg> Открыть
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
-
-                            <div class="bg-black/40 rounded-xl p-3 mb-6 border border-white/5 text-center">
-                                <code id="botLinkDisplay" class="text-[10px] md:text-xs text-cyan-300 break-all">Загрузка...</code>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-3 mt-auto">
-                            <button id="copyLinkBtn" class="btn bg-white/10 hover:bg-white/20 py-3.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2">
-                                📋 КОПИРОВАТЬ
-                            </button>
-                            <button id="openMySiteBtn" class="btn bg-white/10 hover:bg-white/20 py-3.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2">
-                                🌐 ПРЕДПРОСМОТР
-                            </button>
                         </div>
                     </div>
 
-                    <!-- СТАТУС / PRO -->
-                    <div class="acrylic rounded-3xl p-6 flex flex-col justify-between">
-                        <div>
-                            <h2 class="text-xl font-bold mb-1 uppercase text-white">Твой Статус</h2>
-                            <p class="text-xs text-gray-500 mb-6">Условия монетизации</p>
+                    <!-- ПРАВАЯ КОЛОНКА: СТАТУС И ИИ-ПРИЛОЖЕНИЯ -->
+                    <div class="space-y-6 flex flex-col">
+                        
+                        <!-- СТАТУС / PRO -->
+                        <div class="glass-panel rounded-3xl p-6 md:p-8 flex flex-col justify-center flex-1">
+                            <h2 class="text-xl font-bold mb-1 flex items-center gap-2 text-white"><span class="text-2xl">💳</span> Финансовый статус</h2>
+                            <p class="text-xs text-gray-400 mb-6">Условия монетизации вашей сети</p>
 
-                            <div id="tariff-free" class="bg-black/30 border border-gray-700/50 p-5 rounded-2xl relative transition-all">
-                                <div class="absolute -top-2.5 right-4 bg-gray-700 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase shadow-lg">FREE</div>
-                                <h3 class="text-sm font-bold text-gray-400 mb-3 uppercase">Доступно сейчас:</h3>
-                                <ul class="text-xs text-gray-300 space-y-2 mb-5">
-                                    <li class="flex items-center gap-2"><span class="text-green-500">✓</span> Комиссия: <b>25%</b> с продаж</li>
-                                    <li class="flex items-center gap-2"><span class="text-green-500">✓</span> Базовый ИИ-ассистент</li>
-                                    <li class="flex items-center gap-2"><span class="text-green-500">✓</span> Пассивный доход до 3 уровня</li>
-                                </ul>
+                             <!-- ОБНОВЛЕННЫЙ БЛОК ТАРИФОВ (FREE) -->
+                             <div id="tariff-free" class="bg-black/40 border border-gray-700/50 p-6 rounded-2xl relative transition-all overflow-hidden group">
+                                 <div class="absolute -top-1 -right-1 bg-gray-700 text-white text-[10px] font-black px-4 py-1.5 rounded-bl-xl uppercase shadow-lg">TRIAL / FREE</div>
+                                 <h3 class="text-sm font-bold text-gray-300 mb-5 uppercase tracking-wide">Сравнение мощностей:</h3>
+                                 
+                                 <div class="space-y-3.5 mb-8">
+                                     <div class="flex justify-between items-center text-xs pb-3 border-b border-white/5"><span class="text-gray-400">Комиссия с продаж</span><span class="text-white font-bold bg-white/5 px-2 py-1 rounded">25% <span class="text-gray-600 mx-1">vs</span> <span class="text-purple-400">50%</span></span></div>
+                                     <div class="flex justify-between items-center text-xs pb-3 border-b border-white/5"><span class="text-gray-400">Глубина пассива</span><span class="text-white font-bold bg-white/5 px-2 py-1 rounded">3 ур. <span class="text-gray-600 mx-1">vs</span> <span class="text-purple-400">5 ур.</span></span></div>
+                                     <div class="flex justify-between items-center text-xs pb-3 border-b border-white/5"><span class="text-gray-400">CRM Дашборд</span><span class="text-white font-bold bg-white/5 px-2 py-1 rounded"><span class="text-red-400">Нет</span> <span class="text-gray-600 mx-1">vs</span> <span class="text-green-400">Есть</span></span></div>
+                                     <div class="flex justify-between items-center text-xs"><span class="text-gray-400">ИИ-Инструменты</span><span class="text-white font-bold bg-white/5 px-2 py-1 rounded"><span class="text-red-400">0</span> <span class="text-gray-600 mx-1">vs</span> <span class="text-green-400">4 Apps</span></span></div>
+                                 </div>
 
-                                <button onclick="showToast('⚠️ Доступно только на тарифе PRO!', 'warning')" class="btn w-full bg-white/5 text-gray-500 py-3 rounded-xl font-bold text-sm mb-5 border border-white/5">
-                                    👥 ОТКРЫТЬ CRM 🔒
-                                </button>
+                                 <a id="btn-upgrade-pro" href="#" target="_blank" class="btn block w-full bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 py-4 rounded-xl font-black text-sm text-center text-white shadow-[0_0_20px_rgba(168,85,247,0.3)] transition-all transform group-hover:scale-[1.02]">
+                                     💎 РАЗБЛОКИРОВАТЬ PRO ЗА $40
+                                 </a>
+                             </div>
+
+                            <!-- БЛОК PRO -->
+                            <div id="tariff-pro" class="hidden bg-gradient-to-br from-purple-900/20 to-blue-900/20 border border-purple-500/40 p-6 rounded-2xl relative shadow-[0_0_40px_rgba(168,85,247,0.15)]">
+                                <div class="absolute top-0 right-0 bg-gradient-to-r from-cyan-400 to-purple-500 text-white text-[10px] font-black px-4 py-1.5 rounded-bl-xl uppercase shadow-lg">ELITE</div>
+                                <h3 class="text-3xl font-black text-white mb-2 flex items-center gap-2">PRO <span class="text-lg text-purple-400 font-medium">Статус</span></h3>
+                                <p class="text-sm text-gray-300 font-medium mb-6 pb-6 border-b border-purple-500/20">Ваша комиссия повышена до <span class="text-white font-bold bg-white/10 px-2 py-0.5 rounded">50%</span></p>
                                 
-                                <a id="btn-upgrade-pro" href="#" target="_blank" class="btn block w-full bg-gradient-to-r from-cyan-500 to-purple-600 py-3.5 rounded-xl font-bold text-sm text-center text-white shadow-lg shadow-purple-500/30">
-                                    💎 КУПИТЬ PRO
-                                </a>
-                            </div>
-
-                            <div id="tariff-pro" class="hidden bg-purple-900/10 border border-purple-500/50 p-5 rounded-2xl relative shadow-[0_0_30px_rgba(168,85,247,0.15)]">
-                                <div class="absolute -top-2.5 right-4 bg-gradient-to-r from-cyan-400 to-purple-500 text-white text-[9px] font-black px-3 py-1 rounded-full shadow-lg">PRO</div>
-                                <h3 class="text-2xl font-black text-white mb-2 flex items-center gap-2">👑 ЭЛИТА</h3>
-                                <p class="text-sm text-purple-300 font-bold mb-4">Комиссия: <span class="text-white text-lg">50%</span></p>
-                                <ul class="text-xs text-gray-300 space-y-2.5 mb-6">
-                                    <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Пассивный доход до 5 уровня</li>
-                                    <li class="flex items-center gap-2"><span class="text-green-400">✓</span> CRM-дашборд и рассылки активны</li>
-                                    <li class="flex items-center gap-2"><span class="text-green-400">✓</span> ИИ-Лаборатория без лимитов</li>
+                                <ul class="text-sm text-gray-300 space-y-4 mb-8">
+                                    <li class="flex items-center gap-3"><span class="flex items-center justify-center w-5 h-5 rounded-full bg-green-500/20 text-green-400 text-xs">✓</span> Пассивный доход до 5 уровня</li>
+                                    <li class="flex items-center gap-3"><span class="flex items-center justify-center w-5 h-5 rounded-full bg-green-500/20 text-green-400 text-xs">✓</span> Умные CRM-рассылки активны</li>
+                                    <li class="flex items-center gap-3"><span class="flex items-center justify-center w-5 h-5 rounded-full bg-green-500/20 text-green-400 text-xs">✓</span> Лаборатория NeuroGen разблокирована</li>
                                 </ul>
-                                <button id="openCrmBtn" class="btn w-full bg-white text-black py-3.5 rounded-xl font-bold text-sm">
-                                    👥 ОТКРЫТЬ CRM
+                                
+                                <button id="openCrmBtn" class="btn w-full bg-white hover:bg-gray-100 text-black py-4 rounded-xl font-black text-sm shadow-xl transition-all">
+                                    📊 ОТКРЫТЬ CRM КЛИЕНТОВ
                                 </button>
                             </div>
                         </div>
+
                     </div>
                 </div>
-
-                <!-- O2O / ИНСТРУМЕНТЫ -->
-                <div class="acrylic rounded-3xl p-6 border-l-4 border-cyan-500">
-                    <h2 class="text-xl font-bold mb-1">🖨 Печатные материалы</h2>
-                    <p class="text-xs text-gray-500 mb-5" id="printDesc">Материалы будут сгенерированы для выбранной аудитории.</p>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <button id="printTableTentBtn" class="btn bg-black/40 hover:bg-white/10 border border-white/5 rounded-2xl p-5 text-center acrylic-hover">
-                            <span class="text-3xl block mb-2">📄</span>
-                            <span class="text-sm font-bold block text-white mb-1">Рекламный Флаер</span>
-                            <span class="text-[10px] text-gray-400">PDF А4 для печати с QR</span>
-                        </button>
-                        
-                        <button id="createPdfBtn" class="btn bg-black/40 hover:bg-white/10 border border-white/5 rounded-2xl p-5 text-center acrylic-hover">
-                            <span class="text-3xl block mb-2">📱</span>
-                            <span class="text-sm font-bold block text-white mb-1">Вшить в свою PDF</span>
-                            <span class="text-[10px] text-gray-400">Конструктор презентаций</span>
-                        </button>
-                        
-                        <a id="businessMaterialsBtn" href="#" class="btn bg-black/40 hover:bg-white/10 border border-white/5 rounded-2xl p-5 text-center acrylic-hover block">
-                            <span class="text-3xl block mb-2">📚</span>
-                            <span class="text-sm font-bold block text-white mb-1">База Знаний</span>
-                            <span class="text-[10px] text-gray-400">Скрипты и гайды (Я.Диск)</span>
-                        </a>
-                    </div>
-                </div>
-
-                <!-- AI GENERATOR -->
-                <div class="acrylic rounded-3xl p-6">
-                    <h2 class="text-xl font-bold mb-1">📝 Генератор контента</h2>
-                    <p class="text-xs text-gray-500 mb-5">ИИ напишет продающий пост под выбранную аудиторию.</p>
-                    
-                    <div class="bg-gradient-to-br from-purple-900/10 to-blue-900/10 rounded-2xl p-5 border border-purple-500/20">
-                        <div class="flex flex-col md:flex-row gap-3">
-                            <select id="aiPostTopic" class="flex-1 bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-purple-500">
-                                <option value="" disabled selected>Выбери аудиторию для поста...</option>
-                                <option value="Предприниматели, владельцы бизнеса">Бизнесмены (Офлайн и Онлайн)</option>
-                                <option value="Фрилансеры, дизайнеры, IT-специалисты">Фрилансеры и IT</option>
-                                <option value="Блогеры, инфобизнесмены, эксперты">Блогеры и Эксперты</option>
-                                <option value="Сетевики, лидеры MLM">Сетевики (MLM)</option>
-                                <option value="Студенты и люди в найме, ищущие доп. доход">Люди в найме / Студенты</option>
-                                <option value="Мамочки в декрете">Мамочки в декрете</option>
-                            </select>
-                            <button id="generatePostBtn" onclick="generateAIPost()" class="btn bg-purple-600 hover:bg-purple-500 text-white px-6 py-3 rounded-xl text-sm font-bold whitespace-nowrap">
-                                🪄 Сгенерировать
-                            </button>
+                
+                <!-- NEUROGEN HUB (ИИ-ПРИЛОЖЕНИЯ) -->
+                <div class="glass-panel rounded-3xl p-6 md:p-8 relative overflow-hidden">
+                    <div class="absolute -right-10 -top-10 text-9xl opacity-5">🤖</div>
+                    <div class="flex items-center justify-between mb-6 relative z-10">
+                        <div>
+                            <h2 class="text-xl font-bold flex items-center gap-2 text-white">NEUROGEN HUB</h2>
+                            <p class="text-xs text-gray-400">Ваш арсенал ИИ-приложений</p>
                         </div>
+                        <span class="bg-purple-500/20 text-purple-300 border border-purple-500/30 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">Premium Tools</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 relative z-10" id="hub-apps-container">
+                        <!-- Кнопки приложений будут сгенерированы JS -->
+                    </div>
+                </div>
+
+                <!-- O2O / ПЕЧАТНЫЕ МАТЕРИАЛЫ & КОНТЕНТ -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    
+                    <div class="glass-panel rounded-3xl p-6 md:p-8">
+                        <h2 class="text-xl font-bold mb-1 flex items-center gap-2"><span class="text-2xl">🖨</span> Офлайн & Обучение</h2>
+                        <p class="text-xs text-gray-400 mb-6">Материалы генерируются под выбранный вектор.</p>
                         
-                        <div id="aiPostResult" class="hidden mt-4 p-4 bg-black/40 rounded-xl border border-dashed border-purple-500/30">
-                            <p id="aiPostText" class="text-sm text-gray-300 leading-relaxed"></p>
-                            <button onclick="copyToClipboard('aiPostText', false)" class="btn mt-4 text-xs font-bold bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg flex items-center gap-2">
-                                📋 Копировать
+                        <div class="flex flex-col gap-3">
+                            <button id="printTableTentBtn" class="btn bg-black/40 hover:bg-white/10 border border-white/5 rounded-2xl p-4 flex items-center gap-4 glass-panel-hover group">
+                                <div class="w-12 h-12 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">📄</div>
+                                <div class="text-left flex-1">
+                                    <span class="text-sm font-bold text-white block">Рекламный Флаер</span>
+                                    <span class="text-[11px] text-gray-500">PDF А4 для печати с вашим QR</span>
+                                </div>
+                                <div class="text-gray-600 group-hover:text-white transition-colors">→</div>
                             </button>
+                            
+                            <button id="createPdfBtn" class="btn bg-black/40 hover:bg-white/10 border border-white/5 rounded-2xl p-4 flex items-center gap-4 glass-panel-hover group">
+                                <div class="w-12 h-12 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">📱</div>
+                                <div class="text-left flex-1">
+                                    <span class="text-sm font-bold text-white block">Вшить в свою PDF</span>
+                                    <span class="text-[11px] text-gray-500">Добавить QR в любую презентацию</span>
+                                </div>
+                                <div class="text-gray-600 group-hover:text-white transition-colors">→</div>
+                            </button>
+                            
+                            <a id="businessMaterialsBtn" href="#" class="btn bg-black/40 hover:bg-white/10 border border-white/5 rounded-2xl p-4 flex items-center gap-4 glass-panel-hover group">
+                                <div class="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">📚</div>
+                                <div class="text-left flex-1">
+                                    <span class="text-sm font-bold text-white block">База Знаний</span>
+                                    <span class="text-[11px] text-gray-500">Скрипты и гайды на Яндекс.Диск</span>
+                                </div>
+                                <div class="text-gray-600 group-hover:text-white transition-colors">↗</div>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- AI GENERATOR -->
+                    <div class="glass-panel rounded-3xl p-6 md:p-8 flex flex-col">
+                        <h2 class="text-xl font-bold mb-1 flex items-center gap-2"><span class="text-2xl">📝</span> Нейро-Копирайтер</h2>
+                        <p class="text-xs text-gray-400 mb-6">Создание нативных постов под вашу аудиторию.</p>
+                        
+                        <div class="bg-black/40 rounded-2xl p-5 border border-white/5 flex-1 flex flex-col justify-center">
+                            <div class="space-y-4">
+                                <select id="aiPostTopic" class="w-full bg-[#0a0a0a] border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all appearance-none cursor-pointer">
+                                    <option value="" disabled selected>🎯 Кому будем продавать?</option>
+                                    <option value="Предприниматели, владельцы бизнеса">Бизнесмены (Офлайн/Онлайн)</option>
+                                    <option value="Фрилансеры, дизайнеры, IT-специалисты">IT и Фриланс</option>
+                                    <option value="Блогеры, инфобизнесмены, эксперты">Эксперты и Блогеры</option>
+                                    <option value="Сетевики, лидеры MLM">Лидеры сетевого (MLM)</option>
+                                    <option value="Студенты и люди в найме, ищущие доп. доход">Найм / Студенты</option>
+                                </select>
+                                <button id="generatePostBtn" onclick="generateAIPost()" class="btn w-full bg-cyan-600 hover:bg-cyan-500 text-white py-3.5 rounded-xl text-sm font-bold shadow-lg shadow-cyan-500/20">
+                                    ✨ СГЕНЕРИРОВАТЬ ПОСТ
+                                </button>
+                            </div>
+                            
+                            <div id="aiPostResult" class="hidden mt-5">
+                                <div class="p-4 bg-[#05050f] rounded-xl border border-white/10 relative group">
+                                    <p id="aiPostText" class="text-sm text-gray-300 leading-relaxed"></p>
+                                    <button onclick="copyToClipboard('aiPostText', false)" class="absolute top-2 right-2 p-2 bg-white/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/20">
+                                        📋
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -303,108 +370,111 @@ eleventyExcludeFromCollections: true
             <!-- ========================================== -->
             <div id="content-ai" class="hidden space-y-6 animate-fadeInUp">
                 <!-- Пейволл -->
-                <div id="ai-paywall" class="hidden acrylic rounded-3xl p-10 text-center border-purple-500/30 bg-purple-500/5">
-                    <div class="text-6xl mb-6 animate-float">🧠</div>
-                    <h2 class="text-2xl font-black text-white mb-3 uppercase">Ваш <span class="gradient-text">ИИ-Сотрудник</span></h2>
-                    <p class="text-sm text-gray-400 mb-8 max-w-lg mx-auto">
-                        ИИ-ассистент будет сам закрывать сделки с клиентами 24/7. Активируйте подписку, чтобы убрать системные лимиты и получить доступ к тонкой настройке характера.
+                <div id="ai-paywall" class="hidden glass-panel rounded-3xl p-12 text-center border-t-purple-500/30">
+                    <div class="text-7xl mb-8 animate-float">🧠</div>
+                    <h2 class="text-3xl font-black text-white mb-4 uppercase">SaaS <span class="gradient-text">Интеллект</span></h2>
+                    <p class="text-sm text-gray-400 mb-10 max-w-xl mx-auto leading-relaxed">
+                        Подключите нейроядро к вашему боту. ИИ-ассистент будет сам консультировать лидов, отрабатывать возражения и закрывать сделки 24/7. Активация убирает системные лимиты сообщений.
                     </p>
-                    <a href="https://t.me/sethubble_biz_bot" target="_blank" class="btn inline-block bg-gradient-to-r from-cyan-500 to-purple-600 text-white font-bold py-4 px-8 rounded-2xl shadow-xl shadow-purple-500/20 text-sm">
-                        🚀 Активировать интеллект — $3/мес
+                    <a id="btn-upgrade-ai" href="#" target="_blank" class="btn inline-flex items-center gap-3 bg-gradient-to-r from-cyan-500 to-purple-600 text-white font-bold py-4 px-10 rounded-2xl shadow-xl shadow-purple-500/20 text-sm hover:scale-105 transition-transform">
+                        <span>🚀 Активировать за $3/мес</span>
                     </a>
                 </div>
 
                 <!-- Конструктор -->
                 <div id="ai-constructor" class="hidden space-y-6">
-                    <div id="ai-status-banner" class="p-4 rounded-2xl border flex justify-between">
-                        <div class="flex items-center gap-3">
-                            <div id="status-icon" class="text-2xl">⏳</div>
+                    <div id="ai-status-banner" class="glass-panel p-5 rounded-2xl flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <div id="status-icon" class="text-3xl">⏳</div>
                             <div>
-                                <div id="status-title" class="text-xs font-bold uppercase tracking-wider">Загрузка...</div>
-                                <div id="status-date" class="text-[10px] text-gray-400 mt-0.5">---</div>
+                                <div id="status-title" class="text-sm font-bold uppercase tracking-wider text-white">Загрузка...</div>
+                                <div id="status-date" class="text-[11px] text-gray-400 mt-1">---</div>
                             </div>
                         </div>
-                        <div id="status-badge" class="px-3 py-1.5 rounded-full text-[10px] font-black uppercase bg-gray-700 text-white">---</div>
+                        <div id="status-badge" class="px-4 py-1.5 rounded-full text-xs font-black uppercase bg-gray-700 text-white shadow-inner">---</div>
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <!-- ЛЕВАЯ КОЛОНКА -->
                         <div class="space-y-6">
-                            <div class="space-y-3">
-                                <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">⚡ Быстрые пресеты (Тон общения):</p>
+                            <div class="glass-panel p-6 rounded-3xl space-y-5 border-t border-cyan-500/20">
+                                <h4 class="text-xs font-bold text-cyan-400 uppercase tracking-wider mb-2">⚡ Готовые Характеры</h4>
                                 <div class="grid grid-cols-2 gap-3">
-                                    <button onclick="applyAiPreset('shark')" class="btn acrylic acrylic-hover p-4 rounded-xl text-left"><div class="text-2xl mb-2">🦈</div><div class="text-xs font-bold text-white">Акула продаж</div></button>
-                                    <button onclick="applyAiPreset('mentor')" class="btn acrylic acrylic-hover p-4 rounded-xl text-left"><div class="text-2xl mb-2">🎓</div><div class="text-xs font-bold text-white">Наставник</div></button>
-                                    <button onclick="applyAiPreset('techie')" class="btn acrylic acrylic-hover p-4 rounded-xl text-left"><div class="text-2xl mb-2">🤖</div><div class="text-xs font-bold text-white">Технарь-гик</div></button>
-                                    <button onclick="applyAiPreset('friend')" class="btn acrylic acrylic-hover p-4 rounded-xl text-left"><div class="text-2xl mb-2">🤝</div><div class="text-xs font-bold text-white">Заботливый друг</div></button>
+                                    <button onclick="applyAiPreset('shark')" class="btn bg-black/40 border border-white/5 hover:border-cyan-500/50 p-4 rounded-xl text-left transition-colors"><div class="text-2xl mb-2">🦈</div><div class="text-xs font-bold text-white">Волк продаж</div></button>
+                                    <button onclick="applyAiPreset('mentor')" class="btn bg-black/40 border border-white/5 hover:border-blue-500/50 p-4 rounded-xl text-left transition-colors"><div class="text-2xl mb-2">🎓</div><div class="text-xs font-bold text-white">Наставник</div></button>
+                                    <button onclick="applyAiPreset('techie')" class="btn bg-black/40 border border-white/5 hover:border-purple-500/50 p-4 rounded-xl text-left transition-colors"><div class="text-2xl mb-2">🤖</div><div class="text-xs font-bold text-white">Технарь</div></button>
+                                    <button onclick="applyAiPreset('friend')" class="btn bg-black/40 border border-white/5 hover:border-green-500/50 p-4 rounded-xl text-left transition-colors"><div class="text-2xl mb-2">🤝</div><div class="text-xs font-bold text-white">Эмпат</div></button>
                                 </div>
                             </div>
 
-                            <div class="p-5 bg-purple-500/10 border border-purple-500/30 rounded-2xl space-y-4">
-                                <h4 class="text-xs font-bold text-purple-400 uppercase tracking-wider mb-3">⚙️ Провайдер и Ключи</h4>
+                            <div class="glass-panel p-6 rounded-3xl space-y-5 border-t border-purple-500/20">
+                                <h4 class="text-xs font-bold text-purple-400 uppercase tracking-wider mb-2">⚙️ Ядро и API</h4>
                                 <div>
-                                    <label class="text-[10px] font-bold text-gray-500 uppercase mb-1 block">Провайдер:</label>
-                                    <select id="ai-provider" onchange="updateModelsList()" class="w-full p-3 rounded-xl text-sm bg-black/60 border border-white/10 text-white outline-none">
-                                        <option value="polza">Polza.ai (РФ, Карты)</option>
+                                    <label class="text-[10px] font-bold text-gray-500 uppercase mb-2 block">Шлюз:</label>
+                                    <select id="ai-provider" onchange="updateModelsList()" class="w-full p-3.5 rounded-xl text-sm bg-[#0a0a0a] border border-white/10 text-white outline-none cursor-pointer">
+                                        <option value="polza">Polza.ai (РФ, оплата картами)</option>
                                         <option value="openrouter">OpenRouter (Крипта)</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label class="text-[10px] font-bold text-gray-500 uppercase mb-1 block">Модель нейросети:</label>
-                                    <select id="ai-model" class="w-full p-3 rounded-xl text-sm bg-black/60 border border-white/10 text-white outline-none"></select>
+                                    <label class="text-[10px] font-bold text-gray-500 uppercase mb-2 block">Модель (LLM):</label>
+                                    <select id="ai-model" class="w-full p-3.5 rounded-xl text-sm bg-[#0a0a0a] border border-white/10 text-white outline-none cursor-pointer"></select>
                                 </div>
                                 <div>
-                                    <label class="text-[10px] font-bold text-gray-500 uppercase flex justify-between mb-1">
-                                        <span>Свой API Ключ (безлимит):</span>
-                                        <a href="https://sethubble.ru/go-polza.html" target="_blank" class="text-cyan-400 hover:underline">Получить ↗</a>
+                                    <label class="text-[10px] font-bold text-gray-500 uppercase flex justify-between mb-2">
+                                        <span>Свой API Ключ (Безлимит):</span>
+                                        <a href="https://sethubble.ru/go-polza.html" target="_blank" class="text-cyan-400 hover:underline">Где взять? ↗</a>
                                     </label>
-                                    <input type="password" id="ai-api-key" placeholder="sk-..." class="w-full p-3 rounded-xl text-sm bg-black/60 border border-white/10 text-white outline-none">
+                                    <input type="password" id="ai-api-key" placeholder="sk-..." class="w-full p-3.5 rounded-xl text-sm bg-[#0a0a0a] border border-white/10 text-white outline-none focus:border-purple-500">
                                 </div>
                                 <div>
-                                    <label class="text-[10px] font-bold text-gray-500 uppercase flex justify-between mb-1">
-                                        <span>Лимит запросов в день (0 = безлимит):</span>
-                                    </label>
-                                    <input type="number" id="ai-limit" placeholder="0" class="w-full p-3 rounded-xl text-sm bg-black/60 border border-white/10 text-white outline-none">
+                                    <label class="text-[10px] font-bold text-gray-500 uppercase mb-2 block">Лимит диалогов/день (0 = ∞):</label>
+                                    <input type="number" id="ai-limit" placeholder="0" class="w-full p-3.5 rounded-xl text-sm bg-[#0a0a0a] border border-white/10 text-white outline-none focus:border-purple-500">
                                 </div>
                             </div>
 
-                            <div class="glass-panel p-5 rounded-2xl space-y-4 relative overflow-hidden">
-                                <!-- Информационная плашка безопасности знаний -->
-                                <div class="absolute top-0 right-0 left-0 bg-blue-500/20 border-b border-blue-500/30 p-2 text-[10px] text-center text-blue-200">
-                                    ℹ️ Базовые знания о SetHubble жестко вшиты в ядро. Здесь вы настраиваете только манеру общения.
+                            <div class="glass-panel p-6 rounded-3xl space-y-5 border-t border-blue-500/20 relative overflow-hidden">
+                                <div class="absolute top-0 left-0 right-0 bg-blue-500/10 text-[9px] font-bold text-center text-blue-300 py-1.5 tracking-widest uppercase">
+                                    База знаний SetHubble вшита на аппаратном уровне
                                 </div>
-                                <h4 class="text-xs font-bold text-cyan-400 uppercase tracking-wider mb-3 mt-6">🎭 Конструктор промпта</h4>
-                                <div><label class="text-[10px] font-bold text-gray-500 uppercase">Роль ИИ:</label><input type="text" id="ui-role" oninput="compilePrompt()" class="w-full mt-1 p-3 rounded-xl text-sm bg-black/60 border border-white/10 text-white"></div>
-                                <div class="grid grid-cols-2 gap-3">
-                                    <div><label class="text-[10px] font-bold text-gray-500 uppercase">Стиль:</label>
-                                        <select id="ui-tone" onchange="compilePrompt()" class="w-full mt-1 p-3 rounded-xl text-sm bg-black/60 border border-white/10 text-white">
-                                            <option value="Уверенный, давит на выгоду">Уверенный</option><option value="Эмпатичный, задает вопросы">Заботливый</option><option value="Сухой, оперирует цифрами">Технический</option><option value="Ироничный, использует реверс. психологию">Дерзкий</option>
+                                <h4 class="text-xs font-bold text-blue-400 uppercase tracking-wider mb-2 mt-4">🎭 Инженерия Промпта</h4>
+                                <div><label class="text-[10px] font-bold text-gray-500 uppercase mb-2 block">Роль ИИ:</label><input type="text" id="ui-role" oninput="compilePrompt()" class="w-full p-3.5 rounded-xl text-sm bg-[#0a0a0a] border border-white/10 text-white outline-none focus:border-blue-500"></div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div><label class="text-[10px] font-bold text-gray-500 uppercase mb-2 block">Подача:</label>
+                                        <select id="ui-tone" onchange="compilePrompt()" class="w-full p-3.5 rounded-xl text-sm bg-[#0a0a0a] border border-white/10 text-white outline-none cursor-pointer">
+                                            <option value="Уверенный, давит на выгоду">Агрессивный</option><option value="Эмпатичный, задает вопросы">Заботливый</option><option value="Сухой, оперирует цифрами">Деловой</option><option value="Ироничный, использует реверс. психологию">Дерзкий</option>
                                         </select>
                                     </div>
-                                    <div><label class="text-[10px] font-bold text-gray-500 uppercase">Цель:</label>
-                                        <select id="ui-goal" onchange="compilePrompt()" class="w-full mt-1 p-3 rounded-xl text-sm bg-black/60 border border-white/10 text-white">
+                                    <div><label class="text-[10px] font-bold text-gray-500 uppercase mb-2 block">Главная цель:</label>
+                                        <select id="ui-goal" onchange="compilePrompt()" class="w-full p-3.5 rounded-xl text-sm bg-[#0a0a0a] border border-white/10 text-white outline-none cursor-pointer">
                                             <option value="Продать PRO-статус">Продать PRO</option><option value="Убедить зарегистрироваться в системе">Регистрация</option><option value="Закрыть на личный созвон">Созвон</option>
                                         </select>
                                     </div>
                                 </div>
-                                <div><label class="text-[10px] font-bold text-gray-500 uppercase">Возражение "Дорого":</label><input type="text" id="ui-objection" oninput="compilePrompt()" class="w-full mt-1 p-3 rounded-xl text-sm bg-black/60 border border-white/10 text-white"></div>
+                                <div><label class="text-[10px] font-bold text-gray-500 uppercase mb-2 block">Отработка "Дорого":</label><input type="text" id="ui-objection" oninput="compilePrompt()" class="w-full p-3.5 rounded-xl text-sm bg-[#0a0a0a] border border-white/10 text-white outline-none focus:border-blue-500"></div>
                                 <textarea id="ai-prompt-hidden" class="hidden"></textarea>
-                                <button onclick="saveAiSettings()" id="saveAiBtn" class="btn w-full bg-gradient-to-r from-cyan-500 to-blue-600 py-4 rounded-xl font-bold text-white text-sm mt-2">💾 СОХРАНИТЬ</button>
+                                <button onclick="saveAiSettings()" id="saveAiBtn" class="btn w-full bg-white text-black py-4 rounded-xl font-black text-sm mt-4 shadow-lg hover:bg-gray-200 transition-colors">💾 СОХРАНИТЬ КОНФИГУРАЦИЮ</button>
                             </div>
                         </div>
 
                         <!-- ПРАВАЯ КОЛОНКА (ТЕСТ) -->
                         <div class="h-full">
-                            <div class="glass-panel rounded-3xl p-1 flex flex-col h-[600px] border border-white/5">
-                                <div class="p-4 border-b border-white/5 flex items-center justify-between bg-black/60 rounded-t-[calc(1.5rem-4px)]">
-                                    <div class="flex items-center gap-3"><div class="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div><span class="text-xs font-bold text-white uppercase tracking-wider">Тестовый полигон</span></div>
+                            <div class="glass-panel rounded-3xl p-1 flex flex-col h-full min-h-[600px] border-t border-green-500/20">
+                                <div class="p-4 border-b border-white/5 flex items-center justify-between bg-black/40 rounded-t-[calc(1.5rem-4px)]">
+                                    <div class="flex items-center gap-3">
+                                        <div class="relative flex h-3 w-3">
+                                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                          <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                                        </div>
+                                        <span class="text-xs font-bold text-white uppercase tracking-wider">Тестовый полигон</span>
+                                    </div>
                                 </div>
-                                <div id="testChatArea" class="flex-1 overflow-y-auto p-4 space-y-3 bg-[#0a0a0a] flex flex-col scroll-smooth">
-                                    <div class="p-4 text-sm rounded-2xl max-w-[85%] bg-gray-800/60 text-gray-300 self-start shadow-md">Привет! Сохрани настройки и напиши мне.</div>
+                                <div id="testChatArea" class="flex-1 overflow-y-auto p-5 space-y-4 bg-[#05050f] flex flex-col scroll-smooth">
+                                    <div class="p-4 text-sm rounded-2xl max-w-[85%] bg-gray-800/80 text-gray-300 self-start shadow-md border border-white/5">Инициализация завершена. Сохрани настройки и проверь меня в деле.</div>
                                 </div>
-                                <div class="p-3 bg-black/60 border-t border-white/5 rounded-b-[calc(1.5rem-4px)] flex items-center gap-2">
-                                    <input type="text" id="testChatInput" placeholder="Введите сообщение..." class="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-cyan-500" />
-                                    <button onclick="sendTestMessage()" id="testSendBtn" class="btn bg-cyan-600 hover:bg-cyan-500 text-white w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg></button>
+                                <div class="p-3 bg-black/40 border-t border-white/5 rounded-b-[calc(1.5rem-4px)] flex items-center gap-2">
+                                    <input type="text" id="testChatInput" placeholder="Отправь сообщение..." class="flex-1 bg-[#0a0a1a] border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white outline-none focus:border-green-500 transition-colors" />
+                                    <button onclick="sendTestMessage()" id="testSendBtn" class="btn bg-green-600 hover:bg-green-500 text-white w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-green-600/20"><svg class="w-5 h-5 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg></button>
                                 </div>
                             </div>
                         </div>
@@ -416,10 +486,13 @@ eleventyExcludeFromCollections: true
             <!-- TAB: ABOUT (ПРЕЗЕНТАЦИЯ СИСТЕМЫ) -->
             <!-- ========================================== -->
             <div id="content-about" class="hidden animate-fadeInUp">
-                <div class="acrylic rounded-3xl p-8 md:p-12 text-center">
-                    <div id="about-tag" class="inline-block bg-cyan-500/20 text-cyan-400 font-bold px-4 py-1.5 rounded-full text-xs uppercase tracking-widest mb-4 border border-cyan-500/30">АГЕНТЫ</div>
-                    <h2 id="about-title" class="text-3xl md:text-4xl font-black mb-4 uppercase">КАК ПОСТРОИТЬ СЕТЬ И<br><span class="gradient-text">ВЫЙТИ НА ПАССИВ?</span></h2>
-                    <p id="about-subtitle" class="text-sm text-gray-400 mb-12 max-w-2xl mx-auto leading-relaxed">Радикально новый подход к affiliate-маркетингу. Строй структуру, а не разовые продажи.</p>
+                <div class="glass-panel rounded-3xl p-8 md:p-14 text-center relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl -z-10"></div>
+                    <div class="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl -z-10"></div>
+                    
+                    <div id="about-tag" class="inline-block bg-white/5 text-gray-300 font-bold px-5 py-2 rounded-full text-[10px] md:text-xs uppercase tracking-widest mb-6 border border-white/10 shadow-inner">ЗАГРУЗКА...</div>
+                    <h2 id="about-title" class="text-3xl md:text-5xl font-black mb-6 uppercase leading-tight tracking-tight text-white">...</h2>
+                    <p id="about-subtitle" class="text-sm md:text-base text-gray-400 mb-14 max-w-2xl mx-auto leading-relaxed">...</p>
 
                     <div id="about-cards" class="grid md:grid-cols-2 gap-6 text-left">
                         <!-- Карточки будут сгенерированы JS -->
@@ -507,19 +580,19 @@ eleventyExcludeFromCollections: true
             const toast = document.createElement("div");
             const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
             const colors = { success: 'border-green-500/30', error: 'border-red-500/30', warning: 'border-yellow-500/30', info: 'border-blue-500/30' };
-            toast.className = `toast flex items-center gap-2 bg-black/95 backdrop-blur-lg border ${colors[type]} px-5 py-3 rounded-full text-sm font-medium shadow-2xl`;
-            toast.innerHTML = `${icons[type]} ${message}`;
+            toast.className = `toast flex items-center gap-3 bg-[#0a0a1a] border ${colors[type]} px-6 py-4 rounded-full text-sm font-medium shadow-2xl`;
+            toast.innerHTML = `<span class="text-lg">${icons[type]}</span> <span>${message}</span>`;
             container.appendChild(toast);
             requestAnimationFrame(() => toast.classList.add("show"));
-            setTimeout(() => { toast.classList.remove("show"); setTimeout(() => toast.remove(), 300); }, 3000);
+            setTimeout(() => { toast.classList.remove("show"); setTimeout(() => toast.remove(), 400); }, 3000);
         }
 
         function switchTab(tab) {['marketing', 'ai', 'about'].forEach(t => {
             const content = document.getElementById(`content-${t}`);
             const btn = document.getElementById(`tab-${t}`);
             if (content && btn) {
-                if (t === tab) { content.classList.remove('hidden'); btn.classList.add('tab-active', 'text-white'); btn.classList.remove('text-gray-400'); } 
-                else { content.classList.add('hidden'); btn.classList.remove('tab-active', 'text-white'); btn.classList.add('text-gray-400'); }
+                if (t === tab) { content.classList.remove('hidden'); btn.classList.add('active'); } 
+                else { content.classList.add('hidden'); btn.classList.remove('active'); }
             }
         }); }
 
@@ -543,7 +616,7 @@ eleventyExcludeFromCollections: true
             } else if (tg?.initData) {
                 authHeaders["x-telegram-initdata"] = tg.initData;
             } else {
-                document.getElementById("loadingBlock").innerHTML = `<div class="text-red-400 text-sm font-bold">⚠️ ОШИБКА АВТОРИЗАЦИИ</div>`;
+                document.getElementById("loadingBlock").innerHTML = `<div class="text-red-400 text-sm font-bold bg-red-500/10 p-4 rounded-xl border border-red-500/30">⚠️ ОШИБКА АВТОРИЗАЦИИ</div>`;
                 return;
             }
 
@@ -559,7 +632,7 @@ eleventyExcludeFromCollections: true
                     b2bRefLink = data.b2bRefLink || null;
                     initUI();
                 } else throw new Error(data.error);
-            } catch (error) { document.getElementById("loadingBlock").innerHTML = `<div class="text-red-400 text-sm font-bold">⚠️ ${error.message}</div>`; }
+            } catch (error) { document.getElementById("loadingBlock").innerHTML = `<div class="text-red-400 text-sm font-bold bg-red-500/10 p-4 rounded-xl border border-red-500/30">⚠️ ${error.message}</div>`; }
         }
 
         function animateValue(id, start, end, duration, isCurrency = false) {
@@ -576,6 +649,39 @@ eleventyExcludeFromCollections: true
             window.requestAnimationFrame(step);
         }
 
+        function generateAppsButtons(isPro, jwtToken) {
+            const container = document.getElementById("hub-apps-container");
+            if (!container) return;
+            
+            const apps = [
+                { id: "crm", icon: "👥", name: "CRM Клиентов", url: "https://sethubble.ru/crm/" },
+                { id: "viral", icon: "🎬", name: "Viral Video", url: "https://sethubble.ru/viral/" },
+                { id: "scenarios", icon: "🤖", name: "Bot Scenarios", url: "https://sethubble.ru/scenarios/" },
+                { id: "architect", icon: "🏗️", name: "Master Architect", url: "https://sethubble.ru/architect/" },
+            ];
+
+            let html = "";
+            apps.forEach(app => {
+                if (isPro) {
+                    html += `
+                        <button onclick="window.open('${app.url}?token=${jwtToken}', '_blank')" class="btn bg-black/40 hover:bg-white/10 border border-white/5 rounded-2xl p-4 text-left glass-panel-hover flex flex-col justify-between h-full group">
+                            <span class="text-3xl mb-3 group-hover:scale-110 transition-transform">${app.icon}</span>
+                            <span class="text-[11px] md:text-xs font-bold text-white leading-tight">${app.name}</span>
+                        </button>
+                    `;
+                } else {
+                    html += `
+                        <button onclick="showToast('⚠️ Доступно только на тарифе PRO!', 'warning')" class="btn bg-black/20 border border-white/5 rounded-2xl p-4 text-left opacity-60 flex flex-col justify-between h-full relative overflow-hidden group">
+                            <div class="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 backdrop-blur-sm"><span class="text-2xl shadow-black drop-shadow-md">🔒</span></div>
+                            <span class="text-3xl mb-3 filter grayscale">${app.icon}</span>
+                            <span class="text-[11px] md:text-xs font-bold text-gray-500 leading-tight">${app.name}</span>
+                        </button>
+                    `;
+                }
+            });
+            container.innerHTML = html;
+        }
+
         function initUI() {
             document.getElementById("loadingBlock").classList.add("hidden");
             document.getElementById("mainContent").classList.remove("hidden");
@@ -587,6 +693,7 @@ eleventyExcludeFromCollections: true
             animateValue("statEarnings", 0, parseFloat(userData.earnings) || 0, 1500, true);
             document.getElementById("header-earnings").textContent = `$${(parseFloat(userData.earnings) || 0).toFixed(2)}`;
 
+            // Ссылка на оплату PRO
             const xp = parseInt(userData.xp) || 0;
             const price = xp >= 100 ? 20 : 40;
             const productId = xp >= 100 ? "103_97998" : "142_ee4e9";
@@ -596,15 +703,18 @@ eleventyExcludeFromCollections: true
             const upgradeBtn = document.getElementById("btn-upgrade-pro");
             if(upgradeBtn) {
                 upgradeBtn.href = paymentUrl;
-                upgradeBtn.innerHTML = `💎 КУПИТЬ PRO ЗА $${price}`;
+                document.getElementById("pro-price-tag").textContent = `$${price}`;
             }
+
+            // Отрисовка кнопок ИИ-приложений
+            generateAppsButtons(userData.is_pro, webAppJwt);
 
             if (userData.is_pro) {
                 document.getElementById("tariff-pro").classList.remove("hidden");
                 document.getElementById("tariff-free").classList.add("hidden");
-                document.getElementById("openCrmBtn").onclick = () => {
-                    window.open(`https://sethubble.ru/crm/?token=${webAppJwt}`, "_blank");
-                };
+                
+                const oldCrmBtn = document.getElementById("openCrmBtn");
+                if (oldCrmBtn) oldCrmBtn.onclick = () => window.open(`https://sethubble.ru/crm/?token=${webAppJwt}`, "_blank");
             }
 
             const materialsBtn = document.getElementById("businessMaterialsBtn");
@@ -618,10 +728,18 @@ eleventyExcludeFromCollections: true
 
             setLinkMode('universal'); // По умолчанию универсальный режим
 
-            // AI Status
+            // AI Status & SaaS Subscription
             const now = Date.now();
             const aiUntil = parseInt(userData.ai_active_until) || 0;
             const isAiActive = aiUntil > now;
+            
+            // Ссылка на покупку SaaS подписки
+            const aiProductId = userData.ai_product_id || "150_3ca87"; 
+            const aiSubUrl = `https://hubblepay.net/${aiProductId}&afid=${inviterId}`;
+            const aiUpgradeBtn = document.getElementById("btn-upgrade-ai");
+            if (aiUpgradeBtn) {
+                aiUpgradeBtn.href = aiSubUrl;
+            }
 
             const sb = document.getElementById("ai-status-banner");
             if (isAiActive) {
@@ -630,20 +748,23 @@ eleventyExcludeFromCollections: true
                 const daysLeft = Math.ceil((aiUntil - now) / 86400000);
                 const fDate = new Date(aiUntil).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
                 if (daysLeft <= 3) {
-                    sb.className = "p-4 rounded-2xl border border-yellow-500/30 bg-yellow-500/5 flex items-center justify-between";
+                    sb.className = "glass-panel p-5 rounded-2xl flex items-center justify-between border-l-4 border-yellow-500 bg-yellow-500/5";
                     document.getElementById("status-title").innerHTML = "Пробный период <span class='text-yellow-400'>(Trial)</span>";
                     document.getElementById("status-date").textContent = `Доступ до ${fDate}`;
-                    document.getElementById("status-badge").className = "px-3 py-1.5 rounded-full text-[10px] font-black uppercase bg-yellow-500 text-black";
+                    document.getElementById("status-badge").className = "px-4 py-1.5 rounded-full text-[10px] font-black uppercase bg-yellow-500 text-black shadow-[0_0_10px_rgba(234,179,8,0.3)]";
                     document.getElementById("status-badge").textContent = "3 ДНЯ";
                     document.getElementById("status-icon").textContent = "⏳";
                 } else {
-                    sb.className = "p-4 rounded-2xl border border-cyan-500/30 bg-cyan-500/5 flex items-center justify-between";
+                    sb.className = "glass-panel p-5 rounded-2xl flex items-center justify-between border-l-4 border-cyan-500 bg-cyan-500/5";
                     document.getElementById("status-title").innerHTML = "Интеллект <span class='text-cyan-400'>активен</span>";
                     document.getElementById("status-date").textContent = `Подписка до ${fDate}`;
-                    document.getElementById("status-badge").className = "px-3 py-1.5 rounded-full text-[10px] font-black uppercase bg-cyan-500 text-black";
+                    document.getElementById("status-badge").className = "px-4 py-1.5 rounded-full text-[10px] font-black uppercase bg-cyan-500 text-black shadow-[0_0_10px_rgba(6,182,212,0.3)]";
                     document.getElementById("status-badge").textContent = "PREMIUM";
                     document.getElementById("status-icon").textContent = "🚀";
                 }
+            } else {
+                document.getElementById("ai-constructor").classList.add("hidden");
+                document.getElementById("ai-paywall").classList.remove("hidden");
             }
 
             if (userData.ai_provider) document.getElementById("ai-provider").value = userData.ai_provider;
@@ -682,12 +803,13 @@ eleventyExcludeFromCollections: true
             
             data.cards.forEach((card, index) => {
                 const isNeuro = index === 3; 
-                const borderClass = isNeuro ? "hover:border-purple-500/30" : "hover:border-cyan-500/30";
+                const borderClass = isNeuro ? "hover:border-purple-500/40" : "hover:border-cyan-500/40";
+                const bgClass = isNeuro ? "bg-gradient-to-br from-purple-900/10 to-transparent" : "bg-gradient-to-br from-cyan-900/10 to-transparent";
                 
                 cardsContainer.innerHTML += `
-                    <div class="acrylic acrylic-hover rounded-2xl p-6 transition-all group ${borderClass}">
-                        <span class="text-4xl block mb-4 group-hover:scale-110 transition-transform duration-300">${card.icon}</span>
-                        <h3 class="text-lg font-bold text-white mb-2">${card.title}</h3>
+                    <div class="glass-panel glass-panel-hover rounded-3xl p-8 transition-all group ${borderClass} ${bgClass}">
+                        <span class="text-5xl block mb-5 group-hover:scale-110 transition-transform duration-300 drop-shadow-lg">${card.icon}</span>
+                        <h3 class="text-xl font-bold text-white mb-3">${card.title}</h3>
                         <p class="text-sm text-gray-400 leading-relaxed">${card.text}</p>
                     </div>
                 `;
@@ -698,19 +820,18 @@ eleventyExcludeFromCollections: true
             currentLinkMode = mode;['universal', 'agent', 'online', 'offline'].forEach(m => {
                 const btn = document.getElementById(`mode-${m}`);
                 if (m === mode) {
-                    btn.className = `mode-btn active-${m} flex-1 py-2.5 rounded-lg text-[11px] font-bold transition-all`;
+                    btn.className = `mode-btn active-${m}`;
                 } else {
-                    btn.className = `mode-btn flex-1 py-2.5 rounded-lg text-[11px] font-bold text-gray-400 hover:text-white transition-all bg-transparent shadow-none`;
+                    btn.className = `mode-btn`;
                 }
             });
             
             const activeUrl = getActiveLink();
             document.getElementById('botLinkDisplay').textContent = activeUrl;
-            document.querySelectorAll('.bot-link').forEach(el => el.textContent = activeUrl);
             
             const qrContainer = document.getElementById("qrcode");
             qrContainer.innerHTML = "";
-            new QRCode(qrContainer, { text: activeUrl, width: 180, height: 180, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H });
+            new QRCode(qrContainer, { text: activeUrl, width: 160, height: 160, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H });
             
             updateAboutTab();
             if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
@@ -719,10 +840,15 @@ eleventyExcludeFromCollections: true
         document.getElementById("copyLinkBtn").addEventListener("click", function() {
             navigator.clipboard.writeText(getActiveLink()).then(() => {
                 const orig = this.innerHTML;
-                this.innerHTML = "<span>✅</span> СКОПИРОВАНО";
-                this.classList.replace("bg-white/10", "bg-green-600");
+                this.innerHTML = "<span class='text-green-400'>✓</span> СКОПИРОВАНО";
+                this.classList.replace("bg-white/10", "bg-green-500/20");
+                this.classList.replace("hover:bg-white/20", "hover:bg-green-500/30");
                 if(tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
-                setTimeout(() => { this.innerHTML = orig; this.classList.replace("bg-green-600", "bg-white/10"); }, 2000);
+                setTimeout(() => { 
+                    this.innerHTML = orig; 
+                    this.classList.replace("bg-green-500/20", "bg-white/10"); 
+                    this.classList.replace("hover:bg-green-500/30", "hover:bg-white/20"); 
+                }, 2000);
             });
         });
 
@@ -803,7 +929,7 @@ eleventyExcludeFromCollections: true
             
             btn.disabled = true;
             const original = btn.innerHTML;
-            btn.innerHTML = "⏳ Пишу...";
+            btn.innerHTML = "⏳ ГЕНЕРАЦИЯ...";
             
             try {
                 const response = await fetch(`${BACKEND_URL}/?action=generate-post`, {
@@ -822,7 +948,7 @@ eleventyExcludeFromCollections: true
                     resText.innerHTML = data.answer.replace(/\n/g, "<br>");
                     resBox.classList.remove("hidden");
                     resBox.classList.add("animate-fadeInUp");
-                    showToast("Пост готов!", "success");
+                    showToast("Контент готов!", "success");
                 } else {
                     showToast(data.answer || "Ошибка генерации", "warning");
                 }
@@ -887,12 +1013,12 @@ eleventyExcludeFromCollections: true
             document.getElementById("ui-goal").value = p[2];
             document.getElementById("ui-objection").value = p[3];
             compilePrompt();
-            showToast("Пресет загружен! Не забудьте сохранить.", "success");
+            showToast("Конфигурация загружена", "success");
         }
 
         async function saveAiSettings() {
             const btn = document.getElementById("saveAiBtn");
-            btn.disabled = true; const original = btn.innerHTML; btn.innerHTML = "⏳ СОХРАНЯЮ...";
+            btn.disabled = true; const original = btn.innerHTML; btn.innerHTML = "⏳ СОХРАНЕНИЕ...";
 
             const limitVal = document.getElementById("ai-limit").value;
             
@@ -916,9 +1042,9 @@ eleventyExcludeFromCollections: true
                     method: "POST", headers: authHeaders, body: JSON.stringify(payload)
                 });
                 const data = await res.json();
-                if(data.success) showToast("Интеллект обновлён!", "success");
-                else showToast("Ошибка сохранения", "error");
-            } catch(e) { showToast("Ошибка сети", "error"); }
+                if(data.success) showToast("Система обновлена", "success");
+                else showToast("Сбой сохранения", "error");
+            } catch(e) { showToast("Сбой сети", "error"); }
             finally { btn.disabled = false; btn.innerHTML = original; }
         }
 
@@ -933,7 +1059,7 @@ eleventyExcludeFromCollections: true
             
             const area = document.getElementById("testChatArea");
             const typingId = "typing-" + Date.now();
-            area.insertAdjacentHTML('beforeend', `<div id="${typingId}" class="p-3 text-sm rounded-2xl max-w-[85%] bg-gray-800/80 text-gray-200 self-start shadow-md"><div class="typing-indicator"><span></span><span></span><span></span></div></div>`);
+            area.insertAdjacentHTML('beforeend', `<div id="${typingId}" class="p-4 text-sm rounded-2xl max-w-[85%] bg-gray-800/80 text-gray-200 self-start shadow-md border border-white/5"><div class="flex items-center gap-1.5"><span class="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></span><span class="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></span><span class="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style="animation-delay: 0.4s"></span></div></div>`);
             area.scrollTop = area.scrollHeight;
 
             const btn = document.getElementById("testSendBtn");
@@ -946,10 +1072,10 @@ eleventyExcludeFromCollections: true
                 });
                 const data = await response.json();
                 document.getElementById(typingId)?.remove();
-                appendTestChat(data.answer || "Ошибка ИИ", false);
+                appendTestChat(data.answer || "Сбой связи с ядром.", false);
             } catch(e) {
                 document.getElementById(typingId)?.remove();
-                appendTestChat("Сетевая ошибка", false);
+                appendTestChat("Сетевая ошибка.", false);
             } finally {
                 btn.disabled = false;
             }
@@ -958,7 +1084,7 @@ eleventyExcludeFromCollections: true
         function appendTestChat(text, isUser) {
             const area = document.getElementById("testChatArea");
             const div = document.createElement("div");
-            div.className = `p-4 text-sm rounded-2xl max-w-[85%] shadow-md ${isUser ? "bg-gradient-to-r from-cyan-600 to-blue-600 text-white self-end rounded-br-2xl rounded-tr-2xl rounded-tl-2xl" : "bg-gray-800/80 text-gray-200 self-start rounded-bl-2xl rounded-tr-2xl rounded-br-2xl"}`;
+            div.className = `p-4 text-sm rounded-2xl max-w-[85%] shadow-md border ${isUser ? "bg-gradient-to-br from-cyan-600 to-blue-600 text-white self-end rounded-br-sm border-cyan-500/30" : "bg-gray-800/80 text-gray-200 self-start rounded-bl-sm border-white/5"}`;
             div.innerHTML = text.replace(/\n/g, "<br>");
             area.appendChild(div);
             area.scrollTop = area.scrollHeight;
