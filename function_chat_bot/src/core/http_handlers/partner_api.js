@@ -165,6 +165,9 @@ export async function handlePartnerApi(event, context) {
           custom_api_key: user.custom_api_key || "",
           user_daily_limit: user.user_daily_limit || 0,
           ai_ui_state: user.session?.ai_ui_state || null, // Состояние селектов
+          
+          // === НОВАЯ СТРОКА: Передаем ID продукта из ENV во фронтенд ===
+          ai_product_id: process.env.PRODUCT_ID_AI_SUBSCRIPTION || "150_3ca87",
         },
       });
     } catch (error) {
