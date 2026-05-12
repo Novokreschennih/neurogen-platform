@@ -1,16 +1,13 @@
 /**
- * Cron Jobs Handler — v5.1 Optimized
+ * Cron Jobs Handler — v5.2 Optimized
  * Обрабатывает плановые напоминания и дожимы через все каналы:
  * - Telegram (Telegraf)
  * - VK (VK API messages.send)
  * - Email (Yandex Cloud Postbox)
  *
- * ОПТИМИЗАЦИИ v5.1:
- * - Убран лишний запрос checkTripwirePurchase (используем u.bought_tripwire напрямую)
- * - Батчевое обновление last_seen для пропущенных пользователей
- * - Только 1 saveUser на активное действие, а не на каждого пользователя
- *
- * action: params.action === "cron"
+ * ОПТИМИЗАЦИИ v5.2:
+ * - Тихая отработка "глухих" Web-каналов (без спама в логи)
+ * - Корректный парсинг ошибок (исключение [object Object])
  */
 
 import { templates as emailTemplates } from "../email/email_service.js";
@@ -36,7 +33,7 @@ export async function handleCronJobs(event, context) {
 
   if (params.action !== "cron") return null;
 
-  log.info(`[CRON] ========== ЗАПУСК CRON (v5.1 Optimized) ==========`);
+  log.info(`[CRON] ========== ЗАПУСК CRON (v5.2 Optimized) ==========`);
   log.info(
     `[CRON] Критерии: неактивны > ${CRON_STALE_HOURS}ч, макс. пользователей: ${CRON_MAX_USERS_PER_RUN}`,
   );
@@ -204,38 +201,19 @@ export async function handleCronJobs(event, context) {
       }
 
       if (u.session?.is_migrating) {
-        log.debug(`[CRON] Skip user during token migration`, {
-          userId: u.user_id,
-        });
         skippedUserIds.push(u.id);
         stats.skipped++;
         continue;
       }
 
-      // v6.0: Пропускаем пользователей без настроенных каналов
       const hasChannel = u.tg_id || u.vk_id || u.web_id || u.email;
       if (!hasChannel) {
-        log.debug(`[CRON] Skip user without channels (likely merge artifact)`, {
-          userId: u.id,
-        });
         skippedUserIds.push(u.id);
         stats.skipped++;
         continue;
       }
 
-      // Определяем основной канал пользователя
       const primaryChannel = channelManager.getPrimaryChannel(u) || "telegram";
-
-      // v6.0: Логируем контекст для отладки
-      const hoursInactive = ((Date.now() - (u.session?.last_activity || u.last_seen)) / (1000 * 60 * 60)).toFixed(1);
-      log.debug(`[CRON CONTEXT]`, {
-        userId: u.id,
-        firstName: u.first_name,
-        state: u.state,
-        channel: primaryChannel,
-        hoursInactive,
-        channels: Object.keys(u.session?.channels || {}).filter(ch => u.session.channels[ch]?.configured),
-      });
 
       let actionTaken = false;
       let sendResult = null;
@@ -253,7 +231,6 @@ export async function handleCronJobs(event, context) {
           stats.reminded++;
           actionTaken = true;
 
-          // Статистика по каналу
           const ch = sendResult.channel || primaryChannel;
           if (stats.byChannel[ch]) stats.byChannel[ch].sent++;
 
@@ -263,24 +240,26 @@ export async function handleCronJobs(event, context) {
             channel: ch,
           });
         } else {
-          if (sendResult.errorCode === 403) {
+          // ИСПРАВЛЕНИЕ: Игнорируем тихие отказы Web-канала (это не ошибка)
+          const errorMsg = typeof sendResult.error === 'object' ? JSON.stringify(sendResult.error) : sendResult.error;
+
+          if (errorMsg === "Web channel has no push notifications" || sendResult.channel === "web") {
+            // Это нормально. Человек в веб-чате, пуш отправить нельзя. Просто скипаем, чтобы не спамить логи.
+            skippedUserIds.push(u.id);
+            stats.skipped++;
+            
+          } else if (sendResult.errorCode === 403) {
             u.session.is_banned = true;
             u.session.banned_at = Date.now();
-            u.session.ban_reason = sendResult.error || "Bot blocked";
-            log.warn(`[CRON] User blocked`, {
-              userId: u.user_id,
-              channel: primaryChannel,
-            });
-            actionTaken = true; // сохраняем бан
+            u.session.ban_reason = errorMsg || "Bot blocked";
+            log.warn(`[CRON] User blocked`, { userId: u.user_id, channel: primaryChannel });
+            actionTaken = true;
           } else if (sendResult.errorCode === 404) {
             u.session.is_banned = true;
             u.session.banned_at = Date.now();
-            u.session.ban_reason = sendResult.error || "Chat not found (account deleted)";
-            log.warn(`[CRON] Chat not found (404)`, {
-              userId: u.user_id,
-              channel: primaryChannel,
-            });
-            actionTaken = true; // сохраняем бан
+            u.session.ban_reason = errorMsg || "Chat not found (account deleted)";
+            log.warn(`[CRON] Chat not found (404)`, { userId: u.user_id, channel: primaryChannel });
+            actionTaken = true;
           } else {
             stats.failed++;
             const ch = sendResult.channel || primaryChannel;
@@ -288,7 +267,7 @@ export async function handleCronJobs(event, context) {
 
             log.error(`[REMINDER] Failed`, {
               userId: u.user_id,
-              error: sendResult.error,
+              error: errorMsg,
               code: sendResult.errorCode,
               channel: ch,
             });
@@ -298,7 +277,6 @@ export async function handleCronJobs(event, context) {
       }
       // === B. ДОЖИМЫ ===
       else if (shouldSendDozhim(u)) {
-        // ОПТИМИЗАЦИЯ: Убрали лишний запрос `checkTripwirePurchase` — используем u.bought_tripwire
         const isTripwireDozhim =
           u.state.includes("Tripwire") ||
           u.state === "FAQ_PRO" ||
@@ -323,17 +301,15 @@ export async function handleCronJobs(event, context) {
               channel: ch,
             });
           } else {
-            if (sendResult.errorCode === 403) {
+             const errorMsg = typeof sendResult.error === 'object' ? JSON.stringify(sendResult.error) : sendResult.error;
+             if (errorMsg === "Web channel has no push notifications" || sendResult.channel === "web") {
+                 skippedUserIds.push(u.id);
+                 stats.skipped++;
+             } else if (sendResult.errorCode === 403 || sendResult.errorCode === 404) {
               u.session.is_banned = true;
               u.session.banned_at = Date.now();
-              u.session.ban_reason = sendResult.error || "Bot blocked";
-              actionTaken = true; // сохраняем бан
-              stats.skipped++;
-            } else if (sendResult.errorCode === 404) {
-              u.session.is_banned = true;
-              u.session.banned_at = Date.now();
-              u.session.ban_reason = sendResult.error || "Chat not found (account deleted)";
-              actionTaken = true; // сохраняем бан
+              u.session.ban_reason = errorMsg || "Bot blocked/deleted";
+              actionTaken = true;
               stats.skipped++;
             } else {
               stats.failed++;
@@ -365,23 +341,17 @@ export async function handleCronJobs(event, context) {
                 const ch = sendResult.channel || primaryChannel;
                 if (stats.byChannel[ch]) stats.byChannel[ch].sent++;
 
-                log.info(`[DOZHIM] Sent`, {
-                  userId: u.user_id,
-                  nextStep: next,
-                  channel: ch,
-                });
               } else {
-                if (sendResult.errorCode === 403) {
+                const errorMsg = typeof sendResult.error === 'object' ? JSON.stringify(sendResult.error) : sendResult.error;
+                
+                if (errorMsg === "Web channel has no push notifications" || sendResult.channel === "web") {
+                    skippedUserIds.push(u.id);
+                    stats.skipped++;
+                } else if (sendResult.errorCode === 403 || sendResult.errorCode === 404) {
                   u.session.is_banned = true;
                   u.session.banned_at = Date.now();
-                  u.session.ban_reason = sendResult.error || "Bot blocked";
-                  actionTaken = true; // сохраняем бан
-                  stats.skipped++;
-                } else if (sendResult.errorCode === 404) {
-                  u.session.is_banned = true;
-                  u.session.banned_at = Date.now();
-                  u.session.ban_reason = sendResult.error || "Chat not found (account deleted)";
-                  actionTaken = true; // сохраняем бан
+                  u.session.ban_reason = errorMsg || "Bot blocked/deleted";
+                  actionTaken = true;
                   stats.skipped++;
                 } else {
                   stats.failed++;
@@ -401,9 +371,7 @@ export async function handleCronJobs(event, context) {
         stats.skipped++;
       }
 
-      // === ОПТИМИЗАЦИЯ: Сохраняем ТОЛЬКО если было действие ===
       if (actionTaken) {
-        // Сохраняем реальное время последнего действия юзера
         if (!u.session.last_activity) {
           u.session.last_activity = u.last_seen;
         }
@@ -413,16 +381,14 @@ export async function handleCronJobs(event, context) {
 
       await new Promise((res) => setTimeout(res, CRON_USER_PAUSE_MS));
     } catch (e) {
-      log.error(`[CRON ERROR User ${u.user_id}]`, e, { state: u.state });
+      log.error(`[CRON ERROR User ${u.user_id}]`, e.message || String(e), { state: u.state });
       skippedUserIds.push(u.id);
       stats.failed++;
     }
   }
 
-  // ОПТИМИЗАЦИЯ: Батчевое обновление "застрявших" юзеров (1 запрос к БД вместо 50)
   if (skippedUserIds.length > 0) {
     await ydb.batchUpdateLastSeen(skippedUserIds);
-    log.info(`[CRON] Batch updated last_seen for ${skippedUserIds.length} users`);
   }
 
   log.info(`[CRON] ========== ИТОГИ CRON ==========`);
