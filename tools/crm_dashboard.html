@@ -670,13 +670,11 @@
         });
 
       document.getElementById("exportBtn").addEventListener("click", async () => {
-          const botToken = new URLSearchParams(window.location.search).get("bot_token");
-
           try {
             const res = await fetch(`${API_HOST}/?action=export_csv`, {
               method: "POST",
               headers: getAuthHeaders(),
-              body: JSON.stringify({ bot_token: botToken }),
+              body: JSON.stringify({ bot_token: botToken || "" }),
             });
             const blob = await res.blob();
             const url = window.URL.createObjectURL(blob);
