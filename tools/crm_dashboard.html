@@ -308,7 +308,6 @@
 
       async function loadData() {
         if (!API_HOST) return showError("Не настроен BACKEND_URL в HTML файле!");
-        if (!botToken) return showError("Нет токена бота.");
         if (!tg.initData && !jwtToken) return showError("Нет данных для авторизации.");
 
         const maxRetries = 3;
@@ -319,7 +318,7 @@
             const res = await fetch(`${API_HOST}/?action=get_crm_data`, {
               method: "POST",
               headers: getAuthHeaders(),
-              body: JSON.stringify({ bot_token: botToken }),
+              body: JSON.stringify({ bot_token: botToken || "" }),
             });
 
             if (!res.ok) throw new Error(await res.text() || `HTTP ${res.status}`);
@@ -609,7 +608,7 @@
           btn.disabled = true;
 
           let requestPayload = {
-            bot_token: new URLSearchParams(window.location.search).get("bot_token"),
+            bot_token: botToken || "",
             message: msg,
           };
 
