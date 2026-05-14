@@ -806,7 +806,7 @@ export const telegramButtons = {
     if (isPro) {
       const webAppUrl =
         process.env.CRM_WEB_APP_URL ||
-        "https://novokreschennih.github.io/crm-dashboard/";
+        "https://sethubble.ru/crm/";
 
       // Генерируем JWT токен
       const jwtToken = generateToken(
@@ -1662,7 +1662,7 @@ export const telegramButtons = {
     // Подтягиваем ссылку на демо (если нет в env, берем дефолтную)
     const crmDemoUrl =
       process.env.CRM_DEMO_URL ||
-      "https://novokreschennih.github.io/crm-dashboard/crm_demo.html";
+      "https://sethubble.ru/crm/demo/";
 
     return [
       [

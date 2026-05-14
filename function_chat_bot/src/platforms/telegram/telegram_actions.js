@@ -339,7 +339,7 @@ export function registerTelegramActions(bot, ctx) {
     if (isPro) {
       const crmUrl =
         process.env.CRM_WEB_APP_URL ||
-        "https://novokreschennih.github.io/crm-dashboard/";
+        "https://sethubble.ru/crm/";
 
       // Генерируем JWT токен для CRM
       const jwtToken = generateToken(

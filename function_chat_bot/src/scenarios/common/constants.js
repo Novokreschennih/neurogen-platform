@@ -42,7 +42,7 @@ export const PROMO_KIT_URL =
 
 export const CRM_DEMO_URL =
   process.env.CRM_DEMO_URL ||
-  "https://novokreschennih.github.io/crm-dashboard/crm_demo.html";
+  "https://sethubble.ru/crm/demo/";
 
 /**
  * Прогресс-бар в стиле [████████░░] 80%
