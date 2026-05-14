@@ -571,8 +571,10 @@ export async function handleWebChat(event, context) {
       // 3.2. СЕКРЕТНЫЕ СЛОВА (ПРИОРИТЕТ!)
       if (SECRETS_CONFIG[webUser.state]) {
         const config = SECRETS_CONFIG[webUser.state];
+        const normalizedInput = txt.toLowerCase().trim();
 
-        if (txt.toLowerCase() === config.word.toLowerCase()) {
+        if (normalizedInput === config.word.toLowerCase()) {
+          // --- ЛОГИКА УСПЕХА ---
           if (!webUser.session.xp_awarded) webUser.session.xp_awarded = {};
           if (!webUser.session.xp_awarded[config.awardKey]) {
             webUser.session.xp = (webUser.session.xp || 0) + config.xp;
@@ -583,9 +585,18 @@ export async function handleWebChat(event, context) {
 
           webUser.state = getNextStateAfterSecret(webUser.state, "web");
           await ydb.saveUser(webUser);
-          return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ answer: `✅ <b>КОД ПРИНЯТ!</b>\n\n🪙 +${config.xp} NeuroCoins!`, loadNextStep: true }) };
+          
+          return { 
+            statusCode: 200, 
+            headers: corsHeaders, 
+            body: JSON.stringify({ 
+              answer: `✅ <b>КОД ПРИНЯТ!</b>\n\n🪙 Тебе начислено +${config.xp} NeuroCoins!`, 
+              loadNextStep: true 
+            }) 
+          };
 
         } else {
+          // --- ЛОГИКА ОШИБКИ ---
           if (!webUser.session.secret_attempts) webUser.session.secret_attempts = {};
           webUser.session.secret_attempts[webUser.state] = (webUser.session.secret_attempts[webUser.state] || 0) + 1;
 
@@ -604,13 +615,15 @@ export async function handleWebChat(event, context) {
               statusCode: 200,
               headers: corsHeaders,
               body: JSON.stringify({ 
-                answer: `${errorMsg}\n\n⚠️ <i>Система принудительно пропустила модуль, так как лимит попыток исчерпан. Монеты не начислены.</i>`, 
+                answer: `${errorMsg}\n\n⚠️ <i>Лимит попыток исчерпан. Модуль пропущен без начисления монет.</i>`, 
                 loadNextStep: true 
               })
             };
           }
 
           await ydb.saveUser(webUser);
+          
+          // КРИТИЧЕСКИ ВАЖНЫЙ RETURN: возвращаем текст ошибки вместо того чтобы идти к ИИ
           return {
             statusCode: 200,
             headers: corsHeaders,
