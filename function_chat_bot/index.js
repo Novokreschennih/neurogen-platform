@@ -388,7 +388,7 @@ const getHeader = (headers, key) => {
  * @returns {object|null} - { tgData, botToken, botInfo } или null при ошибке
  */
 async function authorizeCrmRequest(headers, eventBody, isBase64Encoded) {
-  // 1. Парсим тело запроса (нужно для bot_token в любом случае)
+  // 1. Парсим тело запроса
   let bodyStr = eventBody || "";
   if (isBase64Encoded)
     bodyStr = Buffer.from(eventBody, "base64").toString("utf8");
@@ -409,16 +409,7 @@ async function authorizeCrmRequest(headers, eventBody, isBase64Encoded) {
     };
   }
 
-  const botToken = data.bot_token;
-  if (!botToken) {
-    return {
-      error: {
-        statusCode: 400,
-        headers: corsHeaders,
-        body: JSON.stringify({ error: "bot_token required" }),
-      },
-    };
-  }
+  let botToken = data.bot_token;
 
   // 2. Ищем JWT токен в заголовке Authorization
   const authHeader = getHeader(headers, "authorization");
@@ -429,8 +420,17 @@ async function authorizeCrmRequest(headers, eventBody, isBase64Encoded) {
     try {
       const decoded = verifyToken(token);
       if (decoded && decoded.uid) {
-        tgData = { user: { id: decoded.uid, first_name: decoded.first_name } };
-        console.log("[AUTH JWT] Decoded user:", decoded.uid);
+        tgData = { user: { id: String(decoded.uid), first_name: decoded.first_name } };
+
+        // ВОССТАНАВЛИВАЕМ ТОКЕН ИЗ БАЗЫ: Если зашли из веба без bot_token
+        if (!botToken) {
+          const user = await ydb.getUser(String(decoded.uid));
+          if (user && user.bot_token && user.bot_token !== "VK_CENTRAL_GROUP") {
+            botToken = user.bot_token;
+          } else {
+            botToken = MAIN_TOKEN; // Fallback на системного бота
+          }
+        }
       }
     } catch (e) {
       console.warn("[AUTH JWT ERROR]", e.message);
@@ -439,74 +439,48 @@ async function authorizeCrmRequest(headers, eventBody, isBase64Encoded) {
 
   // 3. Если JWT не работает — пробуем Telegram initData
   if (!tgData) {
+    if (!botToken) {
+      return {
+        error: {
+          statusCode: 400,
+          headers: corsHeaders,
+          body: JSON.stringify({ error: "bot_token required for WebApp auth" }),
+        },
+      };
+    }
     const initData = getHeader(headers, "x-telegram-initdata");
     if (!initData) {
-      console.error(
-        "[AUTH FAIL] Missing auth. Headers:",
-        JSON.stringify(headers),
-      );
+      console.error("[AUTH FAIL] Missing auth. Headers:", JSON.stringify(headers));
       return {
         error: {
           statusCode: 401,
           headers: corsHeaders,
-          body: JSON.stringify({
-            error: "Telegram authorization required (Header missing)",
-          }),
+          body: JSON.stringify({ error: "Telegram authorization required (Header missing)" }),
         },
       };
     }
-
     // Валидируем подпись Telegram
     tgData = ydb.validateTelegramInitData(initData, botToken);
   }
 
-  if (!tgData) {
-    console.error("[AUTH FAIL] Signature mismatch", {
-      botToken,
-      initDataShort: initData.substring(0, 20),
-    });
+  if (!tgData || !tgData.user) {
     return {
       error: {
         statusCode: 403,
         headers: corsHeaders,
-        body: JSON.stringify({
-          error: "Invalid Telegram authorization (Signature mismatch)",
-        }),
+        body: JSON.stringify({ error: "Invalid authorization or signature mismatch" }),
       },
     };
   }
 
-  if (!tgData.user) {
-    return {
-      error: {
-        statusCode: 403,
-        headers: corsHeaders,
-        body: JSON.stringify({ error: "No user data in initData" }),
-      },
-    };
-  }
-
-  // 3. Получаем инфо о боте из БД
-  let botInfo = await ydb.getBotInfo(botToken);
-
-  // Заранее проверяем, является ли юзер Главным Админом
+  // 4. Получаем инфо о боте из БД
+  let botInfo = botToken ? await ydb.getBotInfo(botToken) : null;
   const isGlobalAdmin = ydb.isAdmin(tgData.user.id);
 
-  // Выводим в лог для отладки
-  log.info(
-    `[AUTH DEBUG] User ID: ${tgData.user.id}, isGlobalAdmin: ${isGlobalAdmin}, botToken matches: ${botToken === MAIN_TOKEN?.trim()}`,
-  );
-
   if (!botInfo) {
-    // === ПУЛЕНЕПРОБИВАЕМЫЙ ПРОПУСК ДЛЯ АДМИНА ===
-    // Пускаем, если это Глобальный Админ ИЛИ если токен совпадает (с очисткой от случайных пробелов)
     if (isGlobalAdmin || botToken === MAIN_TOKEN?.trim()) {
       botInfo = { owner_id: String(tgData.user.id) };
-      log.info("[CRM AUTH] Admin bypassed bot DB check");
     } else {
-      console.error("[AUTH FAIL] Bot not found in DB", {
-        botToken: botToken.substring(0, 15) + "...",
-      });
       return {
         error: {
           statusCode: 404,
@@ -517,41 +491,27 @@ async function authorizeCrmRequest(headers, eventBody, isBase64Encoded) {
     }
   }
 
-  // 4. Проверка прав
-  const isBotOwner = botInfo.owner_id === String(tgData.user.id);
-
-  // Если не глобальный админ — проверяем, что владелец бота купил PRO
+  // 5. Проверка прав и PRO-статуса
   if (!isGlobalAdmin) {
+    const isBotOwner = botInfo.owner_id === String(tgData.user.id);
     if (!isBotOwner) {
-      console.error("[AUTH FAIL] Access denied", {
-        userId: tgData.user.id,
-        ownerId: botInfo.owner_id,
-      });
       return {
         error: {
           statusCode: 403,
           headers: corsHeaders,
-          body: JSON.stringify({
-            error: "Access denied: You are not the owner of this bot",
-          }),
+          body: JSON.stringify({ error: "Access denied: You are not the owner of this bot" }),
         },
       };
     }
 
-    // Проверяем PRO-статус владельца бота
-    const ownerUser = await ydb.findUser({ tg_id: Number(tgData.user.id) });
+    // ИСПРАВЛЕНИЕ: Используем универсальный getUser (поддерживает UUID)
+    const ownerUser = await ydb.getUser(String(tgData.user.id));
     if (!ownerUser || !ownerUser.bought_tripwire) {
-      console.error("[AUTH FAIL] PRO required", {
-        userId: tgData.user.id,
-        hasPro: ownerUser?.bought_tripwire || false,
-      });
       return {
         error: {
           statusCode: 403,
           headers: corsHeaders,
-          body: JSON.stringify({
-            error: "Access denied: PRO status required for bot owners",
-          }),
+          body: JSON.stringify({ error: "Access denied: PRO status required for CRM" }),
         },
       };
     }
