@@ -2,7 +2,12 @@
  * UX Helpers — прогресс, loop detection, channel summary
  */
 
-import { getProgressBar } from "../scenarios/common/constants.js";
+import { 
+  getProgressBar, 
+  SECRET_MAX_ATTEMPTS_BEFORE_HINT, 
+  SECRET_MAX_ATTEMPTS_BEFORE_SKIP, 
+  SECRET_HINTS 
+} from "../scenarios/common/constants.js";
 
 /**
  * Прогресс-бар обучения
