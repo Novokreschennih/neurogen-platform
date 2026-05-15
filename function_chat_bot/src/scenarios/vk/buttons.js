@@ -1547,7 +1547,12 @@ export const vkButtons = {
   ],
 
   // === EDIT_PROFILE ===
-  EDIT_PROFILE: [[{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback: "MAIN_MENU" }]],
+  EDIT_PROFILE: [
+    [{ text: "✏️ Изменить Имя", callback: "EDIT_NAME" }],
+    [{ text: "✏️ Изменить SetHubble ID", callback: "FORCE_REG_UPDATE" }],
+    [{ text: "✏️ Изменить Хвост Ссылки", callback: "EDIT_TAIL" }],
+    [{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback: "MAIN_MENU" }]
+  ],
 
   // === CHESTS_INVENTORY ===
   CHESTS_INVENTORY: (links, user) => {

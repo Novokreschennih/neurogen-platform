@@ -56,7 +56,7 @@ export function getLinks(
       custom_pay_link ||
       `https://${PAYMENT_DOMAIN}/${PRODUCT_ID_PRO}&afid=${partnerId}`,
     reseller: resellerUrl,
-    rocket: regUrl,
+    rocket: user ? `https://sethubble.com/ru/${user.partner_id || "p_qdr"}` : regUrl,
     support: SUPPORT_CHAT_URL,
     pro_disk:
       process.env.DISK_LINK || "https://disk.yandex.ru/d/auId7HugR0sdzA",

@@ -150,6 +150,36 @@ export async function handleWebChat(event, context) {
           };
         }
         
+        if (targetCallback === "EDIT_NAME") {
+          webUser.state = "WAIT_EDIT_NAME";
+          await ydb.saveUser(webUser);
+          return {
+            statusCode: 200,
+            headers: corsHeaders,
+            body: JSON.stringify({
+              success: true,
+              stepKey: webUser.state,
+              text: "✍️ <b>Смена имени</b>\n\nПришли новое имя:",
+              buttons: [[{ text: "🔙 ОТМЕНА", callback_data: "EDIT_PROFILE" }]],
+            }),
+          };
+        }
+        
+        if (targetCallback === "EDIT_TAIL") {
+          webUser.state = "WAIT_EDIT_TAIL";
+          await ydb.saveUser(webUser);
+          return {
+            statusCode: 200,
+            headers: corsHeaders,
+            body: JSON.stringify({
+              success: true,
+              stepKey: webUser.state,
+              text: "✍️ <b>Смена реферального хвоста</b>\n\nПришли новую ссылку или хвост:",
+              buttons: [[{ text: "🔙 ОТМЕНА", callback_data: "EDIT_PROFILE" }]],
+            }),
+          };
+        }
+        
         if (targetCallback === "GO_TO_MODULE_2") {
           targetCallback = "Module_2_Online";
           needsSave = true;
@@ -498,6 +528,23 @@ export async function handleWebChat(event, context) {
               "✅ Принято! Теперь пришли свою <b>Ссылку для приглашений</b> полностью (например: https://sethubble.com/ru/p_xyt):",
           }),
         };
+      }
+
+      // Смена Имени
+      if (u.state === "WAIT_EDIT_NAME") {
+        u.first_name = txt;
+        u.state = "EDIT_PROFILE";
+        if (needsSave) await ydb.saveUser(u);
+        return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ answer: "✅ Имя успешно обновлено!", loadNextStep: true }) };
+      }
+      // Смена Хвоста
+      if (u.state === "WAIT_EDIT_TAIL") {
+        let tail = txt;
+        if (tail.includes("sethubble.com")) tail = tail.split("?")[0].replace(/\/$/, "").split("/").pop();
+        u.sh_ref_tail = tail;
+        u.state = "EDIT_PROFILE";
+        if (needsSave) await ydb.saveUser(u);
+        return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ answer: "✅ Реферальный хвост обновлен!", loadNextStep: true }) };
       }
 
       // --- Б. Состояние ожидания Ссылки + Верификация (ВОПРОСЫ) ---

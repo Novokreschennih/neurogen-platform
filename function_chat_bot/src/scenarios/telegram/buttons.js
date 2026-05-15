@@ -1704,7 +1704,12 @@ export const telegramButtons = {
   ],
 
   // === EDIT_PROFILE ===
-  EDIT_PROFILE: [[{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }]],
+  EDIT_PROFILE: [
+    [{ text: "✏️ Изменить Имя", callback_data: "EDIT_NAME" }],
+    [{ text: "✏️ Изменить SetHubble ID", callback_data: "FORCE_REG_UPDATE" }],
+    [{ text: "✏️ Изменить Хвост Ссылки", callback_data: "EDIT_TAIL" }],
+    [{ text: "🏠 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }]
+  ],
 
   // === CHESTS_INVENTORY ===
   CHESTS_INVENTORY: (links, user) => {
