@@ -38,11 +38,11 @@ export const ROCKET_PRICE = process.env.ROCKET_PRICE || "85";
 export const SHUTTLE_PRICE = process.env.SHUTTLE_PRICE || "350";
 
 export const PROMO_KIT_URL =
-  process.env.PROMO_KIT_URL || "https://sethubble.ru/promo-kit/";
+  process.env.PROMO_KIT_URL || "https://neuro-gen.ru/promo-kit/";
 
 export const CRM_DEMO_URL =
   process.env.CRM_DEMO_URL ||
-  "https://sethubble.ru/crm/demo/";
+  "https://neuro-gen.ru/crm/demo/";
 
 /**
  * Прогресс-бар в стиле [████████░░] 80%

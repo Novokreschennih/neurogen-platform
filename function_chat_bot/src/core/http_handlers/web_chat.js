@@ -232,7 +232,7 @@ export async function handleWebChat(event, context) {
              needsSave = true;
           } else {
             const apiGw = process.env.API_GW_HOST || "d5dsbah1d4ju0glmp9d0.3zvepvee.apigw.yandexcloud.net";
-            const promoKitUrl = `https://sethubble.ru/promo-kit/?token=${webAppToken}&api=https://${apiGw}`;
+            const promoKitUrl = `https://neuro-gen.ru/promo-kit/?token=${webAppToken}&api=https://${apiGw}`;
             return {
               statusCode: 200,
               headers: corsHeaders,
@@ -407,7 +407,7 @@ export async function handleWebChat(event, context) {
     // ============================================================
     if (payload.action === "generate-post") {
       const topic = payload.topic || "предприниматели";
-      const refLink = payload.link || "https://sethubble.ru";
+      const refLink = payload.link || "https://neuro-gen.ru";
       
       const genLimit = webUser.bought_tripwire ? 30 : 5;
       const today = new Date().toISOString().split("T")[0];
@@ -471,7 +471,7 @@ export async function handleWebChat(event, context) {
           headers: {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${apiKey}`,
-            "HTTP-Referer": "https://sethubble.ru"
+            "HTTP-Referer": "https://neuro-gen.ru"
           },
           body: JSON.stringify({
             model: "deepseek/deepseek-v4-flash", 

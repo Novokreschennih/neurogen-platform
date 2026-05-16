@@ -569,7 +569,7 @@ export const texts = {
     const botUsername = user.session?.bot_username || info?.bot_username || "sethubble_biz_bot";
     const trafficLink =
       links?.join ||
-      `https://sethubble.ru/join/?page=${user.sh_ref_tail || user.partner_id || "p_qdr"}`;
+      `https://neuro-gen.ru/?page=${user.sh_ref_tail || user.partner_id || "p_qdr"}`;
 
     if (user.session?.bot_username) {
       return (

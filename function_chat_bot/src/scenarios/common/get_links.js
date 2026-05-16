@@ -43,7 +43,7 @@ export function getLinks(
     ? `https://vk.me/club${vkGroupId}?ref=${startPayload}`
     : `https://vk.me/club${vkGroupId}`;
 
-  const joinUrl = `https://sethubble.ru/join/?page=${sh_ref_tail || startPayload}`;
+  const joinUrl = `https://neuro-gen.ru/?page=${sh_ref_tail || startPayload}`;
 
   return {
     reg: regUrl,

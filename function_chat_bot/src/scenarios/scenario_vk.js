@@ -45,7 +45,7 @@ const vkTextOverrides = {
   // === MY_AI_BOT ===
   MY_AI_BOT: (links, user) => {
     const directLink = links.vk_bot || "https://vk.me/club";
-    const trafficLink = links?.join || `https://sethubble.ru/join/?page=${user.sh_ref_tail || user.partner_id || "p_qdr"}`;
+    const trafficLink = links?.join || `https://neuro-gen.ru/?page=${user.sh_ref_tail || user.partner_id || "p_qdr"}`;
     return (
       `🤖 <b>ТВОЙ ИИ-ПОМОЩНИК УЖЕ В СТРОЮ!</b>\n\n` +
       `✅ <b>Статус:</b> Активен на базе центрального сервера ВКонтакте\n` +

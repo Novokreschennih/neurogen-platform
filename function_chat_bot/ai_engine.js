@@ -748,7 +748,7 @@ ${historyContext}
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://sethubble.ru",
+        "HTTP-Referer": "https://neuro-gen.ru",
         "X-Title": "NeuroGen AI", // Помогает избежать блокировок провайдером
       },
       body: JSON.stringify({

@@ -133,8 +133,8 @@ export async function handlePartnerApi(event, context) {
       }
 
       // v7.2: Landing page is the primary share link (higher conversion)
-      const joinLink = `https://sethubble.ru/join/?page=${partnerTail}`;
-      const b2bRefLink = `https://sethubble.ru/join/?page=${partnerTail}&role=b2b`;
+      const joinLink = `https://neuro-gen.ru/?page=${partnerTail}`;
+      const b2bRefLink = `https://neuro-gen.ru/?page=${partnerTail}&role=b2b`;
       const botDirectLink = `https://t.me/${botUsername}`;
 
       const referrals = await ydb.getUserReferrals(telegramId);

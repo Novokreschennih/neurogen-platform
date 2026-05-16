@@ -306,13 +306,13 @@ function getName(user) {
 }
 
 /**
- * Генерирует ссылку на продающий лендинг /join/ с реферальной атрибуцией.
- * Все каналы теперь ведут на единую точку входа для максимальной конверсии и захвата email.
- */
+ * Генерирует ссылку на продающий лендинг с реферальной атрибуцией.
+  * Все каналы теперь ведут на единую точку входа для максимальной конверсии и захвата email.
+  */
 function generateChannelLinks(user) {
   const ref = getRef(user);
   // ✅ ЕДИНАЯ ССЫЛКА НА ЛЕНДИНГ
-  const joinUrl = `https://sethubble.ru/join/?page=${ref}`;
+  const joinUrl = `https://neuro-gen.ru/?page=${ref}`;
 
   return {
     text: `🔗 Перейти к настройке: ${joinUrl}`,
@@ -334,11 +334,11 @@ function generateChannelLinks(user) {
 }
 
 /**
- * Мягкое предложение подключить дополнительные каналы (теперь ведет на /join/)
- */
+ * Мягкое предложение подключить дополнительные каналы
+  */
 function generateChannelSuggestions(user) {
   const ref = getRef(user);
-  const joinUrl = `https://sethubble.ru/join/?page=${ref}`;
+  const joinUrl = `https://neuro-gen.ru/?page=${ref}`;
   
   return {
     text: `\n💡 Хотите подключить другие каналы (VK, Email, Web)? Перейдите: ${joinUrl}`,
@@ -361,7 +361,7 @@ export const templates = {
    */
   emailVerification(user, code) {
     const name = getName(user);
-    const verifyUrl = `https://sethubble.ru/verify/?email=${encodeURIComponent(user.email)}&code=${encodeURIComponent(code)}`;
+    const verifyUrl = `https://neuro-gen.ru/verify/?email=${encodeURIComponent(user.email)}&code=${encodeURIComponent(code)}`;
 
     return {
       subject: "Подтвердите ваш email — NeuroGen",
