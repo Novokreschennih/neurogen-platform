@@ -21,6 +21,7 @@ CREATE TABLE users (
     vk_id Uint64,                   -- ⚡ VK ID (только цифры)
     web_id Utf8,                    -- ⚡ Web session ID (cookie с лендинга)
     partner_id Utf8,                -- Реферальный хвост
+    partner_afid Utf8,              -- Цифровой ID партнёра (afid)
     state Utf8,                     -- Текущий шаг воронки
     bought_tripwire Bool,           -- Куплен ли Tripwire/PRO
     session Json,                   -- JSON: dialog_history, tags, channel_states, XP

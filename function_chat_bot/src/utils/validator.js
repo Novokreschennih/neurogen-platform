@@ -133,11 +133,19 @@ export function validateStartPayload(raw) {
   }
 
   const partnerId = validatePartnerId(parts[0]);
-  if (!partnerId) return null; // Безопасность: XSS-инъекции не проходят
+  if (!partnerId) return null;
   const result = { partnerId };
 
   if (parts[1]) {
-    const content = parts[1];
+    let content = parts[1];
+
+    // Extract afid if present (format: ...|a1123)
+    if (content.includes("|a")) {
+      const afidIdx = content.indexOf("|a");
+      const afidVal = content.substring(afidIdx + 2);
+      if (/^\d{1,10}$/.test(afidVal)) result.partnerAfid = afidVal;
+      content = content.substring(0, afidIdx);
+    }
 
     // ВАЖНО: сначала проверяем явные префиксы, потом regex/догадки!
     // Порядок: web: > web_ > w > e > base64-угадайка > fallback
@@ -180,6 +188,10 @@ export function validateStartPayload(raw) {
     // Fallback: long content without known prefix → сохраняем как webId
     else if (content.length > 15) {
       result.webId = content;
+    }
+    // Format: partnerId|aAFID (pipe separator, afid only)
+    else if (content.startsWith("a") && /^\d{1,10}$/.test(content.substring(1))) {
+      result.partnerAfid = content.substring(1);
     }
   }
 

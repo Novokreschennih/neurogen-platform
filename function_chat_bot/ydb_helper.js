@@ -76,7 +76,7 @@ export async function init() {
 
 // === v6.0: Омниканальная схема ===
 const USER_FIELDS =
-  "id, email, tg_id, vk_id, web_id, partner_id, state, bought_tripwire, session, last_seen, saved_state, bot_token, tariff, sh_user_id, sh_ref_tail, purchases, first_name, last_reminder_time, reminders_count, pin_code, session_version, ai_active_until, created_at, custom_api_key, custom_prompt, ai_model, ai_provider, user_daily_limit";
+  "id, email, tg_id, vk_id, web_id, partner_id, partner_afid, state, bought_tripwire, session, last_seen, saved_state, bot_token, tariff, sh_user_id, sh_ref_tail, purchases, first_name, last_reminder_time, reminders_count, pin_code, session_version, ai_active_until, created_at, custom_api_key, custom_prompt, ai_model, ai_provider, user_daily_limit";
 
 function mapUser(row) {
   if (!row) return null;
@@ -84,12 +84,12 @@ function mapUser(row) {
   let p = [];
 
   try {
-    const j = row.items[8]?.jsonValue || row.items[8]?.textValue;
+    const j = row.items[9]?.jsonValue || row.items[9]?.textValue;
     if (j && j !== "null") {
       s = JSON.parse(j);
       if (!s.dialog_history) s.dialog_history = [];
     }
-    const pj = row.items[15]?.jsonValue || row.items[15]?.textValue;
+    const pj = row.items[16]?.jsonValue || row.items[16]?.textValue;
     if (pj && pj !== "null") p = JSON.parse(pj);
   } catch (e) {
     log.error("Error parsing user JSON fields", e.message || String(e));
@@ -98,7 +98,6 @@ function mapUser(row) {
   return {
     id: row.items[0]?.textValue || "",
     email: row.items[1]?.textValue || "",
-    // Безопасное извлечение как Int64
     tg_id: row.items[2]?.uint64Value
       ? Number(row.items[2].uint64Value)
       : row.items[2]?.int64Value
@@ -111,41 +110,42 @@ function mapUser(row) {
         : null,
     web_id: row.items[4]?.textValue || "",
     partner_id: row.items[5]?.textValue || "p_qdr",
-    state: row.items[6]?.textValue || "START",
-    bought_tripwire: row.items[7]?.boolValue || false,
+    partner_afid: row.items[6]?.textValue || "",
+    state: row.items[7]?.textValue || "START",
+    bought_tripwire: row.items[8]?.boolValue || false,
     session: s,
-    last_seen: row.items[9]?.uint64Value
-      ? Number(row.items[9].uint64Value)
+    last_seen: row.items[10]?.uint64Value
+      ? Number(row.items[10].uint64Value)
       : null,
-    saved_state: row.items[10]?.textValue || "",
-    bot_token: row.items[11]?.textValue || "",
-    tariff: row.items[12]?.textValue || "",
-    sh_user_id: row.items[13]?.textValue || "",
-    sh_ref_tail: row.items[14]?.textValue || "",
+    saved_state: row.items[11]?.textValue || "",
+    bot_token: row.items[12]?.textValue || "",
+    tariff: row.items[13]?.textValue || "",
+    sh_user_id: row.items[14]?.textValue || "",
+    sh_ref_tail: row.items[15]?.textValue || "",
     purchases: Array.isArray(p) ? p : [],
-    first_name: row.items[16]?.textValue || "",
-    last_reminder_time: row.items[17]?.uint64Value
-      ? Number(row.items[17].uint64Value)
-      : null,
-    reminders_count: row.items[18]?.uint64Value
+    first_name: row.items[17]?.textValue || "",
+    last_reminder_time: row.items[18]?.uint64Value
       ? Number(row.items[18].uint64Value)
+      : null,
+    reminders_count: row.items[19]?.uint64Value
+      ? Number(row.items[19].uint64Value)
       : 0,
-    pin_code: row.items[19]?.textValue || "",
-    session_version: row.items[20]?.uint64Value
-      ? Number(row.items[20].uint64Value)
-      : 0,
-    ai_active_until: row.items[21]?.uint64Value
+    pin_code: row.items[20]?.textValue || "",
+    session_version: row.items[21]?.uint64Value
       ? Number(row.items[21].uint64Value)
       : 0,
-    created_at: row.items[22]?.uint64Value
+    ai_active_until: row.items[22]?.uint64Value
       ? Number(row.items[22].uint64Value)
+      : 0,
+    created_at: row.items[23]?.uint64Value
+      ? Number(row.items[23].uint64Value)
       : null,
-    custom_api_key: row.items[23]?.textValue || "",
-    custom_prompt: row.items[24]?.textValue || "",
-    ai_model: row.items[25]?.textValue || "",
-    ai_provider: row.items[26]?.textValue || "",
-    user_daily_limit: row.items[27]?.uint64Value
-      ? Number(row.items[27].uint64Value)
+    custom_api_key: row.items[24]?.textValue || "",
+    custom_prompt: row.items[25]?.textValue || "",
+    ai_model: row.items[26]?.textValue || "",
+    ai_provider: row.items[27]?.textValue || "",
+    user_daily_limit: row.items[28]?.uint64Value
+      ? Number(row.items[28].uint64Value)
       : 0,
 
     // Обратная совместимость для старого кода (CRM, рассылки)
@@ -388,6 +388,7 @@ export async function saveUser(user) {
           $vk_id: TypedValues.uint64(String(user.vk_id || "0")),
           $web_id: TypedValues.utf8(String(user.web_id || "")),
           $pid: TypedValues.utf8(String(user.partner_id || "p_qdr")),
+          $pafid: TypedValues.utf8(String(user.partner_afid || "")),
           $st: TypedValues.utf8(String(user.state || "START")),
           $br: TypedValues.bool(Boolean(user.bought_tripwire)),
           $js: TypedValues.json(JSON.stringify(user.session || { tags: [] })),
@@ -415,7 +416,7 @@ export async function saveUser(user) {
         const query = `
           DECLARE $id AS Utf8; DECLARE $email AS Utf8;
           DECLARE $tg_id AS Uint64; DECLARE $vk_id AS Uint64; DECLARE $web_id AS Utf8;
-          DECLARE $pid AS Utf8; DECLARE $st AS Utf8; DECLARE $br AS Bool;
+          DECLARE $pid AS Utf8; DECLARE $pafid AS Utf8; DECLARE $st AS Utf8; DECLARE $br AS Bool;
           DECLARE $js AS Json; DECLARE $ls AS Uint64; DECLARE $sv AS Utf8; DECLARE $bt AS Utf8;
           DECLARE $tr AS Utf8; DECLARE $shui AS Utf8; DECLARE $shrt AS Utf8; DECLARE $pur AS Json;
           DECLARE $fn AS Utf8; DECLARE $lrt AS Uint64; DECLARE $rc AS Uint64; DECLARE $pc AS Utf8;
@@ -424,13 +425,13 @@ export async function saveUser(user) {
 
           UPSERT INTO users (
             id, email, tg_id, vk_id, web_id,
-            partner_id, state, bought_tripwire, session,
+            partner_id, partner_afid, state, bought_tripwire, session,
             last_seen, saved_state, bot_token, tariff, sh_user_id, sh_ref_tail, purchases,
             first_name, last_reminder_time, reminders_count, pin_code, session_version, ai_active_until, created_at,
             custom_api_key, custom_prompt, ai_model, ai_provider, user_daily_limit
           ) VALUES (
             $id, $email, $tg_id, $vk_id, $web_id,
-            $pid, $st, $br, $js, $ls, $sv, $bt, $tr, $shui, $shrt, $pur, $fn, $lrt, $rc, $pc, $newVer, $aiUntil, $cat,
+            $pid, $pafid, $st, $br, $js, $ls, $sv, $bt, $tr, $shui, $shrt, $pur, $fn, $lrt, $rc, $pc, $newVer, $aiUntil, $cat,
             $cak, $cp, $aim, $aip, $udl
           );
         `;
@@ -536,6 +537,10 @@ export async function partialUpdateUser(userId, fields, expectedVersion) {
         setClauses.push("partner_id = $pid");
         params.$pid = TypedValues.utf8(String(fields.partner_id));
       }
+      if (fields.partner_afid !== undefined) {
+        setClauses.push("partner_afid = $pafid");
+        params.$pafid = TypedValues.utf8(String(fields.partner_afid));
+      }
       if (fields.first_name !== undefined) {
         setClauses.push("first_name = $fn");
         params.$fn = TypedValues.utf8(String(fields.first_name));
@@ -602,6 +607,7 @@ export async function mergeUsers(
         $vk_id: TypedValues.uint64(String(surviving.vk_id || "0")),
         $web_id: TypedValues.utf8(String(surviving.web_id || "")),
         $pid: TypedValues.utf8(String(surviving.partner_id || "p_qdr")),
+        $pafid: TypedValues.utf8(String(surviving.partner_afid || "")),
         $st: TypedValues.utf8(String(surviving.state || "START")),
         $br: TypedValues.bool(Boolean(surviving.bought_tripwire)),
         $js: TypedValues.json(
@@ -637,7 +643,7 @@ export async function mergeUsers(
       const query = `
         DECLARE $id AS Utf8; DECLARE $email AS Utf8;
         DECLARE $tg_id AS Uint64; DECLARE $vk_id AS Uint64; DECLARE $web_id AS Utf8;
-        DECLARE $pid AS Utf8; DECLARE $st AS Utf8; DECLARE $br AS Bool;
+        DECLARE $pid AS Utf8; DECLARE $pafid AS Utf8; DECLARE $st AS Utf8; DECLARE $br AS Bool;
         DECLARE $js AS Json; DECLARE $ls AS Uint64; DECLARE $sv AS Utf8; DECLARE $bt AS Utf8;
         DECLARE $tr AS Utf8; DECLARE $shui AS Utf8; DECLARE $shrt AS Utf8; DECLARE $pur AS Json;
         DECLARE $fn AS Utf8; DECLARE $lrt AS Uint64; DECLARE $rc AS Uint64; DECLARE $pc AS Utf8;
@@ -648,13 +654,13 @@ export async function mergeUsers(
 
         UPSERT INTO users (
           id, email, tg_id, vk_id, web_id,
-          partner_id, state, bought_tripwire, session,
+          partner_id, partner_afid, state, bought_tripwire, session,
           last_seen, saved_state, bot_token, tariff, sh_user_id, sh_ref_tail, purchases,
           first_name, last_reminder_time, reminders_count, pin_code, session_version, ai_active_until, created_at,
           custom_api_key, custom_prompt, ai_model, ai_provider, user_daily_limit
         ) VALUES (
           $id, $email, $tg_id, $vk_id, $web_id,
-          $pid, $st, $br, $js, $ls, $sv, $bt, $tr, $shui, $shrt, $pur, $fn, $lrt, $rc, $pc, $newVer, $aiUntil, $cat,
+          $pid, $pafid, $st, $br, $js, $ls, $sv, $bt, $tr, $shui, $shrt, $pur, $fn, $lrt, $rc, $pc, $newVer, $aiUntil, $cat,
           $cak, $cp, $aim, $aip, $udl
         );
 

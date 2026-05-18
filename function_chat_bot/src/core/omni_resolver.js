@@ -116,6 +116,7 @@ export async function resolveUser(channel, ids) {
       web_id: ids.web_id || "",
       email: ids.email || "",
       partner_id: ids.partner_id || process.env.MY_PARTNER_ID || "p_qdr",
+      partner_afid: ids.partner_afid || process.env.MY_SH_USER_ID || "1123",
       state: "START",
       bought_tripwire: false,
       purchases: [],
@@ -156,6 +157,7 @@ export async function resolveUser(channel, ids) {
   if (ids.web_id && !main.web_id) main.web_id = ids.web_id;
   if (ids.email && !main.email) main.email = ids.email;
   if (ids.partner_id && !main.partner_id) main.partner_id = ids.partner_id;
+  if (ids.partner_afid && !main.partner_afid) main.partner_afid = ids.partner_afid;
   if (ids.first_name && !main.first_name) main.first_name = ids.first_name;
 
   if (!main.session) main.session = {};

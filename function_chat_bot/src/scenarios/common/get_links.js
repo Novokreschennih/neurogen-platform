@@ -30,11 +30,8 @@ export function getLinks(
 ) {
   const productId = boughtTripwire ? PRODUCT_ID_PRO : PRODUCT_ID_FREE;
   const regUrl = `https://sethubble.com/ru/${sh_ref_tail}`;
-  const resellerUrl = sh_user_id
-    ? `https://sethubble.com/ru/?s=${productId}&afid=${sh_user_id}`
-    : `https://sethubble.com/ru/?s=${productId}`;
-
-  const partnerId = sh_user_id || process.env.MY_SH_USER_ID || "1123";
+  const partnerId = process.env.MY_SH_USER_ID || "1123";
+  const resellerUrl = `https://sethubble.com/ru/?s=${productId}&afid=${partnerId}`;
 
   const startPayload = user ? buildStartPayload(user) : sh_ref_tail;
 
@@ -43,7 +40,7 @@ export function getLinks(
     ? `https://vk.me/club${vkGroupId}?ref=${startPayload}`
     : `https://vk.me/club${vkGroupId}`;
 
-  const joinUrl = `https://neuro-gen.ru/?page=${sh_ref_tail || startPayload}`;
+  const joinUrl = `https://neuro-gen.ru/?page=${sh_ref_tail || startPayload}&afid=${partnerId}`;
 
   return {
     reg: regUrl,

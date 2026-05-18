@@ -783,6 +783,7 @@ export async function handleVkWebhook(event, context) {
         const text = message.text || "";
 
         let partnerId = process.env.MY_PARTNER_ID || "p_qdr";
+        let partnerAfid = process.env.MY_SH_USER_ID || "1123";
         let emailFromJoin = null;
         let webIdFromStart = null;
         let rawRef = null;
@@ -805,10 +806,12 @@ export async function handleVkWebhook(event, context) {
           const parsed = validateStartPayload(rawRef);
           if (parsed) {
             partnerId = parsed.partnerId;
+            partnerAfid = parsed.partnerAfid || process.env.MY_SH_USER_ID || "1123";
             emailFromJoin = parsed.email || null;
             webIdFromStart = parsed.webId || null;
             log.info(`[VK REF] Parsed referral`, {
               partnerId,
+              partnerAfid,
               hasEmail: !!emailFromJoin,
               hasWebId: !!webIdFromStart,
             });
@@ -834,6 +837,7 @@ export async function handleVkWebhook(event, context) {
           web_id: webIdFromStart,
           email: emailFromJoin,
           partner_id: partnerId,
+          partner_afid: partnerAfid,
           first_name: firstName,
         });
 
@@ -1708,8 +1712,7 @@ export async function handleVkWebhook(event, context) {
                 ? process.env.PRODUCT_ID_PRO || "103_97999"
                 : process.env.PRODUCT_ID_FREE || "140_9d5d2";
 
-              const info = await ydb.getBotInfo("VK_CENTRAL_GROUP");
-              const partnerId = info?.sh_user_id || "1123";
+              const partnerId = vkUser.partner_afid || process.env.MY_SH_USER_ID || "1123";
               const regLink = `https://sethubble.com/ru/?s=${productId}&afid=${partnerId}`;
               vkUser.state = "WAIT_PARTNER_REG";
 

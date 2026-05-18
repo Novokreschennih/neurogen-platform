@@ -41,6 +41,7 @@ export async function handleWebChat(event, context) {
     }
     const payloadEmail = payload.email ? validateEmail(payload.email) : null;
     const partnerId = payload.partner_id || payload.referrer || "p_qdr";
+    const partnerAfid = payload.afid || process.env.MY_SH_USER_ID || "1123";
     const firstName = payload.first_name || (payloadEmail ? payloadEmail.split("@")[0] : "WebUser");
 
     let webUser = await ydb.findUser({ web_id: webSessionId });
@@ -54,6 +55,7 @@ export async function handleWebChat(event, context) {
         web_id: webSessionId,
         email: payloadEmail,
         partner_id: partnerId,
+        partner_afid: partnerAfid,
         first_name: firstName,
       });
       // resolveUser уже вызвал saveUser — не дублируем
@@ -285,7 +287,7 @@ export async function handleWebChat(event, context) {
 
       const info = {
         sh_ref_tail: webUser.sh_ref_tail || "p_qdr",
-        sh_user_id: webUser.sh_user_id,
+        sh_user_id: webUser.partner_afid || process.env.MY_SH_USER_ID || "1123",
         bot_username: webUser.session?.bot_username || "sethubble_biz_bot",
       };
       const links = scenario.getLinks(

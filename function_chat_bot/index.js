@@ -703,7 +703,7 @@ const sendStepToUser = async (
     const links = scenario.getLinks(
       info?.sh_ref_tail || "p_qdr",
       info?.tripwire_link,
-      info?.sh_user_id,
+      user.partner_afid || process.env.MY_SH_USER_ID || "1123",
       user.bought_tripwire,
     );
 

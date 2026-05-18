@@ -963,11 +963,7 @@ export function registerTelegramActions(bot, ctx) {
         ? process.env.PRODUCT_ID_PRO || "103_97999"
         : process.env.PRODUCT_ID_FREE || "140_9d5d2";
 
-      const info = await (token === MAIN_TOKEN
-        ? Promise.resolve({ sh_user_id: process.env.MY_SH_USER_ID || "1123" })
-        : ydb.getBotInfo(token));
-
-      const partnerId = info?.sh_user_id || "1123";
+      const partnerId = u.partner_afid || process.env.MY_SH_USER_ID || "1123";
       const regLink = `https://sethubble.com/ru/?s=${productId}&afid=${partnerId}`;
       u.state = "WAIT_PARTNER_REG";
       await ydb.saveUser(u);
@@ -1572,11 +1568,7 @@ export function registerTelegramActions(bot, ctx) {
         ? process.env.PRODUCT_ID_PRO || "103_97999"
         : process.env.PRODUCT_ID_FREE || "140_9d5d2";
 
-      const info = await (token === MAIN_TOKEN
-        ? Promise.resolve({ sh_user_id: process.env.MY_SH_USER_ID || "1123" })
-        : ydb.getBotInfo(token));
-
-      const partnerId = info?.sh_user_id || "1123";
+      const partnerId = ctx.dbUser.partner_afid || process.env.MY_SH_USER_ID || "1123";
       const regLink = `https://sethubble.com/ru/?s=${productId}&afid=${partnerId}`;
 
       ctx.dbUser.state = "WAIT_PARTNER_REG";
