@@ -361,28 +361,39 @@ export const telegramButtons = {
       process.env.API_GW_HOST ||
       "d5dsbah1d4ju0glmp9d0.3zvepvee.apigw.yandexcloud.net";
 
-    // === ИСПРАВЛЕНИЕ v4.3.6: Добавляем параметр mod3=1 для прошедших Модуль 3 ===
     const mod3Done = user.session?.mod3_done;
     const isPro = user.bought_tripwire;
     const mod3Param = mod3Done || isPro ? "&mod3=1" : "";
 
-    return [
-      [
+    const r = [];
+
+    if (user.sh_ref_tail) {
+      r.push([
         {
           text: "📲 ОТКРЫТЬ PROMO-KIT",
           web_app: {
             url: `${PROMO_KIT_URL}?bot=${botName}&api=https://${apiGw}${mod3Param}`,
           },
         },
-      ],
-      [
+      ]);
+    } else {
+      r.push([
         {
-          text: "➡️ Я ИЗУЧИЛ, ВЕДИ НА МОДУЛЬ 3",
-          callback_data: "Module_3_Offline",
+          text: "⚠️ НАСТРОЙ ID ДЛЯ PROMO-KITA",
+          callback_data: "PROMO_KIT",
         },
-      ],
-      [{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }],
-    ];
+      ]);
+    }
+
+    r.push([
+      {
+        text: "➡️ Я ИЗУЧИЛ, ВЕДИ НА МОДУЛЬ 3",
+        callback_data: "Module_3_Offline",
+      },
+    ]);
+    r.push([{ text: "🏠 В МЕНЮ", callback_data: "MAIN_MENU" }]);
+
+    return r;
   },
 
   // === Module_3_Offline ===
@@ -829,9 +840,11 @@ export const telegramButtons = {
       r.push([{ text: "🔒 ТВОИ КЛИЕНТЫ", callback_data: "LOCKED_CRM" }]);
     }
 
-    // 2. Промо-кит (Теперь открывается после Модуля 2!)
-    if (hasMod2) {
+    // 2. Промо-кит (Требует прохождения Модуля 2 И наличия sh_ref_tail)
+    if (hasMod2 && user.sh_ref_tail) {
       r.push([{ text: "📦 ПРОМО-КИТ", callback_data: "PROMO_KIT" }]);
+    } else if (hasMod2 && !user.sh_ref_tail) {
+      r.push([{ text: "⚠️ НАСТРОЙ ID ДЛЯ ПРОМО-КИТА", callback_data: "CLICK_REG_ID" }]);
     } else {
       r.push([
         { text: "🔒 ПЕРСОНАЛЬНЫЙ ПРОМО-КИТ", callback_data: "LOCKED_PROMO" },
@@ -894,17 +907,15 @@ export const telegramButtons = {
   MY_AI_BOT: (links, user) => {
     const r = [];
 
-    // Генерируем ��еферальную ссылку с ID пользователя для Telegram
-    const myRefTail =
-      user.sh_ref_tail ||
-      user.partner_id ||
-      process.env.MY_PARTNER_ID ||
-      "p_qdr";
-    const tgBotUsername =
-      process.env.TELEGRAM_BOT_USERNAME || "neurogen_support_bot";
-    const refLink = `https://t.me/${tgBotUsername}?start=${myRefTail}`;
-
-    r.push([{ text: "📢 ПРИГЛАСИТЬ ДРУГА (+БОНУСЫ)", url: refLink }]);
+    // ЖЕСТКАЯ ПРОВЕРКА: Если у пользователя настроен свой хвост — даем кнопку
+    if (user.sh_ref_tail) {
+      const tgBotUsername = process.env.TELEGRAM_BOT_USERNAME || "neurogen_support_bot";
+      const refLink = `https://t.me/${tgBotUsername}?start=${user.sh_ref_tail}`;
+      r.push([{ text: "📢 ПРИГЛАСИТЬ ДРУГА (+БОНУСЫ)", url: refLink }]);
+    } else {
+      r.push([{ text: "⚠️ НАСТРОИТЬ SETHUBBLE ID", callback_data: "CLICK_REG_ID" }]);
+    }
+    
     r.push([{ text: "💰 МОИ ВЫПЛАТЫ", callback_data: "PARTNER_STATS" }]);
 
     if (user.session?.bot_username) {

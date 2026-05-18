@@ -700,12 +700,12 @@ const sendStepToUser = async (
       })
     : ydb.getBotInfo(token));
 
-  const links = scenario.getLinks(
-    info?.sh_ref_tail || user.partner_id || "p_qdr",
-    info?.tripwire_link,
-    info?.sh_user_id,
-    user.bought_tripwire,
-  );
+    const links = scenario.getLinks(
+      info?.sh_ref_tail || "p_qdr",
+      info?.tripwire_link,
+      info?.sh_user_id,
+      user.bought_tripwire,
+    );
 
   const messageText =
     typeof step.text === "function" ? step.text(links, user, info) : step.text;

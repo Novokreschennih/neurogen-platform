@@ -295,7 +295,7 @@ export async function sendEmailBatch(
  * Получить ref-хвост из пользователя
  */
 function getRef(user) {
-  return user.partner_id || user.sh_ref_tail || "p_qdr";
+  return user.sh_ref_tail || "p_qdr";
 }
 
 /**

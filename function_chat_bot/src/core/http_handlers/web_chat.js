@@ -8,7 +8,7 @@ import {
   validatePartnerId,
   validateWebSessionId,
 } from "../../utils/validator.js";
-import scenario from "../../scenarios/scenario_tg.js";
+import scenario from "../../scenarios/scenario_web.js";
 import { resolveUser } from "../../core/omni_resolver.js";
 import { adaptStateForChannel } from "../../scenarios/common/step_order.js";
 import {
@@ -144,7 +144,7 @@ export async function handleWebChat(event, context) {
             body: JSON.stringify({
               success: true,
               stepKey: webUser.state,
-              text: "✍️ <b>Введи ТВОЙ цифровой ID</b>\n\nПришли мне номер, который ты получил в личном кабинете SetHubble после регистрации (например: 1234):",
+              text: "✍️ <b>Введи ТВОЙ цифровой ID</b>\n\nПришли мне номер из личного кабинета SetHubble (например: 1234).\n\n⚠️ <b>ВАЖНО:</b> Сразу после я попрошу прислать твою реферальную ссылку из SetHubble. ID и ссылка должны быть от ОДНОГО аккаунта. Именно хвост этой ссылки станет твоей персональной реферальной ссылкой в NeuroGen.",
               buttons: [[{ text: "🔙 ОТМЕНА", callback_data: "MAIN_MENU" }]],
             }),
           };
@@ -227,7 +227,21 @@ export async function handleWebChat(event, context) {
         // ЗАЩИТА PROMO_KIT 
         if (targetCallback === "PROMO_KIT") {
           const hasMod2 = webUser.session?.mod2_done || webUser.bought_tripwire;
-          if (!hasMod2) {
+          if (!webUser.sh_ref_tail) {
+             // Жесткая блокировка, если нет ID
+             targetCallback = "WAIT_REG_ID";
+             needsSave = true;
+             return {
+                statusCode: 200,
+                headers: corsHeaders,
+                body: JSON.stringify({
+                  success: true,
+                  stepKey: webUser.state,
+                  text: "⚠️ <b>ДОСТУП ЗАКРЫТ</b>\n\nДля генерации личных ссылок и материалов в Promo-Kit, необходимо привязать свой SetHubble ID.\n\n✍️ <b>Введи ТВОЙ цифровой ID</b> из личного кабинета SetHubble (например: 1234).\n\n⚠️ <b>ВАЖНО:</b> Сразу после я попрошу прислать твою реферальную ссылку из SetHubble. ID и ссылка должны быть от ОДНОГО аккаунта. Именно хвост этой ссылки станет твоей персональной реферальной ссылкой в NeuroGen.",
+                  buttons: [[{ text: "🔙 ОТМЕНА", callback_data: "MAIN_MENU" }]]
+                })
+             };
+          } else if (!hasMod2) {
              targetCallback = "LOCKED_PROMO";
              needsSave = true;
           } else {
@@ -267,7 +281,7 @@ export async function handleWebChat(event, context) {
       const step = scenario.steps[stepKey];
 
       const info = {
-        sh_ref_tail: webUser.sh_ref_tail || webUser.partner_id || "p_qdr",
+        sh_ref_tail: webUser.sh_ref_tail || "p_qdr",
         sh_user_id: webUser.sh_user_id,
         bot_username: webUser.session?.bot_username || "sethubble_biz_bot",
       };
@@ -378,12 +392,13 @@ export async function handleWebChat(event, context) {
 
       user.session.email_verification_code = verificationCode;
       user.session.email_verification_expires = codeExpires;
+      user.session.email = email;
       user.session.channels = user.session.channels || {};
       user.session.channels.email = {
         ...user.session.channels.email,
         enabled: true,
         configured: true,
-        subscribed: false,
+        subscribed: true,
         verified: false,
       };
 
@@ -525,7 +540,7 @@ export async function handleWebChat(event, context) {
           headers: corsHeaders,
           body: JSON.stringify({
             answer:
-              "✅ Принято! Теперь пришли свою <b>Ссылку для приглашений</b> полностью (например: https://sethubble.com/ru/p_xyt):",
+              "✅ <b>Цифровой ID принят!</b> Теперь пришли свою реферальную ссылку из SetHubble ПОЛНОСТЬЮ.\nНапример: https://sethubble.com/ru/p_xyt\n\n⚠️ <b>ВАЖНО:</b> Именно хвост этой ссылки (часть после /ru/) ляжет в основу твоей личной реферальной ссылки в NeuroGen. По ней будут переходить твои клиенты в бота и на лендинг.\n\nЕсли ID и ссылка НЕ совпадают (например, с разных аккаунтов) — реферальная цепочка не замкнётся, и твой Promo-Kit не будет работать.\n\nСкопируй ссылку из SetHubble целиком:",
           }),
         };
       }

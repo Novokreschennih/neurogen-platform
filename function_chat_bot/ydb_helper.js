@@ -282,6 +282,7 @@ export async function verifyEmailCode(email, code) {
         return { valid: false, error: "Code expired" };
       }
 
+      sessionData.email = user.email;
       sessionData.email_verified = true;
       sessionData.email_verification_code = null;
       sessionData.email_verification_expires = null;

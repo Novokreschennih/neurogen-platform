@@ -547,7 +547,7 @@ export async function handleVkWebhook(event, context) {
           vkUser.state = "WAIT_REG_ID";
           await ydb.saveUser(vkUser);
           return await vkCtx.reply(
-            "✍️ Введи ТВОЙ цифровой ID\n\nПришли мне номер, который ты получил в личном кабинете SetHubble после регистрации (например: 1234).",
+            "✍️ Введи ТВОЙ цифровой ID\n\nПришли мне номер из личного кабинета SetHubble (например: 1234).\n\n⚠️ ВАЖНО: Сразу после я попрошу прислать твою реферальную ссылку из SetHubble. ID и ссылка должны быть от ОДНОГО аккаунта. Именно хвост этой ссылки станет твоей персональной реферальной ссылкой в NeuroGen.",
             {},
           );
         }
@@ -702,7 +702,7 @@ export async function handleVkWebhook(event, context) {
           return await renderStep(vkCtx, "Lesson_Final_Comparison", vkToken);
         if (callbackData === "PARTNER_STATS") {
           // Показываем статистику партнёра
-          const refTail = vkUser.sh_ref_tail || vkUser.partner_id || "p_qdr";
+          const refTail = vkUser.sh_ref_tail || "p_qdr";
           try {
             const statsQuery = `
               DECLARE $refTail AS Utf8;
@@ -1476,7 +1476,7 @@ export async function handleVkWebhook(event, context) {
               vkUser.state = "WAIT_REG_TAIL";
               await ydb.saveUser(vkUser);
               return await vkCtx.reply(
-                "✅ Принято! Теперь скопируй и пришли свою <b>Ссылку для приглашений</b> полностью (например: https://sethubble.com/ru/p_xyt):",
+                "✅ Цифровой ID принят! Теперь пришли свою реферальную ссылку из SetHubble ПОЛНОСТЬЮ.\nНапример: https://sethubble.com/ru/p_xyt\n\n⚠️ ВАЖНО: Именно хвост этой ссылки (часть после /ru/) ляжет в основу твоей личной реферальной ссылки в NeuroGen. По ней будут переходить твои клиенты в бота и на лендинг.\n\nЕсли ID и ссылка НЕ совпадают (например, с разных аккаунтов) — реферальная цепочка не замкнётся, и твой Promo-Kit не будет работать.\n\nСкопируй ссылку из SetHubble целиком:",
                 {},
               );
             }

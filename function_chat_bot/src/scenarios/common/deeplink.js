@@ -1,5 +1,5 @@
 export function buildStartPayload(user) {
-  const partnerId = user.partner_id || user.sh_ref_tail || process.env.MY_PARTNER_ID || 'p_qdr';
+  const partnerId = user.sh_ref_tail || "p_qdr";
 
   if (user.web_id) {
     return `${partnerId}__w${user.web_id}`;

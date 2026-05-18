@@ -45,7 +45,15 @@ const vkTextOverrides = {
   // === MY_AI_BOT ===
   MY_AI_BOT: (links, user) => {
     const directLink = links.vk_bot || "https://vk.me/club";
-    const trafficLink = links?.join || `https://neuro-gen.ru/?page=${user.sh_ref_tail || user.partner_id || "p_qdr"}`;
+    
+    const trafficLink = user.sh_ref_tail 
+      ? `https://neuro-gen.ru/?page=${user.sh_ref_tail}`
+      : "⚠️ Ссылка не сформирована (Не настроен ID)";
+
+    const warningMsg = !user.sh_ref_tail 
+      ? `\n\n⚠️ <b>ВНИМАНИЕ:</b> Ты не указал свой SetHubble ID. Promo-Kit заблокирован. Заверши настройку!` 
+      : "";
+
     return (
       `🤖 <b>ТВОЙ ИИ-ПОМОЩНИК УЖЕ В СТРОЮ!</b>\n\n` +
       `✅ <b>Статус:</b> Активен на базе центрального сервера ВКонтакте\n` +
@@ -53,7 +61,8 @@ const vkTextOverrides = {
       `🚀 <b>ССЫЛКА ДЛЯ ПРИВЛЕЧЕНИЯ ТРАФИКА (делись в соцсетях и QR):</b>\n` +
       `<code>${trafficLink}</code>\n\n` +
       `<i>Именно эту ссылку давай клиентам и вставляй в QR-коды. Она ведёт на продающий лендинг, захватывает email и автоматически направляет в нужный канал.</i>\n\n` +
-      `Любой, кто увидит систему — навсегда закрепится за тобой в базе. Просто раздавай ссылку, а ИИ сделает всю работу по презентации и продажам за тебя.`
+      `Любой, кто увидит систему — навсегда закрепится за тобой в базе. Просто раздавай ссылку, а ИИ сделает всю работу по презентации и продажам за тебя.` +
+      warningMsg
     );
   },
 

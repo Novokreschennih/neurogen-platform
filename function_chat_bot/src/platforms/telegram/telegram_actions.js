@@ -134,7 +134,7 @@ export function registerTelegramActions(bot, ctx) {
     await ydb.saveUser(ctx.dbUser);
     await ctx.answerCbQuery();
     await ctx.reply(
-      "✍️ <b>Введи ТВОЙ цифровой ID</b>\n\nПришли мне номер, который ты получил в личном кабинете SetHubble после регистрации (например: 1234).",
+      "✍️ <b>Введи ТВОЙ цифровой ID</b>\n\nПришли мне номер из личного кабинета SetHubble (например: 1234).\n\n⚠️ <b>ВАЖНО:</b> Сразу после я попрошу прислать твою реферальную ссылку из SetHubble. ID и ссылка должны быть от ОДНОГО аккаунта. Именно хвост этой ссылки станет твоей персональной реферальной ссылкой в NeuroGen.",
       { parse_mode: "HTML", protect_content: true },
     );
   });
@@ -235,7 +235,7 @@ export function registerTelegramActions(bot, ctx) {
   bot.action("PARTNER_STATS", async (ctx) => {
     await ctx.answerCbQuery();
 
-    const refTail = ctx.dbUser.sh_ref_tail || ctx.dbUser.partner_id || "p_qdr";
+    const refTail = ctx.dbUser.sh_ref_tail || "p_qdr";
 
     try {
       const statsQuery = `
@@ -608,7 +608,7 @@ export function registerTelegramActions(bot, ctx) {
       u.state = "WAIT_REG_TAIL";
       await ydb.saveUser(u);
       return ctx.reply(
-        "✅ Принято! Теперь скопируй и пришли свою <b>Ссылку для приглашений</b> полностью (например: https://sethubble.com/ru/p_xyt):",
+        "✅ <b>Цифровой ID принят!</b> Теперь пришли свою реферальную ссылку из SetHubble ПОЛНОСТЬЮ.\nНапример: https://sethubble.com/ru/p_xyt\n\n⚠️ <b>ВАЖНО:</b> Именно хвост этой ссылки (часть после /ru/) ляжет в основу твоей личной реферальной ссылки в NeuroGen. По ней будут переходить твои клиенты в бота и на лендинг.\n\nЕсли ID и ссылка НЕ совпадают (например, с разных аккаунтов) — реферальная цепочка не замкнётся, и твой Promo-Kit не будет работать.\n\nСкопируй ссылку из SetHubble целиком:",
         { parse_mode: "HTML", protect_content: true },
       );
     }

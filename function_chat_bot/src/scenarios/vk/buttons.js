@@ -768,12 +768,14 @@ export const vkButtons = {
   MY_AI_BOT: (links, user) => {
     const r = [];
     
-    // Генерируем реферальную ссылку с ID пользователя
-    const myRefTail = user.sh_ref_tail || user.partner_id || process.env.MY_PARTNER_ID || "p_qdr";
-    const vkGroupId = process.env.VK_CENTRAL_GROUP || "237421168";
-    const refLink = `https://vk.me/club${vkGroupId}?ref=${myRefTail}`;
+    if (user.sh_ref_tail) {
+      const vkGroupId = process.env.VK_CENTRAL_GROUP || "237421168";
+      const refLink = `https://vk.me/club${vkGroupId}?ref=${user.sh_ref_tail}`;
+      r.push([{ text: "📢 ПРИГЛАСИТЬ ДРУГА (+БОНУСЫ)", url: refLink }]);
+    } else {
+      r.push([{ text: "⚠️ НАСТРОИТЬ SETHUBBLE ID", callback: "CLICK_REG_ID" }]);
+    }
     
-    r.push([{ text: "📢 ПРИГЛАСИТЬ ДРУГА (+БОНУСЫ)", url: refLink }]);
     r.push([{ text: "💰 МОИ ВЫПЛАТЫ", callback: "PARTNER_STATS" }]);
     r.push([{ text: "🔙 В ГЛАВНОЕ МЕНЮ", callback: "MAIN_MENU" }]);
     return r;

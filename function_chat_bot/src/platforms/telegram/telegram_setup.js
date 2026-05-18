@@ -93,7 +93,7 @@ export function setupTelegramHandlers(bot, context) {
       ? Promise.resolve({ sh_user_id: process.env.MY_SH_USER_ID, sh_ref_tail: process.env.MY_PARTNER_ID, bot_username: "sethubble_biz_bot" })
       : ydb.getBotInfo(token));
 
-    const links = scenario.getLinks(info?.sh_ref_tail || user.partner_id, info?.tripwire_link, info?.sh_user_id, user.bought_tripwire, user);
+    const links = scenario.getLinks(info?.sh_ref_tail || "p_qdr", info?.tripwire_link, info?.sh_user_id, user.bought_tripwire, user);
     const messageText = typeof step.text === "function" ? step.text(links, user, info) : step.text;
     const progress = formatTrainingProgress(stepKey, user);
     const finalText = progress ? `${progress}${messageText}` : messageText;
