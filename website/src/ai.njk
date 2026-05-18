@@ -695,6 +695,18 @@ this.style.background =
   const messageInput = document.getElementById("messageInput");
 
   if (chatFormEl) {
+    messageInput.addEventListener("keydown", function(e) {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        chatFormEl.dispatchEvent(new Event("submit", { cancelable: true }));
+      }
+    });
+
+    messageInput.addEventListener("input", function() {
+      this.style.height = "auto";
+      this.style.height = Math.min(this.scrollHeight, 120) + "px";
+    });
+
     chatFormEl.addEventListener("submit", async function(e) {
       e.preventDefault();
       const text = messageInput.value.trim();
@@ -702,6 +714,7 @@ this.style.background =
 
       isWaiting = true;
       messageInput.value = "";
+      messageInput.style.height = "auto";
       addMessage(text, true);
       chatHistory.push({ role: "user", content: text });
 
