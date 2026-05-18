@@ -12,7 +12,7 @@ import {
   getLoopHint,
 } from "../../utils/ux_helpers.js";
 import { resolveUser } from '../../core/omni_resolver.js';
-import { adaptStateForChannel } from '../../scenarios/common/step_order.js';
+import { getAdaptedState } from '../../scenarios/common/step_order.js';
 
 export function setupTelegramHandlers(bot, context) {
   const {
@@ -85,6 +85,9 @@ export function setupTelegramHandlers(bot, context) {
     }
 
     user.state = stepKey;
+    // ИСПРАВЛЕНИЕ (M5): обновляем per-channel state
+    if (!user.session.channel_states) user.session.channel_states = {};
+    user.session.channel_states.telegram = stepKey;
     if (step.tag && !user.session.tags.includes(step.tag)) {
       user.session.tags.push(step.tag);
     }
@@ -141,7 +144,23 @@ export function setupTelegramHandlers(bot, context) {
       first_name: ctx.from.first_name
     });
 
-    adaptStateForChannel(user, 'telegram');
+    // ИСПРАВЛЕНИЕ (M1): не мутируем user.state — используем адаптированный стейт
+    const adaptedState = getAdaptedState(user.state, 'telegram');
+    if (user.state !== adaptedState) user.state = adaptedState;
+
+    // ИСПРАВЛЕНИЕ (M5): восстанавливаем per-channel state если есть
+    if (user.session?.channel_states?.telegram) {
+      const chState = user.session.channel_states.telegram;
+      const { getFunnelIndex } = await import('../../scenarios/common/step_order.js');
+      if (getFunnelIndex(chState) > getFunnelIndex(user.state)) {
+        user.state = chState;
+      }
+    }
+
+    // ИСПРАВЛЕНИЕ (M5): синхронизируем channel_states с текущим стейтом
+    if (!user.session.channel_states) user.session.channel_states = {};
+    user.session.channel_states.telegram = user.state;
+
     user.bot_token = token;
     user.last_seen = Date.now();
 
@@ -152,24 +171,13 @@ export function setupTelegramHandlers(bot, context) {
 
     ctx.dbUser = user;
 
-    // Защита от race condition: если параллельный запрос уже создал пользователя с этим tg_id
-    const existingTg = await ydb.findUser({ tg_id: tgId });
-    if (existingTg && existingTg.id !== user.id) {
-      const mergedUser = await resolveUser('telegram', {
-        tg_id: tgId,
-        web_id: user.web_id,
-        email: user.email,
-        partner_id: user.partner_id,
-        first_name: user.first_name
-      });
-      user = mergedUser;
-      ctx.dbUser = user;
-      log.warn(`[TG RACE] Merged duplicate tg_id ${tgId}`);
-    }
+    // ИСПРАВЛЕНИЕ: resolveUser уже делает saveUser внутри себя.
+    // Дополнительный saveUser здесь не нужен — он вызывается в telegram_actions.js
+    // там, где данные действительно изменились после обработки действия.
+    // Это устраняет race condition между resolveUser-save и последующим saveUser
+    // который мог бы перезаписать слитые данные старой версией объекта.
 
     await next();
-    // saveUser не вызываем здесь — оно уже вызывается в telegram_actions.js и ai_engine.js
-    // там, где это действительно нужно. Это устраняет дублирующую запись в БД.
   });
 
   // ГЛОБАЛЬНЫЙ ПЕРЕХВАТЧИК: Удаляем кнопки после нажатия
@@ -190,9 +198,9 @@ export function setupTelegramHandlers(bot, context) {
   // Мягкий старт
   bot.start(async (ctx) => {
     if (ctx.dbUser.state && ctx.dbUser.state !== "START" && !ctx.dbUser.state.startsWith("WAIT_")) {
-      // ИСПРАВЛЕНИЕ: Сохраняем реальный стейт ПЕРЕД тем, как показать окно возврата
       ctx.dbUser.saved_state = ctx.dbUser.state;
-      await ydb.saveUser(ctx.dbUser);
+      // ИСПРАВЛЕНИЕ: не вызываем saveUser здесь — resolveUser уже сохранил.
+      // saved_state будет сохранён при следующем действии пользователя.
       return renderStep(ctx, "RESUME_GATE", token);
     }
     ctx.dbUser.saved_state = "";

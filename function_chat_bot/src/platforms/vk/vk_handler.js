@@ -1,5 +1,5 @@
 import { resolveUser } from "../../core/omni_resolver.js";
-import { adaptStateForChannel } from "../../scenarios/common/step_order.js";
+import { getAdaptedState } from "../../scenarios/common/step_order.js";
 import { getVkPhotoAttachment } from "../../utils/vk_photo_cache.js";
 import {
   SECRETS_CONFIG,
@@ -338,7 +338,19 @@ export async function handleVkWebhook(event, context) {
           vk_id: vkUserId,
           first_name: "VK User",
         });
-        adaptStateForChannel(vkUser, "vk");
+        // ИСПРАВЛЕНИЕ (M1): не мутируем user.state — используем адаптированный стейт локально
+        const adaptedState = getAdaptedState(vkUser.state, "vk");
+        if (vkUser.state !== adaptedState) vkUser.state = adaptedState;
+
+        // ИСПРАВЛЕНИЕ (M5): восстанавливаем per-channel state если есть
+        if (vkUser.session?.channel_states?.vk) {
+          const chState = vkUser.session.channel_states.vk;
+          const { getFunnelIndex } = await import('../../scenarios/common/step_order.js');
+          if (getFunnelIndex(chState) > getFunnelIndex(vkUser.state)) {
+            vkUser.state = chState;
+          }
+        }
+
         if (!vkUser.bot_token) {
           vkUser.bot_token = "VK_CENTRAL_GROUP";
         }
@@ -347,6 +359,9 @@ export async function handleVkWebhook(event, context) {
         if (!vkUser.session.channels) vkUser.session.channels = {};
         if (!vkUser.session.channels.vk) vkUser.session.channels.vk = {};
         vkUser.session.channels.vk.group_id = String(vkGroupId);
+        // ИСПРАВЛЕНИЕ (M5): сохраняем channel_states при каждом message_event
+        vkUser.session.channel_states = vkUser.session.channel_states || {};
+        vkUser.session.channel_states.vk = vkUser.state;
         // Промежуточное сохранение удалено — пользователь сохранится в конце роутера
         log.info(`[VK DEBUG] callbackData:`, {
           callbackData,
@@ -515,7 +530,6 @@ export async function handleVkWebhook(event, context) {
         if (callbackData?.startsWith("ENTER_SECRET_")) {
           const level = callbackData.split("_")[2];
           vkUser.state = `WAIT_SECRET_${level}`;
-          await ydb.saveUser(vkUser);
           return await vkCtx.reply(
             `✍️ ВВОД КОДА: МОДУЛЬ ${level}\n\nОтправь мне секретное слово:`,
             {},
@@ -533,7 +547,6 @@ export async function handleVkWebhook(event, context) {
             vkUser.session.skipped_modules = [];
           vkUser.session.skipped_modules.push(secretState);
           vkUser.state = nextState;
-          await ydb.saveUser(vkUser);
           await vkCtx.reply(
             "⏭ Модуль пропущен.\n\n🪙 Монеты за этот модуль не начислены. Ты можешь вернуться к статье позже и ввести секретное слово для получения монет.\n\nПродолжаем 👇",
             {},
@@ -545,7 +558,6 @@ export async function handleVkWebhook(event, context) {
           if (vkUser.sh_user_id && vkUser.sh_ref_tail)
             return await renderStep(vkCtx, "REGISTRATION_EXIST", vkToken);
           vkUser.state = "WAIT_REG_ID";
-          await ydb.saveUser(vkUser);
           return await vkCtx.reply(
             "✍️ Введи ТВОЙ цифровой ID\n\nПришли мне номер из личного кабинета SetHubble (например: 1234).\n\n⚠️ ВАЖНО: Сразу после я попрошу прислать твою реферальную ссылку из SetHubble. ID и ссылка должны быть от ОДНОГО аккаунта. Именно хвост этой ссылки станет твоей персональной реферальной ссылкой в NeuroGen.",
             {},
@@ -601,7 +613,6 @@ export async function handleVkWebhook(event, context) {
 
         if (callbackData === "FORCE_REG_UPDATE") {
           vkUser.state = "WAIT_REG_ID";
-          await ydb.saveUser(vkUser);
           return await vkCtx.reply(
             "✍️ Обновление данных\n\nХорошо, введи новый цифровой ID:",
             {},
@@ -617,7 +628,6 @@ export async function handleVkWebhook(event, context) {
         if (callbackData === "CONFIRM_UPGRADE") {
           if (!vkUser.session.tags.includes("seen_plans"))
             vkUser.session.tags.push("seen_plans");
-          await ydb.saveUser(vkUser);
           return await renderStep(vkCtx, "UPGRADE_CONFIRMED", vkToken);
         }
         if (callbackData === "RESTART_FUNNEL") {
@@ -629,7 +639,6 @@ export async function handleVkWebhook(event, context) {
             tags: vkUser.session?.tags || [],
             last_activity: Date.now(),
           };
-          await ydb.saveUser(vkUser);
           return await renderStep(vkCtx, "START", vkToken);
         }
         if (callbackData === "MAIN_MENU") {
@@ -654,13 +663,11 @@ export async function handleVkWebhook(event, context) {
           return await renderStep(vkCtx, "LOCKED_PLANS_INFO", vkToken);
         if (callbackData === "CONTINUE_WITH_CURRENT_BOT") {
           vkUser.state = "Module_3_Offline";
-          await ydb.saveUser(vkUser);
           return await renderStep(vkCtx, "Module_3_Offline", vkToken);
         }
         if (callbackData === "CREATE_NEW_BOT") {
           vkUser.state = "WAIT_BOT_TOKEN";
           vkUser.saved_state = "";
-          await ydb.saveUser(vkUser);
           return await vkCtx.reply(
             "🔄 СОЗДАНИЕ НОВОГО БОТА\n\nПришли мне API TOKEN нового бота из @BotFather.",
             {},
@@ -670,7 +677,6 @@ export async function handleVkWebhook(event, context) {
           if (!vkUser.session.theory_complete) {
             vkUser.session.theory_complete = true;
             vkUser.session.xp = (vkUser.session.xp || 0) + 10;
-            await ydb.saveUser(vkUser);
           }
           return await renderStep(vkCtx, "Theory_Reward_Spoilers", vkToken);
         }
@@ -678,7 +684,6 @@ export async function handleVkWebhook(event, context) {
           vkUser.session.tmp_shui = vkUser.sh_user_id;
           vkUser.session.tmp_shrt = vkUser.sh_ref_tail;
           vkUser.state = "WAIT_PARTNER_REG";
-          await ydb.saveUser(vkUser);
           return await vkCtx.reply(
             `✅ ДАННЫЕ ПОДТВЕРЖДЕНЫ\n\n🎯 Перейди по ссылке для регистрации и напиши "готов"`,
             {},
@@ -686,7 +691,6 @@ export async function handleVkWebhook(event, context) {
         }
         if (callbackData === "ENTER_NEW_DATA") {
           vkUser.state = "WAIT_SH_ID_P";
-          await ydb.saveUser(vkUser);
           return await vkCtx.reply(
             "✏️ Пришли НОВЫЙ цифровой ID для этого бота:",
             {},
@@ -745,7 +749,6 @@ export async function handleVkWebhook(event, context) {
           if (!navSteps.includes(vkUser.state))
             vkUser.saved_state = vkUser.state;
           vkUser.session.last_vk_step = callbackData;
-          await ydb.saveUser(vkUser);
           log.info(`[VK] Calling renderStep`, { step: callbackData });
           try {
             return await renderStep(vkCtx, callbackData, vkToken);
@@ -790,7 +793,10 @@ export async function handleVkWebhook(event, context) {
           try {
             const parsedPayload = JSON.parse(message.payload);
             rawRef = parsedPayload.command || parsedPayload.ref;
-          } catch (e) {}
+          } catch (e) {
+            // ИСПРАВЛЕНИЕ (M6): если payload — plain string, используем его как rawRef
+            rawRef = message.payload;
+          }
         }
 
         if (rawRef) {
@@ -831,7 +837,18 @@ export async function handleVkWebhook(event, context) {
           first_name: firstName,
         });
 
-        adaptStateForChannel(vkUser, "vk");
+        // ИСПРАВЛЕНИЕ (M1): не мутируем user.state — используем адаптированный стейт локально
+        const adaptedState = getAdaptedState(vkUser.state, "vk");
+        if (vkUser.state !== adaptedState) vkUser.state = adaptedState;
+
+        // ИСПРАВЛЕНИЕ (M5): восстанавливаем per-channel state если есть
+        if (vkUser.session?.channel_states?.vk) {
+          const chState = vkUser.session.channel_states.vk;
+          const { getFunnelIndex } = await import('../../scenarios/common/step_order.js');
+          if (getFunnelIndex(chState) > getFunnelIndex(vkUser.state)) {
+            vkUser.state = chState;
+          }
+        }
 
         // Сохраняем идентификатор VK‑группы в конфигурации канала
         if (!vkUser.session) vkUser.session = {};
@@ -998,7 +1015,8 @@ export async function handleVkWebhook(event, context) {
             const params = new URLSearchParams();
             params.append("access_token", process.env.VK_GROUP_TOKEN);
             params.append("v", "5.199");
-            params.append("user_id", String(message?.from_id || userId));
+            // ИСПРАВЛЕНИЕ (m1): используем vkUser.vk_id или message.from_id — никогда undefined userId
+            params.append("user_id", String(vkUser.vk_id || message?.from_id));
             params.append(
               "random_id",
               String(Math.floor(Math.random() * 2147483647)),
@@ -1076,7 +1094,6 @@ export async function handleVkWebhook(event, context) {
               if (callbackData.startsWith("ENTER_SECRET_")) {
                 const level = callbackData.split("_")[2];
                 vkUser.state = `WAIT_SECRET_${level}`;
-                await ydb.saveUser(vkUser);
                 return await vkCtx.reply(
                   `✍️ ВВОД КОДА: МОДУЛЬ ${level}\n\nОтправь мне секретное слово:`,
                 );
@@ -1089,7 +1106,6 @@ export async function handleVkWebhook(event, context) {
                 if (!vkUser.session.skipped_modules) vkUser.session.skipped_modules = [];
                 vkUser.session.skipped_modules.push(secretState);
                 vkUser.state = nextState;
-                await ydb.saveUser(vkUser);
                 await vkCtx.reply(
                   "⏭ Модуль пропущен.\n\n🪙 Монеты за этот модуль не начислены. Ты можешь вернуться к статье позже и ввести секретное слово для получения монет.\n\nПродолжаем 👇",
                 );
@@ -1116,18 +1132,15 @@ export async function handleVkWebhook(event, context) {
                   vkUser.session.old_bot_token = vkUser.bot_token;
                   vkUser.saved_state = "";
                   vkUser.session.is_changing_token = true;
-                  await ydb.saveUser(vkUser);
                   return await vkCtx.reply(
                     "🔄 ИЗМЕНЕНИЕ ТОКЕНА БОТА\n\nПришли мне НОВЫЙ API TOKEN из @BotFather.",
                   );
                 case "CONTINUE_WITH_CURRENT_BOT":
                   vkUser.state = "Module_3_Offline";
-                  await ydb.saveUser(vkUser);
                   return await renderStep(vkCtx, "Module_3_Offline", vkToken);
                 case "CREATE_NEW_BOT":
                   vkUser.state = "WAIT_BOT_TOKEN";
                   vkUser.saved_state = "";
-                  await ydb.saveUser(vkUser);
                   return await vkCtx.reply(
                     "🔄 СОЗДАНИЕ НОВОГО БОТА\n\nПришли мне API TOKEN нового бота из @BotFather.",
                   );
@@ -1135,7 +1148,6 @@ export async function handleVkWebhook(event, context) {
                   if (!vkUser.session.theory_complete) {
                     vkUser.session.theory_complete = true;
                     vkUser.session.xp = (vkUser.session.xp || 0) + 10;
-                    await ydb.saveUser(vkUser);
                   }
                   return await renderStep(
                     vkCtx,
@@ -1146,13 +1158,11 @@ export async function handleVkWebhook(event, context) {
                   vkUser.session.tmp_shui = vkUser.sh_user_id;
                   vkUser.session.tmp_shrt = vkUser.sh_ref_tail;
                   vkUser.state = "WAIT_PARTNER_REG";
-                  await ydb.saveUser(vkUser);
                   return await vkCtx.reply(
                     `✅ ДАННЫЕ ПОДТВЕРЖДЕНЫ\n\n🎯 Перейди по ссылке для регистрации и напиши "готов"`,
                   );
                 case "ENTER_NEW_DATA":
                   vkUser.state = "WAIT_SH_ID_P";
-                  await ydb.saveUser(vkUser);
                   return await vkCtx.reply(
                     "✏️ Пришли НОВЫЙ цифровой ID для этого бота:",
                   );
@@ -1175,8 +1185,7 @@ export async function handleVkWebhook(event, context) {
                   log.info(`[VK] Setting state to WAIT_REG_ID`, {
                     userId: vkUser.user_id,
                   });
-                  await ydb.saveUser(vkUser);
-                  log.info(`[VK] saveUser completed`, {
+                  log.info(`[VK] State updated (saved at end of request)`, {
                     userId: vkUser.user_id,
                     savedState: "WAIT_REG_ID",
                   });
@@ -1186,7 +1195,6 @@ export async function handleVkWebhook(event, context) {
                   );
                 case "FORCE_REG_UPDATE":
                   vkUser.state = "WAIT_REG_ID";
-                  await ydb.saveUser(vkUser);
                   return await vkCtx.reply(
                     "✍️ <b>Обновление данных</b>\n\nХорошо, введи новый цифровой ID:",
                     {},
@@ -1194,7 +1202,6 @@ export async function handleVkWebhook(event, context) {
                 case "SETUP_BOT_START":
                   vkUser.state = "WAIT_BOT_TOKEN";
                   if (vkUser.bot_token) vkUser.session.is_changing_token = true;
-                  await ydb.saveUser(vkUser);
                   return await vkCtx.reply(
                     "🚀 <b>НАСТРОЙКА БОТА-КЛОНА</b>\n\nПришли мне <b>API TOKEN</b> твоего бота из @BotFather.",
                     {},
@@ -1202,7 +1209,6 @@ export async function handleVkWebhook(event, context) {
                 case "CONFIRM_UPGRADE":
                   if (!vkUser.session.tags.includes("seen_plans"))
                     vkUser.session.tags.push("seen_plans");
-                  await ydb.saveUser(vkUser);
                   return await renderStep(vkCtx, "UPGRADE_CONFIRMED", vkToken);
                 case "RESTART_FUNNEL":
                   vkUser.saved_state = "";
@@ -1217,7 +1223,6 @@ export async function handleVkWebhook(event, context) {
                     ai_count: vkUser.session?.ai_count,
                     ai_date: vkUser.session?.ai_date,
                   };
-                  await ydb.saveUser(vkUser);
                   return await renderStep(vkCtx, "START", vkToken);
                 case "MAIN_MENU":
                   vkUser.reminders_count = 0;
@@ -1296,7 +1301,6 @@ export async function handleVkWebhook(event, context) {
                 case "MULTI_CHANNEL_TG":
                   // Пользователь VK хочет подключить Telegram
                   vkUser.state = "WAIT_TG_SETUP";
-                  await ydb.saveUser(vkUser);
                   return await vkCtx.reply(
                     `📱 <b>ПОДКЛЮЧЕНИЕ TELEGRAM</b>\n\n` +
                       `Чтобы подключить Telegram:\n\n` +
@@ -1309,7 +1313,6 @@ export async function handleVkWebhook(event, context) {
                   );
                 case "CHANNEL_SETUP_VK":
                   vkUser.state = "WAIT_VK_GROUP_ID";
-                  await ydb.saveUser(vkUser);
                   return await renderStep(vkCtx, "CHANNEL_SETUP_VK", vkToken);
                 case "CHANNEL_SETUP_WEB":
                   return await renderStep(vkCtx, "CHANNEL_SETUP_WEB", vkToken);
@@ -1317,7 +1320,6 @@ export async function handleVkWebhook(event, context) {
                   const email = vkUser.session?.email;
                   if (!email) {
                     vkUser.state = "WAIT_EMAIL_INPUT";
-                    await ydb.saveUser(vkUser);
                     return await vkCtx.reply(
                       "📧 Введи свой email для подключения рассылки:",
                       {},
@@ -1336,7 +1338,6 @@ export async function handleVkWebhook(event, context) {
                     configured: true,
                     configured_at: Date.now(),
                   });
-                  await ydb.saveUser(vkUser);
                   return await renderStep(
                     vkCtx,
                     "CHANNEL_SETUP_COMPLETE",
@@ -1388,7 +1389,6 @@ export async function handleVkWebhook(event, context) {
                 if (!navSteps.includes(vkUser.state))
                   vkUser.saved_state = vkUser.state;
                 vkUser.session.last_vk_step = callbackData;
-                await ydb.saveUser(vkUser);
                 return await renderStep(vkCtx, callbackData, vkToken);
               }
               return await vkCtx.reply(
@@ -1433,7 +1433,6 @@ export async function handleVkWebhook(event, context) {
               }
 
               vkUser.state = "START";
-              await ydb.saveUser(vkUser);
               return await renderStep(vkCtx, "START", vkToken);
             }
 
@@ -1471,10 +1470,9 @@ export async function handleVkWebhook(event, context) {
                 userId: vkUser.user_id,
               });
               if (isNaN(txt))
-                return await vkCtx.reply("❌ Пришли только цифры.", {});
+                return await vkCtx.reply("❌ Пришли только цифры.\n\n💡 Если хочешь задать вопрос нейросети, просто напиши «Меню», чтобы выйти из настройки.", {});
               vkUser.sh_user_id = txt;
               vkUser.state = "WAIT_REG_TAIL";
-              await ydb.saveUser(vkUser);
               return await vkCtx.reply(
                 "✅ Цифровой ID принят! Теперь пришли свою реферальную ссылку из SetHubble ПОЛНОСТЬЮ.\nНапример: https://sethubble.com/ru/p_xyt\n\n⚠️ ВАЖНО: Именно хвост этой ссылки (часть после /ru/) ляжет в основу твоей личной реферальной ссылки в NeuroGen. По ней будут переходить твои клиенты в бота и на лендинг.\n\nЕсли ID и ссылка НЕ совпадают (например, с разных аккаунтов) — реферальная цепочка не замкнётся, и твой Promo-Kit не будет работать.\n\nСкопируй ссылку из SetHubble целиком:",
                 {},
@@ -1589,7 +1587,6 @@ export async function handleVkWebhook(event, context) {
               vkUser.session.verification_question = randomQ.q;
               vkUser.session.verification_answers = randomQ.a;
               vkUser.state = "WAIT_VERIFICATION";
-              await ydb.saveUser(vkUser);
 
               return await vkCtx.reply(
                 `🔐 <b>ПОДТВЕРЖДЕНИЕ ВЛАДЕНИЯ АККАУНТОМ</b>\n\n` +
@@ -1623,7 +1620,6 @@ export async function handleVkWebhook(event, context) {
 
               if (!vkUser.email && !vkUser.session.email) {
                 vkUser.state = "WAIT_FUNNEL_EMAIL";
-                await ydb.saveUser(vkUser);
                 await vkCtx.reply(
                   "✅ <b>Аккаунт SetHubble подтверждён!</b>\n\nОстался последний технический шаг перед стартом обучения.",
                   {},
@@ -1632,7 +1628,6 @@ export async function handleVkWebhook(event, context) {
               }
 
               vkUser.state = "Training_Main";
-              await ydb.saveUser(vkUser);
 
               await vkCtx.reply(
                 `✅ <b>Аккаунт подтверждён!</b>\n\nЯ открыл для тебя доступ к материалам. В Главном Меню теперь разблокирован раздел «Обучение».\n\nА сейчас переходим сразу к делу 👇`,
@@ -1645,7 +1640,7 @@ export async function handleVkWebhook(event, context) {
               const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
               if (!emailRegex.test(txt)) {
                 return await vkCtx.reply(
-                  "❌ Это не похоже на email. Пожалуйста, проверь на опечатки и отправь еще раз:",
+                  "❌ Это не похоже на email. Пожалуйста, проверь на опечатки и отправь еще раз.\n\n💡 Если хочешь задать вопрос нейросети, напиши «Меню».",
                   {},
                 );
               }
@@ -1661,8 +1656,6 @@ export async function handleVkWebhook(event, context) {
                 configured: true,
                 subscribed: true,
               };
-
-              await ydb.saveUser(vkUser);
 
               if (emailRecord && emailRecord.id !== vkUser.id) {
                 log.info("[VK FUNNEL] Merging email record into VK user", {
@@ -1683,10 +1676,10 @@ export async function handleVkWebhook(event, context) {
                 );
                 vkUser = await ydb.getUser(emailRecord.id);
                 vkCtx.dbUser = vkUser;
+                await ydb.saveUser(vkUser);
               }
 
               vkUser.state = "Training_Main";
-              await ydb.saveUser(vkUser);
 
               await vkCtx.reply(
                 `✅ <b>Email успешно привязан!</b>\n\nЯ открыл для тебя доступ к материалам. В Главном Меню теперь разблокирован раздел «Обучение».\n\nА сейчас переходим сразу к делу 👇`,
@@ -1698,7 +1691,6 @@ export async function handleVkWebhook(event, context) {
             if (vkUser.state === "WAIT_SH_ID_P") {
               vkUser.session.tmp_shui = txt;
               vkUser.state = "WAIT_SH_TAIL_P";
-              await ydb.saveUser(vkUser);
               return await vkCtx.reply(
                 "Пришли свою ссылку для приглашений полностью (например: https://sethubble.com/ru/p_xyt):",
                 {},
@@ -1711,7 +1703,6 @@ export async function handleVkWebhook(event, context) {
                 tail = tail.split("?")[0].replace(/\/$/, "").split("/").pop();
               }
               vkUser.session.tmp_shrt = tail;
-              await ydb.saveUser(vkUser);
 
               const productId = vkUser.bought_tripwire
                 ? process.env.PRODUCT_ID_PRO || "103_97999"
@@ -1721,7 +1712,6 @@ export async function handleVkWebhook(event, context) {
               const partnerId = info?.sh_user_id || "1123";
               const regLink = `https://sethubble.com/ru/?s=${productId}&afid=${partnerId}`;
               vkUser.state = "WAIT_PARTNER_REG";
-              await ydb.saveUser(vkUser);
 
               return await vkCtx.reply(
                 `🎯 <b>ШАГ 3: СТАНЬ ПАРТНЁРОМ PROДУКТА</b>\n\n` +
@@ -1777,7 +1767,7 @@ export async function handleVkWebhook(event, context) {
                   `❌ ID сообщества — только цифры.\n\n` +
                     `Ты ввёл: <code>${txt}</code>\n\n` +
                     `💡 Подсказка: зайди в сообщество → «Управление» → «Работа с API» → ID указан там\n\n` +
-                    `Попробуй ещё раз:`,
+                    `💡 Если хочешь задать вопрос нейросети, напиши «Меню», чтобы выйти из настройки.`,
                   {},
                 );
               channelManager.enableChannel(vkUser, "vk");
@@ -1792,7 +1782,6 @@ export async function handleVkWebhook(event, context) {
                 "vk",
                 "CHANNEL_SETUP_VK_SUCCESS",
               );
-              await ydb.saveUser(vkUser);
 
               // Сводка каналов
               const allConfigured = Object.keys(
@@ -1844,7 +1833,6 @@ export async function handleVkWebhook(event, context) {
                 "telegram",
                 "CHANNEL_SETUP_TG_SUCCESS",
               );
-              await ydb.saveUser(vkUser);
               return await renderStep(
                 vkCtx,
                 "CHANNEL_SETUP_TG_SUCCESS",
@@ -1860,7 +1848,7 @@ export async function handleVkWebhook(event, context) {
                   `❌ Это не похоже на email.\n\n` +
                     `Ты ввёл: <code>${txt}</code>\n\n` +
                     `💡 Формат: name@example.com\n\n` +
-                    `Попробуй ещё раз:`,
+                    `💡 Если хочешь задать вопрос нейросети, напиши «Меню», чтобы выйти из настройки.`,
                   {},
                 );
               }
@@ -1879,7 +1867,6 @@ export async function handleVkWebhook(event, context) {
               vkUser.session.channel_states =
                 vkUser.session.channel_states || {};
               vkUser.session.channel_states.email = "START";
-              await ydb.saveUser(vkUser);
 
               // v6.0: MERGE — если нашли другого пользователя с таким email
               if (emailRecord && emailRecord.id !== vkUser.id) {
@@ -1918,9 +1905,12 @@ export async function handleVkWebhook(event, context) {
                 await ydb.mergeUsers(emailRecord, vkUser.id, "email_match");
                 // Перезагружаем выжившего пользователя
                 vkUser = await ydb.getUser(emailRecord.id);
-                adaptStateForChannel(vkUser, "vk");
+                // ИСПРАВЛЕНИЕ (M1): не мутируем — используем адаптированный стейт
+                const adaptedState = getAdaptedState(vkUser.state, "vk");
+                if (vkUser.state !== adaptedState) vkUser.state = adaptedState;
                 // Обновить контекст, если уже создан
                 if (typeof vkCtx !== "undefined") vkCtx.dbUser = vkUser;
+                await ydb.saveUser(vkUser);
               }
 
               // Отправляем приветственное письмо
@@ -1967,7 +1957,6 @@ export async function handleVkWebhook(event, context) {
                 }
 
                 vkUser.state = nextState;
-                await ydb.saveUser(vkUser);
                 return await renderStep(vkCtx, nextState, vkToken);
               } else {
                 // Track failed attempts
@@ -1975,7 +1964,6 @@ export async function handleVkWebhook(event, context) {
                   vkUser.session.secret_attempts = {};
                 vkUser.session.secret_attempts[vkUser.state] =
                   (vkUser.session.secret_attempts[vkUser.state] || 0) + 1;
-                await ydb.saveUser(vkUser);
 
                 const attempts = vkUser.session.secret_attempts[vkUser.state];
                 const errorMsg = getSecretWordErrorResponse(
@@ -2006,7 +1994,6 @@ export async function handleVkWebhook(event, context) {
             // Для VK WAIT_BOT_TOKEN больше не используется — сразу к Модулю 3
             if (vkUser.state === "WAIT_BOT_TOKEN") {
               vkUser.state = "Module_3_Offline";
-              await ydb.saveUser(vkUser);
               return await renderStep(vkCtx, "Module_3_Offline", vkToken);
             }
 
@@ -2022,22 +2009,14 @@ export async function handleVkWebhook(event, context) {
             let ownerSettings = {
               custom_prompt: "",
               ai_provider: "polza",
-              ai_model: "openai/gpt-4o-mini",
+              ai_model: "deepseek/deepseek-v4-flash",
               custom_api_key: "",
               user_daily_limit: 0,
             };
 
             if (botInfo && botInfo.owner_id) {
-              const owner = await ydb.getUser(botInfo.owner_id);
-              if (owner) {
-                ownerSettings = {
-                  custom_prompt: owner.custom_prompt || "",
-                  ai_provider: owner.ai_provider || "polza",
-                  ai_model: owner.ai_model || "openai/gpt-4o-mini",
-                  custom_api_key: owner.custom_api_key || "",
-                  user_daily_limit: owner.user_daily_limit || 0,
-                };
-              }
+              const settings = await ydb.getOwnerSettings(botInfo.owner_id);
+              if (settings) ownerSettings = settings;
             }
 
             // 2. ПРОВЕРЯЕМ ДОПУСК: ТОЛЬКО оплаченная подписка дает право на ИИ!
@@ -2097,7 +2076,6 @@ export async function handleVkWebhook(event, context) {
             // === ДЕФОЛТ: Если состояние не распознано или ИИ вернул null ===
             if (!vkUser.state || vkUser.state === "VK_LEAD") {
               vkUser.state = "START";
-              await ydb.saveUser(vkUser);
               return await renderStep(vkCtx, "START", vkToken);
             }
             await renderStep(vkCtx, vkUser.state, vkToken);
@@ -2107,6 +2085,14 @@ export async function handleVkWebhook(event, context) {
         };
 
         await runVkRouter();
+
+        // ИСПРАВЛЕНИЕ (M2 + M5): гарантированное сохранение last_seen и channel_states
+        if (vkUser && vkUser.id) {
+          if (!vkUser.session.channel_states) vkUser.session.channel_states = {};
+          vkUser.session.channel_states.vk = vkUser.state;
+          await ydb.saveUser(vkUser);
+        }
+
         return {
           statusCode: 200,
           headers: { "Content-Type": "text/plain" },

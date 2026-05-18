@@ -117,3 +117,18 @@ export function adaptStateForChannel(user, channel) {
   }
   return user;
 }
+
+/**
+ * ИСПРАВЛЕНИЕ (M1): не мутирует user.state — возвращает адаптированный стейт.
+ * Вызывающий код решает, записывать ли его обратно.
+ * @param {string} state — текущее состояние
+ * @param {string} channel — канал ("telegram", "vk", "web", "email")
+ * @returns {string} адаптированное состояние
+ */
+export function getAdaptedState(state, channel) {
+  if (!state) return "START";
+  if (!isStateSupported(state, channel)) {
+    return getNextSupportedState(state, channel);
+  }
+  return state;
+}

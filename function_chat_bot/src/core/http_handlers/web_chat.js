@@ -10,7 +10,7 @@ import {
 } from "../../utils/validator.js";
 import scenario from "../../scenarios/scenario_web.js";
 import { resolveUser } from "../../core/omni_resolver.js";
-import { adaptStateForChannel } from "../../scenarios/common/step_order.js";
+import { getAdaptedState } from "../../scenarios/common/step_order.js";
 import {
   SECRETS_CONFIG,
   getNextStateAfterSecret,
@@ -56,12 +56,15 @@ export async function handleWebChat(event, context) {
         partner_id: partnerId,
         first_name: firstName,
       });
-      needsSave = true;
+      // resolveUser уже вызвал saveUser — не дублируем
     }
 
     const oldState = webUser.state;
-    adaptStateForChannel(webUser, "web");
-    if (oldState !== webUser.state) needsSave = true;
+    const adaptedState = getAdaptedState(webUser.state, "web");
+    if (oldState !== adaptedState) {
+      webUser.state = adaptedState;
+      needsSave = true;
+    }
 
     if (!webUser.first_name) {
       webUser.first_name = firstName;
@@ -489,7 +492,7 @@ export async function handleWebChat(event, context) {
             "HTTP-Referer": "https://neuro-gen.ru"
           },
           body: JSON.stringify({
-            model: "deepseek/deepseek-v4-flash", 
+            model: ownerSettings.ai_model || "deepseek/deepseek-v4-flash", 
             messages:[
               { role: "system", content: systemPrompt },
               { role: "user", content: "Сгенерируй пост для соцсетей." }
@@ -529,7 +532,8 @@ export async function handleWebChat(event, context) {
             statusCode: 200,
             headers: corsHeaders,
             body: JSON.stringify({
-              answer: "❌ Пришли только цифры. Твой ID из кабинета SetHubble:",
+              answer: "❌ Это не похоже на цифровой ID. Пожалуйста, пришли только цифры из кабинета SetHubble.\n\n<i>💡 Если хочешь задать вопрос нейросети — нажми кнопку «Отмена» ниже.</i>",
+              buttons: [[{ text: "🔙 ОТМЕНА", callback_data: "MAIN_MENU" }]],
             }),
           };
         u.sh_user_id = txt;
@@ -703,7 +707,8 @@ export async function handleWebChat(event, context) {
             headers: corsHeaders,
             body: JSON.stringify({
               answer:
-                "❌ Неверный формат токена. Токен должен выглядеть так: 123456789:ABCdefGHIjkl... Попробуй еще раз:",
+                "❌ Неверный формат токена. Токен должен выглядеть так: 123456789:ABCdefGHIjkl...\n\n<i>💡 Чтобы задать вопрос ИИ, нажми «Отмена» или вернись в Главное меню.</i>",
+              buttons: [[{ text: "🔙 ОТМЕНА", callback_data: "MAIN_MENU" }]],
             }),
           };
         }
@@ -735,7 +740,8 @@ export async function handleWebChat(event, context) {
             headers: corsHeaders,
             body: JSON.stringify({
               answer:
-                "❌ ID сообщества VK должен состоять только из цифр. Попробуй еще раз:",
+                "❌ ID сообщества VK должен состоять только из цифр.\n\n<i>💡 Если передумал настраивать канал, вернись в Главное меню.</i>",
+              buttons: [[{ text: "🔙 В ГЛАВНОЕ МЕНЮ", callback_data: "MAIN_MENU" }]],
             }),
           };
         }

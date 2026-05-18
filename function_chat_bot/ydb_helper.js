@@ -10,6 +10,10 @@ const { Driver, getCredentialsFromEnv, TypedValues } = pkg;
 const botInfoCache = new LRUCache({ max: 50, ttl: 5 * 60 * 1000 });
 // ОПТИМИЗАЦИЯ: Кэш для статуса подписки ИИ владельца (TTL 1 минута)
 const ownerAiCache = new LRUCache({ max: 50, ttl: 60 * 1000 });
+// ОПТИМИЗАЦИЯ: Кэш для реферального хвоста партнёра (TTL 5 минут)
+const partnerCache = new LRUCache({ max: 100, ttl: 5 * 60 * 1000 });
+// ОПТИМИЗАЦИЯ: Кэш для настроек владельца VK группы (TTL 5 минут)
+const ownerSettingsCache = new LRUCache({ max: 50, ttl: 5 * 60 * 1000 });
 
 export { log };
 
@@ -145,8 +149,10 @@ function mapUser(row) {
       : 0,
 
     // Обратная совместимость для старого кода (CRM, рассылки)
+    // ИСПРАВЛЕНИЕ: возвращаем UUID (id) вместо tg_id — для мультиканальности
+    // Рассылки должны использовать channelManager.getChannelUserId(u, ch)
     get user_id() {
-      return this.tg_id ? String(this.tg_id) : this.id;
+      return this.id;
     },
   };
 }
@@ -615,6 +621,12 @@ export async function mergeUsers(
         $newVer: TypedValues.uint64(String(newVersion)),
         $cat: TypedValues.uint64(String(surviving.created_at || now)),
         $aiUntil: TypedValues.uint64(String(surviving.ai_active_until || 0)),
+        // ИСПРАВЛЕНИЕ: AI-поля теперь включены в merge
+        $cak: TypedValues.utf8(String(surviving.custom_api_key || "")),
+        $cp: TypedValues.utf8(String(surviving.custom_prompt || "")),
+        $aim: TypedValues.utf8(String(surviving.ai_model || "")),
+        $aip: TypedValues.utf8(String(surviving.ai_provider || "")),
+        $udl: TypedValues.uint64(String(surviving.user_daily_limit || 0)),
         $mergeId: TypedValues.utf8(mergeId),
         $survId: TypedValues.utf8(String(surviving.id)),
         $delId: TypedValues.utf8(String(deletedUserId)),
@@ -630,6 +642,7 @@ export async function mergeUsers(
         DECLARE $tr AS Utf8; DECLARE $shui AS Utf8; DECLARE $shrt AS Utf8; DECLARE $pur AS Json;
         DECLARE $fn AS Utf8; DECLARE $lrt AS Uint64; DECLARE $rc AS Uint64; DECLARE $pc AS Utf8;
         DECLARE $newVer AS Uint64; DECLARE $cat AS Uint64; DECLARE $aiUntil AS Uint64;
+        DECLARE $cak AS Utf8; DECLARE $cp AS Utf8; DECLARE $aim AS Utf8; DECLARE $aip AS Utf8; DECLARE $udl AS Uint64;
         DECLARE $mergeId AS Utf8; DECLARE $survId AS Utf8; DECLARE $delId AS Utf8;
         DECLARE $reason AS Utf8; DECLARE $mergeTs AS Uint64;
 
@@ -637,12 +650,17 @@ export async function mergeUsers(
           id, email, tg_id, vk_id, web_id,
           partner_id, state, bought_tripwire, session,
           last_seen, saved_state, bot_token, tariff, sh_user_id, sh_ref_tail, purchases,
-          first_name, last_reminder_time, reminders_count, pin_code, session_version, ai_active_until, created_at
+          first_name, last_reminder_time, reminders_count, pin_code, session_version, ai_active_until, created_at,
+          custom_api_key, custom_prompt, ai_model, ai_provider, user_daily_limit
         ) VALUES (
           $id, $email, $tg_id, $vk_id, $web_id,
-          $pid, $st, $br, $js, $ls, $sv, $bt, $tr, $shui, $shrt, $pur, $fn, $lrt, $rc, $pc, $newVer, $aiUntil, $cat
+          $pid, $st, $br, $js, $ls, $sv, $bt, $tr, $shui, $shrt, $pur, $fn, $lrt, $rc, $pc, $newVer, $aiUntil, $cat,
+          $cak, $cp, $aim, $aip, $udl
         );
 
+        // TODO: Реализовать сохранение удаленной сессии (deleted_session_backup)
+        // перед UPSERT INTO user_merges — сейчас бэкап не сохраняется,
+        // но таблица user_merges уже имеет колонку deleted_session_backup Json.
         UPSERT INTO user_merges (id, surviving_user_id, deleted_user_id, merge_reason, merged_at)
         VALUES ($mergeId, $survId, $delId, $reason, $mergeTs);
 
@@ -748,7 +766,7 @@ export async function getBotInfo(token) {
         bot_username: r.items[4]?.textValue || "",
         // v7.0 AI-поля для конструктора ИИ-сотрудников
         ai_provider: r.items[5]?.textValue || "polza",
-        ai_model: r.items[6]?.textValue || "openai/gpt-4o-mini",
+        ai_model: r.items[6]?.textValue || "deepseek/deepseek-v4-flash",
         custom_api_key: r.items[7]?.textValue || "",
         custom_prompt: r.items[8]?.textValue || "",
         user_daily_limit: r.items[9]?.uint64Value
@@ -776,7 +794,8 @@ export async function getBotInfoByVkGroup(groupId) {
 
   try {
     return await driver.tableClient.withSession(async (session) => {
-      const query = `DECLARE $gid AS Utf8; SELECT user_id, sh_user_id, sh_ref_tail, bot_username FROM bots VIEW idx_bots_vk_group_id WHERE vk_group_id = $gid;`;
+      // ИСПРАВЛЕНИЕ (m4): добавлены AI-поля по аналогии с getBotInfo
+      const query = `DECLARE $gid AS Utf8; SELECT user_id, sh_user_id, sh_ref_tail, bot_username, ai_provider, ai_model, custom_api_key, custom_prompt, user_daily_limit FROM bots VIEW idx_bots_vk_group_id WHERE vk_group_id = $gid;`;
       const { resultSets } = await session.executeQuery(query, {
         $gid: TypedValues.utf8(String(groupId)),
       });
@@ -787,6 +806,14 @@ export async function getBotInfoByVkGroup(groupId) {
         sh_user_id: r.items[1]?.textValue || "",
         sh_ref_tail: r.items[2]?.textValue || "",
         bot_username: r.items[3]?.textValue || "",
+        // ИСПРАВЛЕНИЕ (m4): AI-поля для VK-бота
+        ai_provider: r.items[4]?.textValue || "polza",
+        ai_model: r.items[5]?.textValue || "deepseek/deepseek-v4-flash",
+        custom_api_key: r.items[6]?.textValue || "",
+        custom_prompt: r.items[7]?.textValue || "",
+        user_daily_limit: r.items[8]?.uint64Value
+          ? Number(r.items[8].uint64Value)
+          : 0,
       };
 
       // ОПТИМИЗАЦИЯ: Пишем в кэш
@@ -1292,6 +1319,39 @@ export async function isOwnerAiActive(leadUser, botToken, vkGroupId) {
     );
     return false;
   }
+}
+
+/**
+ * Получить реферальный хвост партнёра из кэша (TTL 5 мин)
+ */
+export async function getPartnerTail(userId) {
+  const key = String(userId);
+  const cached = partnerCache.get(key);
+  if (cached) return cached;
+  const user = await getUser(key);
+  const tail = user?.sh_ref_tail || "p_qdr";
+  partnerCache.set(key, tail);
+  return tail;
+}
+
+/**
+ * Получить настройки владельца VK группы из кэша (TTL 5 мин)
+ */
+export async function getOwnerSettings(ownerId) {
+  const key = String(ownerId);
+  const cached = ownerSettingsCache.get(key);
+  if (cached) return cached;
+  const owner = await getUser(key);
+  if (!owner) return null;
+  const settings = {
+    custom_prompt: owner.custom_prompt || "",
+    ai_provider: owner.ai_provider || "polza",
+    ai_model: owner.ai_model || "deepseek/deepseek-v4-flash",
+    custom_api_key: owner.custom_api_key || "",
+    user_daily_limit: owner.user_daily_limit || 0,
+  };
+  ownerSettingsCache.set(key, settings);
+  return settings;
 }
 
 export async function recordLinkClick(partnerId, userId, botToken) {

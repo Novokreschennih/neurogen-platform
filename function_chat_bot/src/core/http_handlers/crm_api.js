@@ -56,9 +56,8 @@ export async function handleCrmApi(event, context) {
     const pageSize = parseInt(data.pageSize) || 50;
     const offset = (page - 1) * pageSize;
 
-    // УЗНАЕМ ХВОСТ ПАРТНЕРА, КОТОРЫЙ ОТКРЫЛ CRM (Поддержка Web UUID и TG ID)
-    const partner = await ydb.getUser(String(auth.tgData.user.id));
-    const partnerTail = partner?.sh_ref_tail || "p_qdr";
+    // УЗНАЕМ ХВОСТ ПАРТНЕРА, КОТОРЫЙ ОТКРЫЛ CRM (из кэша)
+    const partnerTail = await ydb.getPartnerTail(String(auth.tgData.user.id));
 
     // ОПТИМИЗАЦИЯ: Параллельный запрос к БД.
     // Вместо 300мс + 300мс + 300мс, всё загрузится за 300мс!
@@ -212,8 +211,8 @@ export async function handleCrmApi(event, context) {
     const allUsersForBroadcast = await ydb.getUsersByPartner(partnerTail, 10000, 0);
     const userMap = new Map(allUsersForBroadcast.map((u) => [u.user_id, u]));
 
-    const tgUserIds = [];
-    const vkUserIds = [];
+    const tgUsers = [];  // { uid, chatId }
+    const vkUsers = [];  // { uid, vkId }
     const emailUsers = [];
 
     for (const uid of targetUserIds) {
@@ -231,8 +230,14 @@ export async function handleCrmApi(event, context) {
       if (!u) continue;
 
       const ch = channelManager.getPrimaryChannel(u);
-      if (ch === "telegram") tgUserIds.push(uid);
-      else if (ch === "vk") vkUserIds.push(uid);
+      if (ch === "telegram") {
+        const tgChatId = channelManager.getChannelUserId(u, "telegram");
+        if (tgChatId) tgUsers.push({ uid, chatId: tgChatId });
+      }
+      else if (ch === "vk") {
+        const vkId = channelManager.getChannelUserId(u, "vk");
+        if (vkId) vkUsers.push({ uid, vkId });
+      }
       else if (ch === "email") emailUsers.push(u);
     }
 
@@ -241,11 +246,12 @@ export async function handleCrmApi(event, context) {
     const results = {};
 
     // Telegram рассылка
-    if (tgUserIds.length > 0) {
+    if (tgUsers.length > 0) {
       const broadcastBot = new Telegraf(botToken);
+      const tgChatIds = tgUsers.map((u) => u.chatId);
       const tgResults = await ydb.broadcastWithRateLimit(
         broadcastBot,
-        tgUserIds,
+        tgChatIds,
         message,
         {
           parse_mode: "HTML",
@@ -259,17 +265,16 @@ export async function handleCrmApi(event, context) {
     }
 
     // VK рассылка (асинхронно батчами по 10)
-    if (vkUserIds.length > 0 && process.env.VK_SERVICE_TOKEN) {
+    if (vkUsers.length > 0 && process.env.VK_SERVICE_TOKEN) {
       const vkChunkSize = 10;
-      for (let i = 0; i < vkUserIds.length; i += vkChunkSize) {
-        const chunk = vkUserIds.slice(i, i + vkChunkSize);
-        await Promise.all(chunk.map(async (uid) => {
+      for (let i = 0; i < vkUsers.length; i += vkChunkSize) {
+        const chunk = vkUsers.slice(i, i + vkChunkSize);
+        await Promise.all(chunk.map(async ({ uid, vkId }) => {
           try {
-            const vkUserId = uid.replace("vk:", "");
             const params = new URLSearchParams({
               access_token: process.env.VK_SERVICE_TOKEN,
               v: "5.199",
-              user_id: vkUserId,
+              user_id: String(vkId),
               random_id: String(Math.floor(Math.random() * 2147483647)),
               message: message.replace(/<[^>]*>/g, ""),
             });

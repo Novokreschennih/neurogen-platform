@@ -414,15 +414,38 @@ export const templates = {
     const name = getName(user);
     const links = generateChannelLinks(user);
 
+    // ИСПРАВЛЕНИЕ (m3): читаемые названия шагов вместо технических имён
+    const stepNames = {
+      Module_1_Strategy: "Модуль 1: Стратегия",
+      Module_2_Online: "Модуль 2: Онлайн-воронка",
+      Module_3_Offline: "Модуль 3: Офлайн-бизнес",
+      Lesson_Final_Comparison: "Финальный выбор",
+      Offer_Tripwire: "Оффер PRO",
+      Training_Main: "Обучение",
+      Training_Pro_Main: "PRO-обучение",
+      Pre_Training_Logic: "Логика обучения",
+      Theory_Mod1: "Теория: Модуль 1",
+      Theory_Mod2: "Теория: Модуль 2",
+      Theory_Mod3: "Теория: Модуль 3",
+      Theory_Mod4: "Теория: Модуль 4",
+      Theory_Mod5: "Теория: Модуль 5",
+      Agent_1_Pain: "Путь агента",
+      Business_Offline_Pain: "Офлайн-бизнес",
+      Business_Online_Pain: "Онлайн-бизнес",
+    };
+    // Используем saved_state (реальный шаг воронки) вместо REMINDER_1H
+    const realStep = user.saved_state || stepName;
+    const readableStep = stepNames[realStep] || stepNames[stepName] || "Обучение";
+
     return {
       subject: "⏰ Напоминание: продолжите обучение в NeuroGen",
       text:
-        `${name}, вы остановились на шаге "${stepName}".\n\n` +
+        `${name}, вы остановились на шаге "${readableStep}".\n\n` +
         `Система ждёт вас! Продолжайте движение к своей ИИ-системе.\n\n` +
         `Ваши каналы:\n${links.text}\n\n` +
         `— Команда NeuroGen`,
       html:
-        `<p><b>${name}</b>, вы остановились на шаге <i>"${stepName}"</i>.</p>` +
+        `<p><b>${name}</b>, вы остановились на шаге <i>"${readableStep}"</i>.</p>` +
         `<p>Система ждёт вас! Продолжайте движение к своей ИИ-системе.</p>` +
         `<p style="margin: 16px 0">${links.html}</p>` +
         `<p style="color: #6b7280; font-size: 13px"><i>— Команда NeuroGen</i></p>`,

@@ -118,7 +118,16 @@ export function validateStartPayload(raw) {
     // | separator must be checked BEFORE - because UUIDs contain hyphens
     parts = trimmed.split("|");
   } else if (trimmed.includes("-")) {
-    parts = trimmed.split("-");
+    // ИСПРАВЛЕНИЕ (m6): если после первого дефиса идёт UUID-фрагмент,
+    // склеиваем всё обратно — UUID содержит дефисы и не должен сплититься
+    const dashIdx = trimmed.indexOf("-");
+    const afterDash = trimmed.substring(dashIdx + 1);
+    // UUID fragment: hex chars + hyphens, total length suggests UUID
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(afterDash) || afterDash.length > 20) {
+      parts = [trimmed.substring(0, dashIdx), afterDash];
+    } else {
+      parts = trimmed.split("-");
+    }
   } else {
     parts = [trimmed];
   }

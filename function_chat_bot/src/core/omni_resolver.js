@@ -41,12 +41,29 @@ function mergeUserData(target, source) {
     }
   }
 
+  // ИСПРАВЛЕНИЕ: объединяем per-channel funnel states
+  if (!target.session.channel_states) target.session.channel_states = {};
+  if (source.session.channel_states) {
+    for (const [ch, state] of Object.entries(source.session.channel_states)) {
+      if (!target.session.channel_states[ch]) {
+        target.session.channel_states[ch] = state;
+      }
+    }
+  }
+
   if (!target.email && source.email) target.email = source.email;
   if (source.ai_active_until > (target.ai_active_until || 0)) {
     target.ai_active_until = source.ai_active_until;
   }
   if (!target.first_name && source.first_name)
     target.first_name = source.first_name;
+
+  // ИСПРАВЛЕНИЕ: копируем AI-настройки из source если в target они пустые/дефолтные
+  if (!target.ai_provider && source.ai_provider) target.ai_provider = source.ai_provider;
+  if (!target.ai_model && source.ai_model) target.ai_model = source.ai_model;
+  if (!target.custom_api_key && source.custom_api_key) target.custom_api_key = source.custom_api_key;
+  if (!target.custom_prompt && source.custom_prompt) target.custom_prompt = source.custom_prompt;
+  if (!target.user_daily_limit && source.user_daily_limit) target.user_daily_limit = source.user_daily_limit;
 }
 
 export async function resolveUser(channel, ids) {

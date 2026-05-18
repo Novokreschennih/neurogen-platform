@@ -603,7 +603,7 @@ export function registerTelegramActions(bot, ctx) {
 
     if (u.state === "WAIT_REG_ID") {
       if (isNaN(txt))
-        return ctx.reply("❌ Пришли только цифры.", { protect_content: true });
+        return ctx.reply("❌ Пришли только цифры.\n\n<i>💡 Если хочешь выйти из режима настройки и задать вопрос ИИ, нажми /menu</i>", { parse_mode: "HTML", protect_content: true });
       u.sh_user_id = txt;
       u.state = "WAIT_REG_TAIL";
       await ydb.saveUser(u);
@@ -831,7 +831,8 @@ export function registerTelegramActions(bot, ctx) {
           `https://api.telegram.org/bot${txt}/getMe`,
         ).then((r) => r.json());
         if (!res.ok)
-          return ctx.reply("❌ Неверный токен. Проверь и пришли ещё раз:", {
+          return ctx.reply("❌ Неверный токен. Проверь и пришли ещё раз.\n\n<i>💡 Для отмены нажми /menu</i>", {
+            parse_mode: "HTML",
             protect_content: true,
           });
 
@@ -1193,7 +1194,7 @@ export function registerTelegramActions(bot, ctx) {
       let ownerSettings = {
         custom_prompt: "",
         ai_provider: "polza",
-        ai_model: "openai/gpt-4o-mini",
+        ai_model: "deepseek/deepseek-v4-flash",
         custom_api_key: "",
         user_daily_limit: 0,
       };
@@ -1204,7 +1205,7 @@ export function registerTelegramActions(bot, ctx) {
           ownerSettings = {
             custom_prompt: owner.custom_prompt || "",
             ai_provider: owner.ai_provider || "polza",
-            ai_model: owner.ai_model || "openai/gpt-4o-mini",
+            ai_model: owner.ai_model || "deepseek/deepseek-v4-flash",
             custom_api_key: owner.custom_api_key || "",
             user_daily_limit: owner.user_daily_limit || 0,
           };
@@ -1295,7 +1296,7 @@ export function registerTelegramActions(bot, ctx) {
         ai_model:
           ownerSettings.ai_model ||
           botSettings?.ai_model ||
-          "openai/gpt-4o-mini",
+          "deepseek/deepseek-v4-flash",
         custom_api_key: ownerSettings.custom_api_key || "",
         custom_prompt: ownerSettings.custom_prompt || "",
       };

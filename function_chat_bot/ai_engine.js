@@ -737,7 +737,7 @@ ${historyContext}
   try {
     // Таймаут 8 секунд
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     // v3.0: Используем baseURL и model из botConfig
     const endpoint = baseURL

@@ -330,7 +330,7 @@ async function askNeuroGenAI(userText, user, botConfig = {}) {
     textLength: userText.length,
     historyLength: cleanedHistory.length,
     provider: botConfig.ai_provider || "polza",
-    model: botConfig.ai_model || "openai/gpt-4o-mini",
+    model: botConfig.ai_model || "deepseek/deepseek-v4-flash",
   });
 
   // Генерируем ответ через AI Engine v3.0 (с botConfig)

@@ -138,10 +138,17 @@ export async function handleCronJobs(event, context) {
    * Мультиканальная отправка: пробуем основной канал, при неудаче — фолбэк на email
    */
   async function sendWithFallback(user, stepKey, maxRetries) {
+    // ИСПРАВЛЕНИЕ: используем channel-specific ID вместо общего user_id
+    const primaryChannel = channelManager.getPrimaryChannel(user) || "telegram";
+    const channelUserId = channelManager.getChannelUserId(user, primaryChannel);
+    if (!channelUserId) {
+      return { sent: false, error: "No channel ID", errorCode: null, channel: primaryChannel };
+    }
+
     // Основная отправка через sendStepToUser (автоматически определяет канал)
     let result = await sendStepToUser(
       user.bot_token,
-      user.user_id,
+      channelUserId,
       stepKey,
       user,
       maxRetries,
@@ -376,7 +383,15 @@ export async function handleCronJobs(event, context) {
           u.session.last_activity = u.last_seen;
         }
         u.last_seen = Date.now();
-        await ydb.saveUser(u);
+        await ydb.partialUpdateUser(u.id, {
+          state: u.state,
+          last_seen: u.last_seen,
+          session: u.session,
+          saved_state: u.saved_state,
+          bought_tripwire: u.bought_tripwire,
+          last_reminder_time: u.last_reminder_time,
+          reminders_count: u.reminders_count,
+        }, u.session_version);
       }
 
       await new Promise((res) => setTimeout(res, CRON_USER_PAUSE_MS));
