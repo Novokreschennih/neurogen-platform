@@ -138,7 +138,8 @@ export async function handlePartnerApi(event, context) {
       const botDirectLink = `https://t.me/${botUsername}`;
 
       const referrals = await ydb.getUserReferrals(telegramId);
-      const earnings = referrals.length * 20 * 0.25;
+      // Считаем реальные оплаты (PRO-статусы) среди приведенных людей
+      const paidReferrals = referrals.filter(r => r.bought_tripwire).length;
       const clicks = await ydb.getPartnerClicks(partnerTail);
 
       return response(200, {
@@ -153,7 +154,7 @@ export async function handlePartnerApi(event, context) {
           xp: user.session?.xp || 0, // NeuroCoins для динамической цены PRO
           inviter_sh_id: botInfo?.sh_user_id || "1123", // ID пригласителя для AFID
           referrals: referrals.length,
-          earnings: earnings.toFixed(2),
+          paid_referrals: paidReferrals, // Отдаем количество оплат
           clicks,
           is_pro: user.bought_tripwire,
           partner_id: user.sh_ref_tail,
