@@ -158,7 +158,7 @@ export async function handlePartnerApi(event, context) {
           xp: user.session?.xp || 0, // NeuroCoins для динамической цены PRO
           inviter_sh_id: botInfo?.sh_user_id || "1123", // ID пригласителя для AFID
           referrals: referrals.length,
-          paid_referrals: paidReferrals, // Отдаем количество оплат
+          paid_referrals: paidReferrals, // Количество оплат
           clicks,
           is_pro: user.bought_tripwire,
           sh_user_id: user.sh_user_id || "",
