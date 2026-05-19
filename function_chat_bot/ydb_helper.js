@@ -41,7 +41,7 @@ export const driver = new Driver({
   // === ИСПРАВЛЕНИЕ: ЖЕСТКИЕ ЛИМИТЫ ДЛЯ SERVERLESS ===
   poolSettings: {
     minLimit: 0, // НЕ держим сессии про запас (экономит квоты)
-    maxLimit: 1, // 1 контейнер = 1 сессия. Больше облачной функции не нужно!
+    maxLimit: 2, // 2 сессии на контейнер. 1 — слишком мало при последовательных saveUser.
     keepAlivePeriod: 30000,
   },
 });
@@ -57,7 +57,7 @@ function isTransientYdbError(e) {
   );
 }
 
-let driverInitialized = false;
+export let driverInitialized = false;
 
 export async function init() {
   if (!driverInitialized) {
@@ -372,8 +372,8 @@ export async function saveUser(user) {
   await new Promise((res) => setTimeout(res, 10 + Math.random() * 40));
 
   // Retry logic for RESOURCE_EXHAUSTED errors
-  const maxRetries = 4;
-  const baseDelayMs = 400;
+  const maxRetries = 5;
+  const baseDelayMs = 1000;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {

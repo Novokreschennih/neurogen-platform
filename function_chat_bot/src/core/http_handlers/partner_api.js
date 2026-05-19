@@ -24,6 +24,7 @@ export async function handlePartnerApi(event, context) {
     "get_partner_link",
     "update_ai_settings",
     "get_public_config",
+    "generate-post",
   ];
   if (!actions.includes(params.action)) return null;
 
@@ -147,6 +148,9 @@ export async function handlePartnerApi(event, context) {
         b2bRefLink,
         botDirectLink,
         botName: botUsername,
+        central_tg_bot: "sethubble_biz_bot",
+        central_vk_group: process.env.VK_CENTRAL_GROUP || "237421168",
+        has_personal_bot: !!user.session?.bot_username,
         user: {
           id: telegramId,
           first_name: firstName,
@@ -156,6 +160,7 @@ export async function handlePartnerApi(event, context) {
           earnings: earnings.toFixed(2),
           clicks,
           is_pro: user.bought_tripwire,
+          sh_user_id: user.sh_user_id || "",
           partner_id: user.sh_ref_tail,
           ai_active_until: user.ai_active_until || 0,
           // === Расширенные данные ИИ ===
@@ -238,6 +243,154 @@ export async function handlePartnerApi(event, context) {
         success: false,
         error: error.message || "Internal error",
       });
+    }
+  }
+
+  // === 5. GENERATE POST (ИИ-КОПИРАЙТЕР ДЛЯ PROMO-KIT) ===
+  if (params.action === "generate-post") {
+    try {
+      let user = await ydb.getUser(telegramId);
+      if (!user) {
+        return response(404, {
+          success: false,
+          error: "User not found",
+        });
+      }
+
+      let body = {};
+      try {
+        body = event.body ? JSON.parse(event.body) : {};
+      } catch (e) {}
+
+      const topic = body.topic || "предприниматели";
+      const refLink = body.link || "https://neuro-gen.ru";
+
+      const genLimit = user.bought_tripwire ? 30 : 5;
+      const today = new Date().toISOString().split("T")[0];
+
+      if (!user.session) user.session = {};
+      if (user.session.post_gen_date !== today) {
+        user.session.post_gen_count = 0;
+        user.session.post_gen_date = today;
+      }
+
+      if (user.session.post_gen_count >= genLimit) {
+        await ydb.saveUser(user);
+        return response(200, {
+          answer: `⏳ Лимит генераций на сегодня исчерпан (${genLimit}/${genLimit}). Активируйте PRO для увеличения лимитов.`
+        });
+      }
+
+      user.session.post_gen_count = (user.session.post_gen_count || 0) + 1;
+
+      let ownerSettings = { ai_provider: "polza", ai_model: "deepseek/deepseek-v4-flash", custom_api_key: "" };
+      if (user.partner_id && user.partner_id !== "p_qdr") {
+        try {
+          const owner = await ydb.getUserByRefTail(user.partner_id);
+          if (owner) {
+            ownerSettings = {
+              ai_provider: owner.ai_provider || "polza",
+              ai_model: owner.ai_model || "deepseek/deepseek-v4-flash",
+              custom_api_key: owner.custom_api_key || ""
+            };
+          }
+        } catch(e) {}
+      }
+
+      const apiKey = ownerSettings.custom_api_key || process.env.POLZA_API_KEY || process.env.OPENROUTER_API_KEY;
+      if (!apiKey) {
+        await ydb.saveUser(user);
+        return response(200, { answer: "⚠️ Системный API ключ не настроен" });
+      }
+
+      const baseURL = ownerSettings.ai_provider === "openrouter" ? "https://openrouter.ai/api/v1" : "https://polza.ai/api/v1";
+
+      const systemPrompt = `Ты — SMM-копирайтер платформы NeuroGen / SetHubble.
+Твоя задача: написать ОДИН короткий вирусный пост для соцсетей.
+
+📋 БАЗА ЗНАНИЙ О ПРОДУКТЕ:
+- SetHubble — гибридная IT-платформа и крипто-платежный шлюз с многоуровневой партнёркой. Не MLM, не affiliate-маркетинг.
+- Пользователь получает ИИ-бота, который продаёт за него 24/7, доступ к нейросетям NeuroGen, пассивный доход в USDT со всей сети.
+- FREE: 25% лично, по 3% до 3 уровня. PRO: 50% лично, по 5% до 5 уровней + CRM + ИИ-приложения.
+- Делишься ссылкой → люди закрепляются за тобой навсегда (до 10 уровней) → получаешь % с их покупок.
+- Можно подключать офлайн-бизнесы (салоны, СТО, фитнес) через QR-коды и многоуровневые промокоды.
+- Онлайн-бизнес: приём USDT/BTC/ETH/TON от $1, монетизация отказников.
+- O2O-генератор «Троянский конь»: PDF-презентация с QR-кодом для B2B-встреч.
+- Компрессия: деньги ленивых партнёров поднимаются к активным.
+- PRO стоит $40 (или $20 за 100 NeuroCoins).
+
+🎯 СТИЛЬ И СТРУКТУРА (ОБЯЗАТЕЛЬНО СЛЕДУЙ ЭТИМ ПРИМЕРАМ):
+
+Пример 1:
+🚀 Хватит сливать бюджет на Яндекс.Директ!
+
+Моя новая IT-система оцифрует ваших клиентов и превратит их в агентов. Вы платите % только за РЕАЛЬНЫЕ деньги в кассе.
+
+Плюс — вы получаете пассивный доход с их онлайн-покупок. Узнайте как 👇
+ССЫЛКА
+
+Пример 2:
+💸 Хочешь свой бизнес, но нет стартового капитала?
+
+Стань теневым партнёром! Раздавай бесплатный инструмент (QR-коды) кофейням и салонам красоты, и получай % с их оборота.
+
+Обучение и старт $0: 👇
+ССЫЛКА
+
+Пример 3:
+📱 Монетизируй тех, кто НЕ КУПИЛ твой курс!
+
+95% твоей аудитории уходит к конкурентам. С нашей системой они станут твоими агентами и будут приносить пассивный доход, даже покупая чужие продукты.
+
+Как это работает: 👇
+ССЫЛКА
+
+📏 ЖЁСТКИЕ ПРАВИЛА:
+1. Структура: ЭМОДЗИ + ПРОВОКАЦИОННЫЙ ЗАГОЛОВОК → БОЛЬ АУДИТОРИИ → КОНКРЕТНОЕ РЕШЕНИЕ → CTA + ССЫЛКА
+2. 200-400 символов. Без воды, без длинных вступлений.
+3. НИКАКИХ хештегов. НИКАКИХ кавычек вокруг текста.
+4. Используй конкретику: USDT, %, $0, 24/7, QR-коды, ИИ-бот.
+5. Тон: провокационный, энергичный, с эмодзи.
+6. Разбивай на короткие абзацы (1-2 предложения).
+7. В самом конце — призыв к действию и ЭТУ ССЫЛКУ: ${refLink}
+
+Аудитория поста: ${topic}.
+Напиши пост.`;
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+      const res = await fetch(`${baseURL}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+          "HTTP-Referer": "https://neuro-gen.ru"
+        },
+        body: JSON.stringify({
+          model: ownerSettings.ai_model || "deepseek/deepseek-v4-flash",
+          messages:[
+            { role: "system", content: systemPrompt },
+            { role: "user", content: "Сгенерируй пост для соцсетей." }
+          ],
+          max_tokens: 1000,
+          temperature: 0.7
+        }),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+      const data = await res.json();
+      const text = data.choices?.[0]?.message?.content;
+
+      if (!text) throw new Error("Empty response");
+
+      await ydb.saveUser(user);
+      return response(200, { answer: text });
+
+    } catch (e) {
+      log.error(`[PARTNER API] generate-post error`, e);
+      return response(500, { error: e.message });
     }
   }
 

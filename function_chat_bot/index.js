@@ -1033,7 +1033,7 @@ export const handler = async (event) => {
 
   // === HEALTH CHECK (v5.0) ===
   if (action === "health" || action === "ping") {
-    const ydbOk = driverInitialized ? "ok" : "initializing";
+    const ydbOk = ydb.driverInitialized ? "ok" : "initializing";
     return {
       statusCode: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

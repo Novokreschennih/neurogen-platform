@@ -1,5 +1,0 @@
-{
-  "layout": "layouts/academy.njk",
-  "tags": ["academy"],
-  "permalink": "/academy/{{ page.fileSlug }}/index.html"
-}
