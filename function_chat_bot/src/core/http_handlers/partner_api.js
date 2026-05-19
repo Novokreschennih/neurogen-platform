@@ -163,7 +163,10 @@ export async function handlePartnerApi(event, context) {
           is_pro: user.bought_tripwire,
           sh_user_id: user.sh_user_id || "",
           partner_id: user.sh_ref_tail,
+          partner_afid: user.partner_afid || "",
           ai_active_until: user.ai_active_until || 0,
+          // === Каналы ===
+          channels: user.session?.channels || {},
           // === Расширенные данные ИИ ===
           custom_prompt: user.custom_prompt || "",
           ai_provider: user.ai_provider || "polza",
